@@ -1,0 +1,145 @@
+========================================================================
+             HYNOX CAMPUS — HOW THE DATABASE WORKS (SIMPLE GUIDE)
+========================================================================
+
+This guide explains how the Hynox Campus platform works in simple English. It lists our database tables, what they do, and exactly what happens when someone performs an action on the website.
+
+------------------------------------------------------------------------
+SECTION 1: ONBOARDING & USER LOGIN (How people join the site)
+------------------------------------------------------------------------
+
+1. Table: institution.institutions
+   * What it is: A list of all colleges, schools, or companies that use Hynox Campus.
+   * What happens: When a new college signs a contract, the platform owner (Super Admin) adds them here. This creates a profile with the college's name, logo, and website.
+
+2. Table: core.users
+   * What it is: The master list of profiles for everyone (students, trainers, admins).
+   * What happens: 
+     - When an admin uploads a student list from an Excel sheet, a placeholder row is created here.
+     - When the user verifies their email and logs in for the first time, this profile is linked to their login credentials.
+
+3. Table: core.user_invitations
+   * What it is: Active signup links and invite tokens.
+   * What happens: When an admin uploads a student list, the system generates a secure link with a unique code here. An email is sent to the student. When the student clicks the link, the system marks the invitation status as "accepted."
+
+4. Tables: core.roles & core.user_roles
+   * What they are: Roles (Student, Trainer, Admin) and who has which role.
+   * What happens: When a user finishes signing up, a record is added to user_roles to define what they can see. For example, a student is labeled 'student' so they cannot access the grading pages.
+
+5. Table: institution.institution_admins
+   * What it is: List of who is the head admin for each college.
+   * What happens: When a college profile is created, the Super Admin assigns a user (like the principal or placement head) here to manage that specific college.
+
+6. Table: core.audit_logs
+   * What it is: A security logbook of critical actions.
+   * What happens: Every time an admin creates a course, invites users, or changes user roles, the system automatically writes a note here explaining who did it, what they changed, and when.
+
+------------------------------------------------------------------------
+SECTION 2: CREATING CURRICULUMS & COURSES (How lessons are structured)
+------------------------------------------------------------------------
+
+7. Table: academic.programs
+   * What it is: A degree track or study department (e.g., "Computer Science Degree").
+   * What happens: The college admin creates a Program. This acts as a folder containing all the courses the students will study.
+
+8. Table: academic.courses
+   * What it is: Individual subjects (e.g., "Learn React JS").
+   * What happens: A trainer or admin adds a Course inside a Program. It holds description details, difficulty level, and settings.
+
+9. Table: academic.modules
+   * What it is: Chapters or units inside a Course (e.g., "Chapter 1: Git Basics").
+   * What happens: The trainer splits a course into modules to keep things organized.
+
+10. Table: academic.lessons
+    * What it is: Single lectures or study sessions inside a Chapter.
+    * What happens: The trainer adds lesson topics. Each topic can have a video lecture URL and text explanation.
+
+11. Table: academic.lesson_resources
+    * What it is: Downloadable slides, cheatsheets, and project links.
+    * What happens: The trainer uploads PDFs or code links for a lesson. Students can click and download these files.
+
+12. Table: academic.course_instructors
+    * What it is: A record showing which teacher is teaching which subject.
+    * What happens: The admin assigns a teacher to a course. This grants the teacher permission to update lessons and grade submissions for that subject.
+
+------------------------------------------------------------------------
+SECTION 3: DELIVERY & ATTENDANCE (How live classes work)
+------------------------------------------------------------------------
+
+13. Table: delivery.cohorts
+    * What it is: A classroom batch of students (e.g., "React Class 2026 - Batch B").
+    * What happens: The college admin creates a Cohort so they can manage students together rather than individually.
+
+14. Table: delivery.enrollments
+    * What it is: The list of which students belong to which Cohort.
+    * What happens: The admin assigns students to a Cohort. Once assigned, students can view all subjects mapped to that cohort.
+
+15. Table: delivery.course_assignments
+    * What it is: A scheduler mapping courses to cohorts.
+    * What happens: When a trainer makes a course active for a specific cohort, a row is created here. The course immediately appears on the students' homepages.
+
+16. Table: delivery.lesson_progress
+    * What it is: Individual lesson tracking.
+    * What happens: When a student clicks on a lesson, watches a video, or finishes reading the content, the system marks the status as "completed" for that student and lesson.
+
+17. Table: delivery.course_progress
+    * What it is: Total subject progress bar calculation.
+    * What happens: Every time a student completes a lesson, the system calculates the percentage of finished lessons and updates this table. For example, if there are 10 lessons and the student finishes 5, this updates to "50% Completed."
+
+------------------------------------------------------------------------
+SECTION 4: EVALUATING STUDENTS (How homework, quizzes & labs work)
+------------------------------------------------------------------------
+
+18. Table: learning.activities
+    * What it is: Homework tasks attached to lessons.
+    * What happens: When a trainer creates an assignment (Quiz, Project, or Coding task), the system creates a row here to handle general settings like passing score, maximum points, and deadline.
+
+19. Table: learning.activity_assignments
+    * What it is: Assigns a homework task to a classroom batch.
+    * What happens: The trainer assigns the activity to a Cohort. This triggers a notification to students that their homework is open.
+
+20. Table: learning.student_activity_progress
+    * What it is: Tracks the current score and completion status of a student's homework.
+    * What happens: When a student starts an activity, this record is set to "in_progress". When graded, it records the final points (e.g., 85/100) and marks it as "completed".
+
+21. Tables: learning.quizzes, quiz_questions, quiz_options
+    * What they are: The questions and answers for a Quiz activity.
+    * What happens: When a trainer builds a quiz, the quiz settings are saved. Then questions (e.g., "What does HTML stand for?") and options (with correct/incorrect flags) are saved.
+
+22. Tables: learning.quiz_attempts & quiz_answers
+    * What they are: A student's quiz submissions.
+    * What happens: When a student answers quiz questions and clicks "Submit", the system inserts a quiz_attempt. It compares the selected options with the correct answers, calculates the score instantly, saves it, and displays the result to the student.
+
+23. Tables: learning.projects & project_submissions
+    * What they are: Practical project assignments.
+    * What happens:
+      - The trainer defines the project details (e.g., "Build a Weather App").
+      - The student writes code, uploads it to GitHub, and submits their GitHub link. The system saves this link as a submission.
+
+24. Table: learning.project_reviews
+    * What it is: Trainer reviews for projects.
+    * What happens: The trainer opens the submitted GitHub URL, reads the student's code, decides if it is correct, and saves a review with a score, status (e.g., Approved, Revision Requested), and text feedback.
+
+25. Tables: learning.programming_challenges & challenge_test_cases
+    * What they are: Interactive code challenges (LeetCode-style).
+    * What happens: The trainer inputs a coding problem (e.g., "Write a program to sum two numbers") and inputs test cases (e.g., Input: "2, 3" -> Output: "5").
+
+26. Tables: learning.challenge_submissions & challenge_test_case_results
+    * What they are: Student code submissions and test outcomes.
+    * What happens: When a student types code in the browser playground and submits it, the system saves their script. The system runs the code against each test case and saves whether it passed or failed.
+
+27. Table: learning.challenge_execution_queue
+    * What it is: A queue line for compiling student code.
+    * What happens: When a student clicks submit, the code is placed in this queue. An automated background worker picks up the code, runs it inside a safe sandbox container, returns the results, and clears the queue item.
+
+========================================================================
+Summary of a Student's Daily Cycle:
+========================================================================
+1. Student logs in (checks core.users & core.user_roles).
+2. Student views their batch's courses (checks delivery.enrollments & delivery.course_assignments).
+3. Student clicks a lesson, reads study notes, or watches a lecture video (updates delivery.lesson_progress).
+4. Student opens homework (checks learning.activity_assignments).
+5. Student completes a quiz, links a GitHub project, or writes code in the playground (saves data to attempts/submissions).
+6. Automated grading or trainers evaluate results (saves to quiz_attempts, project_reviews, or challenge_submissions).
+7. Student's dashboard updates progress bars (updates delivery.course_progress & learning.student_activity_progress).
+========================================================================
