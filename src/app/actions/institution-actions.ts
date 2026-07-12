@@ -188,11 +188,12 @@ export async function onboardSingleUserAction(params: {
   email: string;
   name: string;
   role: string;
-  institutionId: string;
+  institutionId?: string;
 }) {
   const { email, name, role, institutionId } = params;
-  if (!email || !name || !role || !institutionId) {
-    return { error: "All fields (email, name, role, institution) are required." };
+  const isTeacher = role === "teacher" || role === "trainer";
+  if (!email || !name || !role || (!isTeacher && !institutionId)) {
+    return { error: "Required fields (email, name, role, and campus if not teacher) are missing." };
   }
 
   try {
@@ -200,7 +201,7 @@ export async function onboardSingleUserAction(params: {
     if (!userDetails) return { error: "Access denied." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
-    const isInstAdmin = userDetails.primaryRole === "institution_admin" && userDetails.tenantId === institutionId;
+    const isInstAdmin = !isTeacher && userDetails.primaryRole === "institution_admin" && userDetails.tenantId === institutionId;
 
     if (!isSuperAdmin && !isInstAdmin) {
       return { error: "Access denied." };

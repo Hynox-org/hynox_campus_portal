@@ -3,10 +3,8 @@ import { redirect } from "next/navigation";
 import { Terminal } from "lucide-react";
 import SignOutButton from "@/components/sign-out-button";
 import TeacherConsole from "./teacher-console";
-import { listCohorts, listEnrollments } from "@/services/delivery";
-import { listAllActivities, listProjectSubmissions, listChallengeSubmissions } from "@/services/learning";
-import { listTeacherInstitutions } from "@/services/institution";
-import { listPrograms } from "@/services/academic";
+import { listTeacherCohorts, listCohortEnrollments, listCohortCourseAssignments } from "@/services/delivery";
+import { listCohortActivities, listCohortProjectSubmissions, listCohortChallengeSubmissions } from "@/services/learning";
 
 export const dynamic = "force-dynamic";
 
@@ -22,36 +20,43 @@ export default async function TeacherPage() {
 
   const { authUser, primaryRole, user } = userDetails;
 
-  // Resolve assigned institutions for the teacher
-  let assignedInstitutions: any[] = [];
+  let cohorts: any[] = [];
   try {
-    assignedInstitutions = await listTeacherInstitutions(user.id, primaryRole === "super_admin");
+    cohorts = await listTeacherCohorts(user.id, primaryRole === "super_admin");
   } catch (err) {
-    console.error("Failed to load teacher assigned institutions:", err);
+    console.error("Failed to load teacher assigned cohorts:", err);
   }
 
-  // Set initial tenant context to the first assigned institution
-  const resolvedTenantId = assignedInstitutions[0]?.id || "";
+  // Set initial cohort ID to the first assigned cohort
+  const resolvedCohortId = cohorts[0]?.id || "";
+  const resolvedTenantId = cohorts[0]?.tenant_id || "";
 
-  let cohorts: any[] = [];
+  // Derive assigned institutions from the teacher's cohorts
+  const instMap = new Map<string, any>();
+  cohorts.forEach(c => {
+    if (c.institution) {
+      instMap.set(c.institution.id, c.institution);
+    }
+  });
+  const assignedInstitutions = Array.from(instMap.values());
+
   let activities: any[] = [];
   let projectSubmissions: any[] = [];
   let challengeSubmissions: any[] = [];
   let enrollments: any[] = [];
   let programs: any[] = [];
 
-  if (resolvedTenantId) {
+  if (resolvedCohortId) {
     try {
-      [cohorts, activities, projectSubmissions, challengeSubmissions, enrollments, programs] = await Promise.all([
-        listCohorts(resolvedTenantId),
-        listAllActivities(resolvedTenantId),
-        listProjectSubmissions(resolvedTenantId),
-        listChallengeSubmissions(resolvedTenantId),
-        listEnrollments(resolvedTenantId),
-        listPrograms(resolvedTenantId, primaryRole)
+      [activities, projectSubmissions, challengeSubmissions, enrollments, programs] = await Promise.all([
+        listCohortActivities(resolvedCohortId),
+        listCohortProjectSubmissions(resolvedCohortId),
+        listCohortChallengeSubmissions(resolvedCohortId),
+        listCohortEnrollments(resolvedCohortId),
+        listCohortCourseAssignments(resolvedCohortId).then(list => list.map(l => l.course).filter(Boolean))
       ]);
     } catch (err) {
-      console.error("Failed to load teacher dashboard datasets for institution:", err);
+      console.error("Failed to load teacher dashboard datasets for cohort:", err);
     }
   }
 
@@ -83,6 +88,7 @@ export default async function TeacherPage() {
         <TeacherConsole
           teacherId={user?.id || ""}
           tenantId={resolvedTenantId}
+          initialCohortId={resolvedCohortId}
           initialCohorts={cohorts}
           initialActivities={activities}
           initialProjectSubmissions={projectSubmissions}

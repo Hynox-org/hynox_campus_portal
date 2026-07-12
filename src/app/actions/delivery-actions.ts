@@ -200,3 +200,63 @@ export async function listStudentLessonProgressAction(userId: string) {
     return { error: error.message || "Failed to list student lesson progress." };
   }
 }
+
+export async function listTeacherCohortsAction(teacherId: string, isSuperAdmin: boolean) {
+  try {
+    await verifyAdmin();
+    const data = await deliveryService.listTeacherCohorts(teacherId, isSuperAdmin);
+    return { success: true, cohorts: data };
+  } catch (error: any) {
+    return { error: error.message || "Failed to list teacher cohorts." };
+  }
+}
+
+export async function listCohortCourseAssignmentsAction(cohortId: string) {
+  try {
+    await verifyAdmin();
+    const data = await deliveryService.listCohortCourseAssignments(cohortId);
+    return { success: true, assignments: data };
+  } catch (error: any) {
+    return { error: error.message || "Failed to list cohort course assignments." };
+  }
+}
+
+export async function listCohortEnrollmentsAction(cohortId: string) {
+  try {
+    await verifyAdmin();
+    const data = await deliveryService.listCohortEnrollments(cohortId);
+    return { success: true, enrollments: data };
+  } catch (error: any) {
+    return { error: error.message || "Failed to list cohort enrollments." };
+  }
+}
+
+export async function assignTeacherToCohortAction(cohortId: string, teacherId: string) {
+  try {
+    await verifyAdmin();
+    const data = await deliveryService.assignTeacherToCohort(cohortId, teacherId);
+    return { success: true, mapping: data };
+  } catch (error: any) {
+    return { error: error.message || "Failed to assign teacher to cohort." };
+  }
+}
+
+export async function removeTeacherFromCohortAction(cohortId: string, teacherId: string) {
+  try {
+    await verifyAdmin();
+    await deliveryService.removeTeacherFromCohort(cohortId, teacherId);
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to remove teacher from cohort." };
+  }
+}
+
+export async function listAllCohortsAction() {
+  try {
+    await verifyAdmin();
+    const data = await deliveryService.listAllCohorts();
+    return { success: true, cohorts: data };
+  } catch (error: any) {
+    return { error: error.message || "Failed to list all cohorts." };
+  }
+}

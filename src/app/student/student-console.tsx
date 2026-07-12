@@ -976,7 +976,7 @@ export default function StudentConsole({
                 {/* Cohorts info */}
                 <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-4">
                   <h3 className="text-xs font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-2.5 flex items-center gap-1.5 uppercase tracking-wider">
-                    <GraduationCap className="text-[#2563EB]" size={15} /> Program Cohort Details
+                    <GraduationCap className="text-[#2563EB]" size={15} /> Batch Group Details
                   </h3>
                   
                   {selectedProgram ? (
@@ -985,7 +985,7 @@ export default function StudentConsole({
                         <h4 className="font-bold text-[#0F172A] text-xs">{selectedProgram.title}</h4>
                         <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-[#475569]">
                           <span className="bg-[#2563EB]/15 text-[#2563EB] px-2 py-0.5 rounded font-bold">
-                            Cohort: {selectedProgram.cohorts?.map((c: any) => c.code).join(", ") || "N/A"}
+                            Group: {selectedProgram.cohorts?.map((c: any) => c.code).join(", ") || "N/A"}
                           </span>
                           <span>•</span>
                           <span>{selectedProgram.courses?.length || 0} Assigned Courses</span>
@@ -1004,7 +1004,7 @@ export default function StudentConsole({
                     </div>
                   ) : (
                     <div className="text-center py-6 text-[#475569] font-medium bg-slate-50/20 rounded-xl border border-dashed border-[#E2E8F0]">
-                      No active cohort enrollment found.
+                      No active group enrollment found.
                     </div>
                   )}
                 </div>
@@ -1202,7 +1202,7 @@ export default function StudentConsole({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-4 text-slate-400 text-[10px]">No active cohort attendance logs.</div>
+                    <div className="text-center py-4 text-slate-400 text-[10px]">No active group attendance logs.</div>
                   )}
                 </div>
 
@@ -1218,7 +1218,7 @@ export default function StudentConsole({
           <div className="space-y-6">
             {!selectedProgram ? (
               <div className="text-center py-8 text-[#475569] font-medium bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm">
-                You are not currently enrolled in any active cohorts. Please contact your administrator.
+                You are not currently enrolled in any active groups. Please contact your administrator.
               </div>
             ) : !selectedCourse ? (
               <div className="bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm space-y-4">
@@ -1754,7 +1754,7 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center py-6 text-slate-500 font-medium">No quizzes assigned to your cohort.</p>
+                  <p className="text-center py-6 text-slate-500 font-medium">No quizzes assigned to your group.</p>
                 )}
               </>
             ) : (
@@ -1994,7 +1994,7 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center py-6 text-slate-500 font-medium">No projects assigned to your cohort.</p>
+                  <p className="text-center py-6 text-slate-500 font-medium">No projects assigned to your group.</p>
                 )}
               </>
             ) : (
@@ -2162,7 +2162,7 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center py-6 text-slate-500 font-medium">No challenges assigned to your cohort.</p>
+                  <p className="text-center py-6 text-slate-500 font-medium">No challenges assigned to your group.</p>
                 )}
               </>
             ) : (

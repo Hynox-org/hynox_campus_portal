@@ -511,3 +511,39 @@ export async function deleteChallengeTestCaseAction(id: string) {
     return { error: error.message || "Failed to delete challenge test case." };
   }
 }
+
+export async function listCohortProjectSubmissionsAction(cohortId: string) {
+  try {
+    const submissions = await service.listCohortProjectSubmissions(cohortId);
+    return { submissions };
+  } catch (error: any) {
+    return { error: error.message || "Failed to load project submissions for cohort." };
+  }
+}
+
+export async function listCohortChallengeSubmissionsAction(cohortId: string) {
+  try {
+    const submissions = await service.listCohortChallengeSubmissions(cohortId);
+    return { submissions };
+  } catch (error: any) {
+    return { error: error.message || "Failed to load challenge submissions for cohort." };
+  }
+}
+
+export async function listCohortActivitiesAction(cohortId: string) {
+  try {
+    const activities = await service.listCohortActivities(cohortId);
+    return { success: true, activities };
+  } catch (error: any) {
+    return { error: error.message || "Failed to load activities for cohort." };
+  }
+}
+
+export async function listCohortQuizAttemptsAction(cohortId: string) {
+  try {
+    const attempts = await service.listCohortQuizAttempts(cohortId);
+    return { success: true, attempts };
+  } catch (error: any) {
+    return { error: error.message || "Failed to load quiz attempts for cohort." };
+  }
+}

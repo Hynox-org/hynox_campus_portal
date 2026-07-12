@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { getVisibleTestCases, getAllTestCasesInternal } from "./learning";
 import { cookies } from "next/headers";
+import { syncCourseProgressByActivity } from "./delivery";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
@@ -764,6 +765,10 @@ export async function executeAllTestsAndGrade(submissionId: string) {
         updated_at: new Date().toISOString()
       })
       .eq("id", sub.student_activity_progress_id);
+
+    if (challenge?.activity_id) {
+      await syncCourseProgressByActivity(sub.student_id, challenge.activity_id);
+    }
 
     // Complete audit log log entry
     await supabase

@@ -80,9 +80,10 @@ export async function processCsvOnboarding(
       const email = row.email;
       const name = row.name;
       const roleName = (row.role || "student").toLowerCase();
-      const institutionId = row.institution_id || selectedInstitutionId;
+      const isTeacher = roleName === "teacher" || roleName === "trainer";
+      const finalTenantId = isTeacher ? null : (row.institution_id || selectedInstitutionId);
 
-      if (!email || !name || !roleName || !institutionId) {
+      if (!email || !name || !roleName || (!isTeacher && !finalTenantId)) {
         throw new Error("Missing required fields (name, email, or institution_id)");
       }
 
@@ -111,7 +112,7 @@ export async function processCsvOnboarding(
           .insert({
             full_name: name,
             email: email,
-            tenant_id: institutionId,
+            tenant_id: finalTenantId,
             status: "invited",
             onboarding_source: "excel_import",
           })
@@ -136,7 +137,7 @@ export async function processCsvOnboarding(
         await supabase
           .schema("core")
           .from("users")
-          .update({ tenant_id: institutionId })
+          .update({ tenant_id: finalTenantId })
           .eq("id", userId);
       }
 
@@ -159,7 +160,7 @@ export async function processCsvOnboarding(
         .from("user_invitations")
         .insert({
           user_id: userId,
-          tenant_id: institutionId,
+          tenant_id: finalTenantId,
           token: token,
           invited_by: invitedByUserId,
           expires_at: expiresAt,
@@ -180,7 +181,7 @@ export async function processCsvOnboarding(
         mentor_invite: "Mentor",
       };
       const roleLabel = roleNameMap[invitationType] || "Member";
-      const institutionName = instMap.get(institutionId) || "Hynox Campus";
+      const institutionName = finalTenantId ? (instMap.get(finalTenantId) || "Hynox Campus") : "Hynox Campus";
 
       let mailStatus = "sent";
       try {
@@ -443,14 +444,17 @@ export async function onboardSingleUser(params: {
   email: string;
   name: string;
   role: string;
-  institutionId: string;
+  institutionId?: string;
   invitedByUserId: string;
 }): Promise<OnboardingResult> {
   const supabase = await createClient();
   const { email, name, role, institutionId, invitedByUserId } = params;
 
   try {
-    if (!email || !name || !role || !institutionId) {
+    const roleName = role.toLowerCase();
+    const isTeacher = roleName === "teacher" || roleName === "trainer";
+
+    if (!email || !name || !role || (!isTeacher && !institutionId)) {
       throw new Error("Missing required fields (name, email, role, or institutionId)");
     }
 
@@ -461,7 +465,6 @@ export async function onboardSingleUser(params: {
       .select("id, name");
 
     const rolesMap = new Map(rolesList?.map((r) => [r.name.toLowerCase(), r.id]));
-    const roleName = role.toLowerCase();
     const roleId = rolesMap.get(roleName);
     if (!roleId) {
       throw new Error(
@@ -469,13 +472,19 @@ export async function onboardSingleUser(params: {
       );
     }
 
+    const finalTenantId = isTeacher ? null : institutionId;
+
     // Fetch institution name
-    const { data: inst } = await supabase
-      .schema("institution")
-      .from("institutions")
-      .select("name")
-      .eq("id", institutionId)
-      .maybeSingle();
+    let inst = null;
+    if (finalTenantId) {
+      const { data: instData } = await supabase
+        .schema("institution")
+        .from("institutions")
+        .select("name")
+        .eq("id", finalTenantId)
+        .maybeSingle();
+      inst = instData;
+    }
 
     // Check if user already exists
     const { data: existingUser } = await supabase
@@ -495,7 +504,7 @@ export async function onboardSingleUser(params: {
         .insert({
           full_name: name,
           email: email,
-          tenant_id: institutionId,
+          tenant_id: finalTenantId,
           status: "invited",
           onboarding_source: "excel_import",
         })
@@ -520,7 +529,7 @@ export async function onboardSingleUser(params: {
       await supabase
         .schema("core")
         .from("users")
-        .update({ tenant_id: institutionId })
+        .update({ tenant_id: finalTenantId })
         .eq("id", userId);
     }
 
@@ -543,7 +552,7 @@ export async function onboardSingleUser(params: {
       .from("user_invitations")
       .insert({
         user_id: userId,
-        tenant_id: institutionId,
+        tenant_id: finalTenantId,
         token: token,
         invited_by: invitedByUserId,
         expires_at: expiresAt,

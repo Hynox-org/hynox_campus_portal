@@ -42,6 +42,13 @@ import {
   getAcademicLookupsAction
 } from "@/app/actions/academic-actions";
 import { signOutAction } from "@/app/actions/auth-actions";
+import {
+  listTeacherCohortsAction,
+  assignTeacherToCohortAction,
+  removeTeacherFromCohortAction,
+  listCohortsAction,
+  listAllCohortsAction
+} from "@/app/actions/delivery-actions";
 import * as XLSX from "xlsx";
 import { 
   Building, 
@@ -138,6 +145,12 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
   const [selectedTeacherForDetail, setSelectedTeacherForDetail] = useState<any | null>(null);
   const [teacherDetailsLoading, setTeacherDetailsLoading] = useState(false);
   const [teacherInstDetails, setTeacherInstDetails] = useState<any[]>([]);
+  const [systemCohorts, setSystemCohorts] = useState<any[]>([]);
+  
+  // Teacher Onboarding Form States
+  const [teacherOnboardName, setTeacherOnboardName] = useState("");
+  const [teacherOnboardEmail, setTeacherOnboardEmail] = useState("");
+  const [teacherOnboardLoading, setTeacherOnboardLoading] = useState(false);
 
   const handleSelectInstitutionForExplorer = async (instId: string) => {
     setExplorerSelectedId(instId);
@@ -414,79 +427,54 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
 
   const loadAllTeachersData = async () => {
     setLoadingTeachers(true);
-    const res = await listAllTeachersAction();
-    if (res.teachers) {
-      setTeachersList(res.teachers);
-    } else if (res.error) {
-      alert(res.error);
+    const [tRes, cRes] = await Promise.all([
+      listAllTeachersAction(),
+      listAllCohortsAction()
+    ]);
+    if (tRes.teachers) {
+      setTeachersList(tRes.teachers);
+    } else if (tRes.error) {
+      alert(tRes.error);
+    }
+    if (cRes.cohorts) {
+      setSystemCohorts(cRes.cohorts);
     }
     setLoadingTeachers(false);
   };
 
-  const handleMapTeacher = async (userId: string, tenantId: string) => {
-    if (!tenantId) {
-      alert("Please select a target institution.");
+  const handleMapTeacher = async (userId: string, cohortId: string) => {
+    if (!cohortId) {
+      alert("Please select a target cohort.");
       return;
     }
     setLoadingTeachers(true);
-    const res = await mapTeacherToInstitutionAction(userId, tenantId);
+    const res = await assignTeacherToCohortAction(cohortId, userId);
     if (res.success) {
-      alert("Teacher mapped successfully!");
-      // Fetch fresh teachers list first, then update selected teacher and details
-      const updatedTeacherRes = await listAllTeachersAction();
-      if (updatedTeacherRes.teachers) {
-        setTeachersList(updatedTeacherRes.teachers);
-        const latestTeacher = updatedTeacherRes.teachers.find((t: any) => t.id === userId);
-        if (latestTeacher) {
-          setSelectedTeacherForDetail(latestTeacher);
-          // Load detail rows
-          setTeacherDetailsLoading(true);
-          setTeacherInstDetails([]);
-          const detailsRes = await getTeacherInstitutionDetailsAction(userId);
-          if (detailsRes.details) {
-            setTeacherInstDetails(detailsRes.details);
-          }
-          setTeacherDetailsLoading(false);
-        }
-      } else {
-        loadAllTeachersData();
+      alert("Teacher assigned to cohort successfully!");
+      const freshCohorts = await listTeacherCohortsAction(userId, false);
+      if (freshCohorts.cohorts) {
+        setTeacherInstDetails(freshCohorts.cohorts);
       }
     } else {
-      alert(res.error || "Failed to map teacher.");
+      alert(res.error || "Failed to assign teacher to cohort.");
     }
     setLoadingTeachers(false);
   };
 
-  const handleUnmapTeacher = async (userId: string, tenantId: string) => {
-    if (!confirm("Are you sure you want to remove this institution mapping?")) {
+  const handleUnmapTeacher = async (userId: string, cohortId: string) => {
+    if (!confirm("Are you sure you want to remove this cohort mapping?")) {
       return;
     }
     setLoadingTeachers(true);
-    const res = await unmapTeacherFromInstitutionAction(userId, tenantId);
+    const res = await removeTeacherFromCohortAction(cohortId, userId);
     if (res.success) {
-      alert("Teacher unmapped successfully!");
-      // Fetch fresh teachers list first, then update selected teacher and details
-      const updatedTeacherRes = await listAllTeachersAction();
-      if (updatedTeacherRes.teachers) {
-        setTeachersList(updatedTeacherRes.teachers);
-        const latestTeacher = updatedTeacherRes.teachers.find((t: any) => t.id === userId);
-        if (latestTeacher) {
-          setSelectedTeacherForDetail(latestTeacher);
-          setTeacherDetailsLoading(true);
-          setTeacherInstDetails([]);
-          const detailsRes = await getTeacherInstitutionDetailsAction(userId);
-          if (detailsRes.details) {
-            setTeacherInstDetails(detailsRes.details);
-          }
-          setTeacherDetailsLoading(false);
-        } else {
-          setSelectedTeacherForDetail(null);
-        }
-      } else {
-        loadAllTeachersData();
+      alert("Teacher removed from cohort successfully!");
+      const freshCohorts = await listTeacherCohortsAction(userId, false);
+      if (freshCohorts.cohorts) {
+        setTeacherInstDetails(freshCohorts.cohorts);
       }
     } else {
-      alert(res.error || "Failed to unmap teacher.");
+      alert(res.error || "Failed to remove teacher from cohort.");
     }
     setLoadingTeachers(false);
   };
@@ -496,9 +484,9 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
     setMappingInstId(""); // Reset mapping selection when loading a teacher
     setTeacherDetailsLoading(true);
     setTeacherInstDetails([]);
-    const res = await getTeacherInstitutionDetailsAction(teacher.id);
-    if (res.details) {
-      setTeacherInstDetails(res.details);
+    const res = await listTeacherCohortsAction(teacher.id, false);
+    if (res.cohorts) {
+      setTeacherInstDetails(res.cohorts);
     } else if (res.error) {
       alert(res.error);
     }
@@ -957,7 +945,8 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
     setLoading(true);
     clearStatuses();
 
-    if (!selectedInstId) {
+    const isTeacher = singleRole === "teacher";
+    if (!isTeacher && !selectedInstId) {
       setError("Please select or create an institution first.");
       setLoading(false);
       return;
@@ -973,7 +962,7 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
       email: singleEmail,
       name: singleName,
       role: singleRole,
-      institutionId: selectedInstId,
+      institutionId: isTeacher ? undefined : selectedInstId,
     });
 
     if (res.error) {
@@ -994,6 +983,34 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
       }
     }
     setLoading(false);
+  };
+
+  const handleTeacherOnboardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teacherOnboardName.trim() || !teacherOnboardEmail.trim()) {
+      alert("Name and Email are required.");
+      return;
+    }
+    setTeacherOnboardLoading(true);
+    const res = await onboardSingleUserAction({
+      email: teacherOnboardEmail,
+      name: teacherOnboardName,
+      role: "teacher",
+      institutionId: undefined
+    });
+    setTeacherOnboardLoading(false);
+    if (res.error) {
+      alert(res.error);
+    } else if (res.result) {
+      if (res.result.status === "success") {
+        alert(`Successfully onboarded and invited teacher '${teacherOnboardEmail}'!`);
+        setTeacherOnboardName("");
+        setTeacherOnboardEmail("");
+        loadAllTeachersData();
+      } else {
+        alert(res.result.error || "Failed to onboard teacher.");
+      }
+    }
   };
 
   const handleSuperAdminOnboard = async (e: React.FormEvent) => {
@@ -1260,94 +1277,52 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
 
             <div className="space-y-4">
               <h4 className="text-[11px] font-bold text-[#1d1d1f] uppercase tracking-wider pb-2 border-b border-[#d2d2d7]">
-                Assigned Campuses & Handled Programs
+                Assigned Cohorts
               </h4>
 
               {teacherDetailsLoading ? (
                 <div className="text-center py-12 text-xs text-[#86868b] font-medium flex items-center justify-center gap-2">
-                  <RefreshCw size={14} className="animate-spin text-[#0066cc]" /> Loading campus program status...
+                  <RefreshCw size={14} className="animate-spin text-[#0066cc]" /> Loading cohort assignments...
                 </div>
               ) : teacherInstDetails.length === 0 ? (
                 <div className="text-center py-8 text-xs text-[#86868b] border border-dashed border-[#d2d2d7] rounded-xl">
-                  No active campus or program mappings found.
+                  No cohort assignments found.
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {Object.entries(
-                    teacherInstDetails.reduce((groups: any, item: any) => {
-                      const key = item.institution_name;
-                      if (!groups[key]) groups[key] = [];
-                      groups[key].push(item);
-                      return groups;
-                    }, {})
-                  ).map(([instName, items]: [string, any]) => {
-                    const isPrimary = items[0]?.is_primary;
-                    const instId = items[0]?.institution_id;
-
-                    return (
-                      <div key={instName} className="border border-[#E8E8ED] rounded-xl p-4 bg-white shadow-sm space-y-3">
-                        <div className="flex justify-between items-center pb-2 border-b border-dashed border-[#E8E8ED]">
-                          <h5 className="text-xs font-bold text-[#1d1d1f] flex items-center gap-2">
-                            {instName}
-                            {isPrimary && (
-                              <span className="bg-blue-50 text-blue-600 border border-blue-100 text-[8px] font-extrabold px-1.5 py-0.5 rounded">
-                                PRIMARY
-                              </span>
-                            )}
-                          </h5>
-                          
-                          {!isPrimary && (
-                            <button
-                              onClick={async () => {
-                                await handleUnmapTeacher(selectedTeacherForDetail.id, instId);
-                                loadTeacherDetailsData(selectedTeacherForDetail);
-                              }}
-                              className="text-[10px] text-red-500 font-bold hover:underline"
-                            >
-                              Remove Assignment
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <span className="text-[10px] font-bold text-[#86868b] uppercase tracking-wide block">Managed Educational Programs:</span>
-                          
-                          {items.some((i: any) => i.program_title) ? (
-                            <div className="space-y-2">
-                              {items.filter((i: any) => i.program_title).map((item: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-center text-xs bg-slate-50/50 p-2.5 rounded-lg border border-[#E8E8ED]">
-                                  <span className="font-semibold text-[#1d1d1f]">{item.program_title}</span>
-                                  
-                                  <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase border ${
-                                    item.program_status === "active" || item.program_status === "public"
-                                      ? "bg-green-50 text-green-700 border-green-200"
-                                      : item.program_status === "ended" || item.program_status === "archived"
-                                      ? "bg-red-50 text-red-700 border-red-200"
-                                      : "bg-amber-50 text-amber-700 border-amber-200"
-                                  }`}>
-                                    {item.program_status || "Active"}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-[10px] text-[#86868b] italic">No active courses or programs assigned under this campus yet.</p>
-                          )}
-                        </div>
+                <div className="space-y-2">
+                  {teacherInstDetails.map((cohort: any) => (
+                    <div key={cohort.id} className="border border-[#E8E8ED] rounded-xl p-4 bg-white shadow-sm flex justify-between items-center">
+                      <div>
+                        <h5 className="text-xs font-bold text-[#1d1d1f]">
+                          {cohort.name} ({cohort.code})
+                        </h5>
+                        <p className="text-[10px] text-[#86868b] mt-0.5">
+                          Institution: {cohort.institution?.name || "Global / Internal"}
+                        </p>
                       </div>
-                    );
-                  })}
+                      
+                      <button
+                        onClick={async () => {
+                          await handleUnmapTeacher(selectedTeacherForDetail.id, cohort.id);
+                          loadTeacherDetailsData(selectedTeacherForDetail);
+                        }}
+                        className="text-[10px] text-red-500 font-bold hover:underline"
+                      >
+                        Remove Cohort
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Assign Additional Campus */}
+            {/* Assign Additional Cohort */}
             <div className="bg-white border border-[#E8E8ED] rounded-xl p-4 shadow-sm space-y-3">
               <h5 className="text-[11px] font-bold text-[#1d1d1f] uppercase tracking-wider">
-                Assign Additional Campus / Institution
+                Assign Additional Cohort
               </h5>
               <p className="text-[10px] text-[#86868b] font-medium leading-relaxed">
-                Map this teacher/trainer to another educational institution. They will be able to manage programs and view academic courses under that institution.
+                Map this teacher/trainer to an active cohort. They will be able to mark student attendance and access assigned courses under that cohort.
               </p>
               <div className="flex flex-col gap-3 pt-1">
                 <div className="relative">
@@ -1356,12 +1331,12 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
                     onChange={(e) => setMappingInstId(e.target.value)}
                     className="w-full bg-[#F5F5F7] border border-[#d2d2d7] hover:border-[#86868b] px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#0066cc]/10 focus:border-[#0066cc] transition-all appearance-none cursor-pointer pr-10"
                   >
-                    <option value="">Choose institution...</option>
-                    {institutions.map(inst => {
-                      const isAssigned = inst.id === selectedTeacherForDetail.tenant_id || (selectedTeacherForDetail.mapped_tenant_ids || []).includes(inst.id);
+                    <option value="">Choose cohort...</option>
+                    {systemCohorts.map(cohort => {
+                      const isAssigned = teacherInstDetails.some(c => c.id === cohort.id);
                       return (
-                        <option key={inst.id} value={inst.id} disabled={isAssigned} className="text-[#1d1d1f]">
-                          {inst.name} {isAssigned ? "(Already Assigned)" : ""}
+                        <option key={cohort.id} value={cohort.id} disabled={isAssigned} className="text-[#1d1d1f]">
+                          {cohort.name} ({cohort.code}) - {cohort.institution?.name || "Global"} {isAssigned ? "(Already Assigned)" : ""}
                         </option>
                       );
                     })}
@@ -1388,7 +1363,7 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
                   ) : (
                     <Plus size={14} />
                   )}
-                  Assign Institution
+                  Assign Cohort
                 </button>
               </div>
             </div>
@@ -1526,7 +1501,7 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
                   ? "bg-[#0066cc] text-white shadow-sm border-[#0066cc]"
                   : "bg-white border-[#E8E8ED] hover:bg-[#F5F5F7] text-[#86868b] hover:text-[#1d1d1f]"
               }`}
-              title="Programs & Academics"
+              title="Batches & Academics"
             >
               <GraduationCap size={18} />
             </button>
@@ -1705,7 +1680,7 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
                       : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-slate-50"
                   }`}
                 >
-                  Programs Explorer
+                  Batches Explorer
                 </button>
                 <button
                   onClick={() => {
@@ -1720,7 +1695,7 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
                       : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-slate-50"
                   }`}
                 >
-                  Examine Programs
+                  Examine Batches
                 </button>
                 <button
                   onClick={() => {
@@ -1735,7 +1710,7 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
                       : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-slate-50"
                   }`}
                 >
-                  Cohorts & Delivery
+                  Groups & Delivery
                 </button>
                 <button
                   onClick={() => {
@@ -2231,7 +2206,6 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
                           required
                         >
                           <option value="student">Student</option>
-                          <option value="teacher">Teacher / Trainer</option>
                           <option value="institution_admin">Institution Administrator</option>
                         </select>
                       </div>
@@ -2920,10 +2894,51 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
           {/* TAB: TEACHER MULTI-INSTITUTION MAPPING */}
           {activeTab === "teacher_mapping" && (
             <div className="space-y-6 animate-fadeIn">
+              {/* Teacher Onboarding Card */}
+              <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-sm p-6 space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-[#1d1d1f]">Invite & Onboard New Teacher</h3>
+                  <p className="text-[11px] text-[#86868b] mt-0.5">Onboard a platform-wide teacher/trainer instantly. Teachers are not bound to any institution on invite; they are assigned to cohorts later.</p>
+                </div>
+                <form onSubmit={handleTeacherOnboardSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end text-xs">
+                  <div>
+                    <label className="block font-semibold mb-1 text-[#86868b]">Full Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Professor Smith"
+                      value={teacherOnboardName}
+                      onChange={(e) => setTeacherOnboardName(e.target.value)}
+                      className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-[#86868b]">Email Address *</label>
+                    <input
+                      type="email"
+                      placeholder="e.g. smith@hynox.org"
+                      value={teacherOnboardEmail}
+                      onChange={(e) => setTeacherOnboardEmail(e.target.value)}
+                      className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <button
+                      type="submit"
+                      disabled={teacherOnboardLoading || !teacherOnboardName.trim() || !teacherOnboardEmail.trim()}
+                      className="w-full bg-[#0066cc] text-white py-2 rounded-lg shadow-sm font-bold hover:bg-[#0066cc]/95 transition-all disabled:opacity-50"
+                    >
+                      {teacherOnboardLoading ? "Onboarding..." : "Onboard Teacher"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
               <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-sm p-6">
                 <div>
-                  <h3 className="text-sm font-bold text-[#1d1d1f]">Teacher Campus Assignments Mapping</h3>
-                  <p className="text-[11px] text-[#86868b] mt-0.5">Assign, manage, and map registered educators and teachers to various school or college campus institutions.</p>
+                  <h3 className="text-sm font-bold text-[#1d1d1f]">Teacher Cohort Mapping & Assignments</h3>
+                  <p className="text-[11px] text-[#86868b] mt-0.5">Assign, manage, and map platform educators to their respective active cohort learning groups.</p>
                 </div>
 
                 <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[#E8E8ED]">

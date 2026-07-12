@@ -44,9 +44,10 @@ import {
 interface DeliveryManagerProps {
   institutions: any[];
   initialTab: "cohorts" | "enrollments" | "assignments";
+  isTeacherMode?: boolean;
 }
 
-export default function DeliveryManager({ institutions, initialTab }: DeliveryManagerProps) {
+export default function DeliveryManager({ institutions, initialTab, isTeacherMode = false }: DeliveryManagerProps) {
   const [selectedInstId, setSelectedInstId] = useState(institutions[0]?.id || "");
   const [activeSubTab, setActiveSubTab] = useState<"cohorts" | "enrollments" | "assignments" | "attendance">(initialTab as any);
 
@@ -500,30 +501,34 @@ export default function DeliveryManager({ institutions, initialTab }: DeliveryMa
           }`}
         >
           <Users size={14} />
-          Cohorts ({cohorts.length})
+          Groups ({cohorts.length})
         </button>
-        <button
-          onClick={() => setActiveSubTab("enrollments")}
-          className={`px-3 sm:px-5 py-2.5 font-bold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
-            activeSubTab === "enrollments"
-              ? "border-[#0066cc] text-[#0066cc]"
-              : "border-transparent text-[#86868b] hover:text-[#1d1d1f]"
-          }`}
-        >
-          <UserCheck size={14} />
-          Enrollments ({enrollments.length})
-        </button>
-        <button
-          onClick={() => setActiveSubTab("assignments")}
-          className={`px-3 sm:px-5 py-2.5 font-bold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
-            activeSubTab === "assignments"
-              ? "border-[#0066cc] text-[#0066cc]"
-              : "border-transparent text-[#86868b] hover:text-[#1d1d1f]"
-          }`}
-        >
-          <BookOpen size={14} />
-          Course Assignments ({assignments.length})
-        </button>
+        {!isTeacherMode && (
+          <button
+            onClick={() => setActiveSubTab("enrollments")}
+            className={`px-3 sm:px-5 py-2.5 font-bold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
+              activeSubTab === "enrollments"
+                ? "border-[#0066cc] text-[#0066cc]"
+                : "border-transparent text-[#86868b] hover:text-[#1d1d1f]"
+            }`}
+          >
+            <UserCheck size={14} />
+            Enrollments ({enrollments.length})
+          </button>
+        )}
+        {!isTeacherMode && (
+          <button
+            onClick={() => setActiveSubTab("assignments")}
+            className={`px-3 sm:px-5 py-2.5 font-bold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
+              activeSubTab === "assignments"
+                ? "border-[#0066cc] text-[#0066cc]"
+                : "border-transparent text-[#86868b] hover:text-[#1d1d1f]"
+            }`}
+          >
+            <BookOpen size={14} />
+            Course Assignments ({assignments.length})
+          </button>
+        )}
         <button
           onClick={() => setActiveSubTab("attendance")}
           className={`px-3 sm:px-5 py-2.5 font-bold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${

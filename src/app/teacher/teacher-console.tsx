@@ -54,7 +54,11 @@ import {
   updateActivityAndSubclassAction,
   deleteChallengeExampleAction,
   deleteChallengeTestCaseAction,
-  getActivityDetailsNoStudentAction
+  getActivityDetailsNoStudentAction,
+  listCohortProjectSubmissionsAction,
+  listCohortChallengeSubmissionsAction,
+  listCohortActivitiesAction,
+  listCohortQuizAttemptsAction
 } from "@/app/actions/learning-actions";
 import {
   listTenantCoursesAction,
@@ -76,7 +80,9 @@ import {
   listCohortsAction,
   listEnrollmentsAction,
   getStudentDeliveryDataAction,
-  listStudentLessonProgressAction
+  listStudentLessonProgressAction,
+  listCohortEnrollmentsAction,
+  listCohortCourseAssignmentsAction
 } from "@/app/actions/delivery-actions";
 import DeliveryManager from "@/app/admin/delivery-manager";
 
@@ -100,6 +106,7 @@ function formatDatetimeLocal(isoString?: string) {
 interface TeacherConsoleProps {
   teacherId: string;
   tenantId: string;
+  initialCohortId: string;
   initialCohorts: any[];
   initialActivities: any[];
   initialProjectSubmissions: any[];
@@ -112,6 +119,7 @@ interface TeacherConsoleProps {
 export default function TeacherConsole({
   teacherId,
   tenantId,
+  initialCohortId,
   initialCohorts,
   initialActivities,
   initialProjectSubmissions,
@@ -156,8 +164,12 @@ export default function TeacherConsole({
   const [moduleFormOpen, setModuleFormOpen] = useState(false);
   const [lessonFormOpen, setLessonFormOpen] = useState(false);
 
-  // Active selected institution and programs
-  const [selectedInstId, setSelectedInstId] = useState<string>(assignedInstitutions[0]?.id || tenantId || "");
+  // Active selected cohort as the primary driver
+  const [selectedCohortId, setSelectedCohortId] = useState<string>(initialCohortId || initialCohorts?.[0]?.id || "");
+  const [selectedInstId, setSelectedInstId] = useState<string>(
+    initialCohorts.find(c => c.id === (initialCohortId || initialCohorts?.[0]?.id || ""))?.institution_id || tenantId || ""
+  );
+
   const [programsList, setProgramsList] = useState<any[]>(initialPrograms || []);
   const [selectedProgramId, setSelectedProgramId] = useState<string>(initialPrograms?.[0]?.id || "");
 
@@ -184,8 +196,6 @@ export default function TeacherConsole({
     return list;
   }, [enrollments]);
 
-  // General selection states
-  const [selectedCohortId, setSelectedCohortId] = useState<string>("");
   const [selectedProjectSub, setSelectedProjectSub] = useState<any>(null);
   const [selectedChallengeSub, setSelectedChallengeSub] = useState<any>(null);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -209,8 +219,8 @@ export default function TeacherConsole({
   const [reviewStatus, setReviewStatus] = useState<string>("approved");
 
   // 2. ACTIVITY BUILDER & ASSIGNMENT STATE
-  const [coursesList, setCoursesList] = useState<any[]>([]);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>("");
+  const [coursesList, setCoursesList] = useState<any[]>(initialPrograms || []);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(initialPrograms?.[0]?.id || "");
   const [lessonsList, setLessonsList] = useState<any[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState<string>("");
 
@@ -342,98 +352,95 @@ export default function TeacherConsole({
     loadLookups();
   }, []);
 
-  // Load new dataset when selected institution changes
+  const [loadingCohortData, setLoadingCohortData] = useState(false);
+
+  // Load new dataset when selected cohort changes
   useEffect(() => {
-    if (!selectedInstId) return;
+    if (!selectedCohortId) return;
 
     startTransition(async () => {
-      // Fetch cohorts
-      const cohortRes = await listCohortsAction(selectedInstId);
-      if (cohortRes.cohorts) {
-        setCohorts(cohortRes.cohorts);
-      } else {
-        setCohorts([]);
-      }
+      setLoadingCohortData(true);
+      try {
+        const instId = cohorts.find(c => c.id === selectedCohortId)?.institution_id || tenantId || "";
+        setSelectedInstId(instId);
 
-      // Fetch programs
-      const progRes = await listProgramsAction(selectedInstId);
-      const resProgs = progRes.programs || [];
-      setProgramsList(resProgs);
-      const firstProgId = resProgs[0]?.id || "";
-      setSelectedProgramId(firstProgId);
-      
-      // Fetch activities with forced recompile check
-      const actRes = await listAllActivitiesAction(selectedInstId);
-      if (actRes.activities) {
-        setActivities(actRes.activities);
-      } else {
-        setActivities([]);
-      }
+        const [enrollRes, actRes, projRes, chalRes, quizRes, courseRes] = await Promise.all([
+          listCohortEnrollmentsAction(selectedCohortId),
+          listCohortActivitiesAction(selectedCohortId),
+          listCohortProjectSubmissionsAction(selectedCohortId),
+          listCohortChallengeSubmissionsAction(selectedCohortId),
+          listCohortQuizAttemptsAction(selectedCohortId),
+          listCohortCourseAssignmentsAction(selectedCohortId)
+        ]);
 
-      // Fetch project submissions
-      const projRes = await listProjectSubmissionsAction(selectedInstId);
-      if (projRes.submissions) {
-        setProjectSubmissions(projRes.submissions);
-      } else {
-        setProjectSubmissions([]);
-      }
+        if (enrollRes.success && enrollRes.enrollments) {
+          setEnrollments(enrollRes.enrollments);
+        } else if (enrollRes.enrollments) {
+          setEnrollments(enrollRes.enrollments);
+        } else {
+          setEnrollments([]);
+        }
 
-      // Fetch challenge submissions
-      const chalRes = await listChallengeSubmissionsAction(selectedInstId);
-      if (chalRes.submissions) {
-        setChallengeSubmissions(chalRes.submissions);
-      } else {
-        setChallengeSubmissions([]);
-      }
+        if (actRes.success && actRes.activities) {
+          setActivities(actRes.activities);
+        } else {
+          setActivities([]);
+        }
 
-      // Fetch enrollments
-      const enrollRes = await listEnrollmentsAction(selectedInstId);
-      if (enrollRes.enrollments) {
-        setEnrollments(enrollRes.enrollments);
-      } else {
-        setEnrollments([]);
-      }
+        if (projRes.submissions) {
+          setProjectSubmissions(projRes.submissions);
+        } else {
+          setProjectSubmissions([]);
+        }
 
-      // Fetch courses list
-      const courseRes = await listTenantCoursesAction(selectedInstId);
-      if (courseRes.courses) {
-        setCoursesList(courseRes.courses);
-      } else {
-        setCoursesList([]);
-      }
+        if (chalRes.submissions) {
+          setChallengeSubmissions(chalRes.submissions);
+        } else {
+          setChallengeSubmissions([]);
+        }
 
-      // Fetch quiz attempts
-      const quizAttsRes = await listQuizAttemptsAction(selectedInstId);
-      if (quizAttsRes.attempts) {
-        setQuizAttempts(quizAttsRes.attempts);
-      } else {
-        setQuizAttempts([]);
+        if (quizRes.success && quizRes.attempts) {
+          setQuizAttempts(quizRes.attempts);
+        } else {
+          setQuizAttempts([]);
+        }
+
+        if (courseRes.success && courseRes.assignments) {
+          const courses = courseRes.assignments.map((a: any) => a.course).filter(Boolean);
+          setCoursesList(courses);
+          setProgramsList(courses);
+          if (courses.length > 0) {
+            setSelectedCourseId(courses[0].id);
+            setSyllabusCourseId(courses[0].id);
+            setSelectedProgramId(courses[0].id);
+          } else {
+            setSelectedCourseId("");
+            setSyllabusCourseId("");
+            setSelectedProgramId("");
+          }
+        } else {
+          setCoursesList([]);
+          setProgramsList([]);
+          setSelectedCourseId("");
+          setSyllabusCourseId("");
+          setSelectedProgramId("");
+        }
+      } catch (err) {
+        console.error("Failed to load dynamic cohort data:", err);
+      } finally {
+        setLoadingCohortData(false);
       }
 
       // Reset selection forms
       setSelectedProjectSub(null);
       setSelectedChallengeSub(null);
       setSelectedQuizAttempt(null);
-      setSelectedCourseId("");
       setSelectedLessonId("");
-      setSyllabusCourseId("");
     });
-  }, [selectedInstId]);
+  }, [selectedCohortId, cohorts, tenantId]);
 
-  // Derive filtered cohorts based on selected program
-  const filteredCohorts = cohorts.filter(c => !selectedProgramId || c.program_id === selectedProgramId);
-  const filteredCohortIds = filteredCohorts.map(c => c.id);
-
-  // Reset selectedCohortId to the first cohort in the filtered list if needed
-  useEffect(() => {
-    if (filteredCohorts.length > 0) {
-      if (!filteredCohorts.some(c => c.id === selectedCohortId)) {
-        setSelectedCohortId(filteredCohorts[0].id);
-      }
-    } else {
-      setSelectedCohortId("");
-    }
-  }, [selectedProgramId, cohorts, selectedCohortId]);
+  const filteredCohorts = cohorts;
+  const filteredCohortIds = cohorts.map(c => c.id);
 
   // Load lessons whenever course is selected for activity builder
   useEffect(() => {
@@ -549,7 +556,7 @@ export default function TeacherConsole({
   const currentCohortEnrollments = filteredEnrollments.filter(e => e.cohort_id === selectedCohortId);
 
   // Filter courses list to selected program
-  const filteredCourses = coursesList.filter(c => !selectedProgramId || c.program_id === selectedProgramId);
+  const filteredCourses = coursesList;
 
   const combinedSubmissions = React.useMemo(() => {
     const list: any[] = [];
@@ -952,16 +959,17 @@ export default function TeacherConsole({
 
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const actId = createdActivityId || selectedLessonId;
-    if (!actId || !assignmentCohortId) {
-      setStatusMessage({ type: "error", text: "Select target cohort and activity to schedule assignment." });
+    const actId = createdActivityId;
+    const targetCohortId = selectedCohortId;
+    if (!actId || !targetCohortId) {
+      setStatusMessage({ type: "error", text: "Please select activity base details to schedule assignment." });
       return;
     }
 
     startTransition(async () => {
       const result = await assignActivityToCohortAction({
         activity_id: actId,
-        cohort_id: assignmentCohortId,
+        cohort_id: targetCohortId,
         is_required: true,
         available_from: availableFrom ? new Date(availableFrom).toISOString() : undefined,
         available_until: availableUntil ? new Date(availableUntil).toISOString() : undefined,
@@ -2570,52 +2578,32 @@ export default function TeacherConsole({
             <Menu size={16} />
           </button>
           <div>
-            <h2 className="text-base font-bold text-[#0F172A]">Instructor Multi-Campus Hub</h2>
-            <p className="text-xs text-[#475569]">Select your active assigned campus institution and academic program to filter workspace actions.</p>
+            <h2 className="text-base font-bold text-[#0F172A]">Instructor Cohort Dashboard</h2>
+            <p className="text-xs text-[#475569]">Select your active assigned cohort to view student roster, attendance, assigned course syllabus, and grade activities.</p>
           </div>
         </div>
 
-        {assignedInstitutions.length === 0 ? (
+        {cohorts.length === 0 ? (
           <div className="flex items-center gap-2 bg-[#DC2626]/10 border border-[#DC2626]/20 px-4 py-2 rounded-xl text-xs text-[#DC2626] font-bold">
             <ShieldAlert size={16} />
-            No campus institution assigned yet
+            No cohorts assigned yet
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-            {/* Institution Select */}
-            <div className="flex flex-col gap-1 w-full sm:w-64">
-              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider">Institution Campus</span>
+            {/* Group Select */}
+            <div className="flex flex-col gap-1 w-full sm:w-80">
+              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider">Select Group</span>
               <select
-                value={selectedInstId}
-                onChange={(e) => setSelectedInstId(e.target.value)}
+                value={selectedCohortId}
+                onChange={(e) => setSelectedCohortId(e.target.value)}
                 className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#2563EB] shadow-sm w-full"
               >
-                {assignedInstitutions.map(inst => (
-                  <option key={inst.id} value={inst.id}>{inst.name} ({inst.institution_code})</option>
+                {cohorts.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.code}) - {c.institution?.name || "Global"}
+                  </option>
                 ))}
               </select>
-            </div>
-
-            {/* Program Select */}
-            <div className="flex flex-col gap-1 w-full sm:w-64">
-              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider">Academic Program</span>
-              {programsList.length === 0 ? (
-                <div className="bg-[#F8FAFC] border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs text-[#475569] font-medium text-center">
-                  No programs found
-                </div>
-              ) : (
-                <select
-                  value={selectedProgramId}
-                  onChange={(e) => setSelectedProgramId(e.target.value)}
-                  className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#2563EB] shadow-sm w-full"
-                >
-                  {programsList.map(prog => (
-                    <option key={prog.id} value={prog.id}>
-                      {prog.title} {prog.status?.code === "draft" ? " (Draft)" : ""}
-                    </option>
-                  ))}
-                </select>
-              )}
             </div>
           </div>
         )}
@@ -2774,7 +2762,7 @@ export default function TeacherConsole({
                           : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
                       }`}
                     >
-                      Cohorts & Delivery
+                      Groups & Delivery
                     </button>
                     <button
                       onClick={() => {
@@ -2894,12 +2882,12 @@ export default function TeacherConsole({
                 <ShieldAlert size={32} />
               </div>
               <div className="space-y-2">
-                <h2 className="text-xl font-bold text-[#0F172A]">Program Access Suspended</h2>
+                <h2 className="text-xl font-bold text-[#0F172A]">Batch Access Suspended</h2>
                 <p className="text-sm text-[#475569]">
-                  The program <strong className="text-[#0F172A]">{currentSelectedProg?.title}</strong> is currently deactivated or suspended.
+                  The batch <strong className="text-[#0F172A]">{currentSelectedProg?.title}</strong> is currently deactivated or suspended.
                 </p>
                 <p className="text-xs text-[#64748B] leading-relaxed">
-                  All teaching tools, roster management, grading, and syllabus editors have been locked for this program. Please select another active program from the header dropdown to continue.
+                  All teaching tools, roster management, grading, and syllabus editors have been locked for this batch. Please select another active batch from the header dropdown to continue.
                 </p>
               </div>
             </div>
@@ -2920,9 +2908,9 @@ export default function TeacherConsole({
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-800 flex items-start gap-2.5 shadow-sm">
               <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
               <div>
-                <span className="font-bold">Draft Program Pathway</span>
+                <span className="font-bold">Draft Batch Pathway</span>
                 <p className="mt-0.5 text-amber-700 font-medium">
-                  This program is currently in draft mode. You can customize, update, and manage the curriculum/syllabus, but students and institutions won't be able to view or enroll in it until a Super Admin approves and activates it.
+                  This batch is currently in draft mode. You can customize, update, and manage the curriculum/syllabus, but students and institutions won't be able to view or enroll in it until a Super Admin approves and activates it.
                 </p>
               </div>
             </div>
@@ -2931,7 +2919,7 @@ export default function TeacherConsole({
           {/* TAB: COHORTS & DELIVERY */}
           {activeTab === "delivery" && (
             <div className="animate-fadeIn">
-              <DeliveryManager institutions={assignedInstitutions} initialTab="cohorts" />
+              <DeliveryManager institutions={assignedInstitutions} initialTab="cohorts" isTeacherMode={true} />
             </div>
           )}
 
@@ -3129,17 +3117,8 @@ export default function TeacherConsole({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-[#0F172A]">Academic Student Directory</h3>
-                  <p className="text-[10px] text-[#475569]">Select cohort and inspect student learning status (click any student to review details)</p>
+                  <p className="text-[10px] text-[#475569]">Active Cohort: <strong className="text-[#2563EB] font-bold">{cohorts.find(c => c.id === selectedCohortId)?.name || "N/A"}</strong> (Directory includes all enrolled students)</p>
                 </div>
-                <select
-                  value={selectedCohortId}
-                  onChange={(e) => setSelectedCohortId(e.target.value)}
-                  className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#2563EB] w-full sm:w-60"
-                >
-                  {filteredCohorts.map(c => (
-                    <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
-                  ))}
-                </select>
               </div>
 
               {(() => {
@@ -3845,17 +3824,9 @@ export default function TeacherConsole({
 
                     <form onSubmit={handleAssignSubmit} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
                       <h4 className="text-xs font-bold flex items-center gap-1"><Calendar size={14} /> Schedule Deployment Assignment</h4>
-                      <div>
-                        <label className="text-[10px] block font-bold text-[#475569]">Select Cohort</label>
-                        <select 
-                          value={assignmentCohortId}
-                          onChange={(e) => setAssignmentCohortId(e.target.value)}
-                          className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
-                          required
-                        >
-                          <option value="">-- Select Target Cohort --</option>
-                          {filteredCohorts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
+                      <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-3 rounded-xl text-xs">
+                        <span className="text-[10px] font-bold text-[#2563EB] uppercase block">DEPLOYING TO COHORT</span>
+                        <span className="font-bold text-[#0F172A]">{cohorts.find(c => c.id === selectedCohortId)?.name || "Active Cohort"}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -4075,7 +4046,12 @@ export default function TeacherConsole({
               </div>
 
               <div className="lg:col-span-2 space-y-6">
-                {syllabusLessonId ? (
+                {!syllabusCourseId ? (
+                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-10 text-center text-[#475569] shadow-sm">
+                    <AlertCircle className="mx-auto mb-2 text-[#475569]/40" size={36} />
+                    <p className="text-xs font-bold text-[#0F172A]">Select a Course from the navigator tree to view and manage its syllabus.</p>
+                  </div>
+                ) : syllabusLessonId ? (
                   <>
                     {/* View Mode Toggle Header */}
                     <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl shadow-sm flex items-center justify-between">
