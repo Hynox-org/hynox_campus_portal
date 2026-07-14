@@ -24,66 +24,6 @@ export default async function InstitutionAdminPage() {
     redirect("/login");
   }
 
-  // Load scoped invitations, cohorts, enrollments, programs, instructors, and submissions in parallel
-  let invitations: any[] = [];
-  let cohorts: any[] = [];
-  let enrollments: any[] = [];
-  let programs: any[] = [];
-  let instructors: any[] = [];
-  let projectSubmissions: any[] = [];
-  let challengeSubmissions: any[] = [];
-  let activities: any[] = [];
-  let coursesList: any[] = [];
-  let quizAttempts: any[] = [];
-  let lookups: any = {
-    courseTypes: [],
-    lessonTypes: [],
-    statuses: [],
-    visibilityTypes: []
-  };
-
-  try {
-    const [
-      allInvitations,
-      cohortsRes,
-      enrollmentsRes,
-      programsRes,
-      instructorsRes,
-      projectSubmissionsRes,
-      challengeSubmissionsRes,
-      lookupsRes,
-      activitiesRes,
-      coursesRes,
-      quizAttsRes
-    ] = await Promise.all([
-      listOnboardingInvitations(),
-      listCohorts(tenantId),
-      listEnrollments(tenantId),
-      listPrograms(tenantId, primaryRole),
-      listTenantInstructors(tenantId),
-      listProjectSubmissions(tenantId),
-      listChallengeSubmissions(tenantId),
-      getAcademicLookups(),
-      listAllActivities(tenantId),
-      listTenantCourses(tenantId),
-      listQuizAttemptsAction(tenantId)
-    ]);
-
-    invitations = (allInvitations || []).filter((inv: any) => inv.tenant_id === tenantId);
-    cohorts = cohortsRes || [];
-    enrollments = enrollmentsRes || [];
-    programs = programsRes || [];
-    instructors = instructorsRes || [];
-    projectSubmissions = projectSubmissionsRes || [];
-    challengeSubmissions = challengeSubmissionsRes || [];
-    activities = activitiesRes || [];
-    coursesList = coursesRes || [];
-    quizAttempts = quizAttsRes?.attempts || [];
-    lookups = lookupsRes || lookups;
-  } catch (error) {
-    console.error("Failed to load institution admin page datasets:", error);
-  }
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#0F172A] font-sans">
       <header className="bg-white border-b border-[#E2E8F0] shadow-sm sticky top-0 z-40">
@@ -131,17 +71,8 @@ export default async function InstitutionAdminPage() {
           <InstitutionPanel 
             adminEmail={authUser.email} 
             institution={institution}
-            initialInvitations={invitations}
-            initialPrograms={programs}
-            initialInstructors={instructors}
-            initialCohorts={cohorts}
-            initialEnrollments={enrollments}
-            initialProjectSubmissions={projectSubmissions}
-            initialChallengeSubmissions={challengeSubmissions}
-            initialActivities={activities}
-            initialCoursesList={coursesList}
-            initialQuizAttempts={quizAttempts}
-            lookups={lookups}
+            tenantId={tenantId}
+            primaryRole={primaryRole}
           />
         )}
       </main>

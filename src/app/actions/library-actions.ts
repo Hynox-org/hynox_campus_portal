@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { getCurrentUser } from "@/services/auth";
 import * as libraryService from "@/services/library";
 
@@ -27,6 +27,7 @@ export async function createCourseTemplateAction(input: libraryService.CourseTem
   try {
     await verifySuperAdmin();
     const data = await libraryService.createCourseTemplate(input);
+    revalidateTag("course-templates", "max");
     revalidatePath("/admin");
     return { success: true, template: data };
   } catch (error: any) {
@@ -38,6 +39,7 @@ export async function updateCourseTemplateAction(id: string, input: Partial<libr
   try {
     await verifySuperAdmin();
     const data = await libraryService.updateCourseTemplate(id, input);
+    revalidateTag("course-templates", "max");
     revalidatePath("/admin");
     return { success: true, template: data };
   } catch (error: any) {
@@ -49,6 +51,7 @@ export async function deleteCourseTemplateAction(id: string) {
   try {
     await verifySuperAdmin();
     await libraryService.deleteCourseTemplate(id);
+    revalidateTag("course-templates", "max");
     revalidatePath("/admin");
     return { success: true };
   } catch (error: any) {

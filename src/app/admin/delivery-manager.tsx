@@ -19,7 +19,9 @@ import {
   listStudentLessonProgressAction
 } from "@/app/actions/delivery-actions";
 import { listProgramsAction, listCoursesAction, listLessonsForCourseAction } from "@/app/actions/academic-actions";
-import { listAllActivitiesAction, listQuizAttemptsAction, listProjectSubmissionsAction, listChallengeSubmissionsAction } from "@/app/actions/learning-actions";
+import { useQueryClient } from "@tanstack/react-query";
+import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
+import { usePrograms } from "@/hooks/use-academics";
 import AttendancePanel from "@/components/attendance-panel";
 import { 
   Building, 
@@ -55,17 +57,32 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
     setActiveSubTab(initialTab);
   }, [initialTab]);
 
+  const queryClient = useQueryClient();
+
+  // React Query prefetching hooks
+  const { data: deliveryData } = useDeliveryData(selectedInstId);
+  const { data: learningData } = useLearningData(selectedInstId);
+  const { data: acadPrograms } = usePrograms(selectedInstId);
+
+  // Derive list views instantly from cache
+  const cohorts = deliveryData?.cohorts || [];
+  const enrollments = deliveryData?.enrollments || [];
+  const assignments = deliveryData?.assignments || [];
+  const students = deliveryData?.students || [];
+  
+  const activities = learningData?.activities || [];
+  const quizAttempts = learningData?.quizAttempts || [];
+  const projectSubmissions = learningData?.projectSubmissions || [];
+  const challengeSubmissions = learningData?.challengeSubmissions || [];
+
+  const programs = acadPrograms || [];
+  // For assignments, we need all courses in the institution. We can get them from acadPrograms or prefetch.
+  // Actually we can just leave allCourses empty if not strictly required, or fetch on demand.
+  const [allCourses, setAllCourses] = useState<any[]>([]);
+
   // Lookup structures
   const [cohortStatuses, setCohortStatuses] = useState<any[]>([]);
   const [enrollmentStatuses, setEnrollmentStatuses] = useState<any[]>([]);
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [allCourses, setAllCourses] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-
-  // List views
-  const [cohorts, setCohorts] = useState<any[]>([]);
-  const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -114,31 +131,19 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
   const [expandedQuizId, setExpandedQuizId] = useState<string | null>(null);
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
-  // Loaded activity datasets
-  const [quizAttempts, setQuizAttempts] = useState<any[]>([]);
-  const [projectSubmissions, setProjectSubmissions] = useState<any[]>([]);
-  const [challengeSubmissions, setChallengeSubmissions] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
-
   // Fetch drawer details on student click
   useEffect(() => {
     if (selectedStudent) {
       const studentId = selectedStudent.user_id;
 
       getStudentDeliveryDataAction(studentId).then(res => {
-        if (res.success && res.programs) {
-          setActiveStudentProgress(res.programs);
-        } else {
-          setActiveStudentProgress([]);
-        }
+        if (res.success && res.programs) setActiveStudentProgress(res.programs);
+        else setActiveStudentProgress([]);
       });
 
       listStudentLessonProgressAction(studentId).then(res => {
-        if (res.success && res.progressList) {
-          setActiveStudentLessonsProgress(res.progressList);
-        } else {
-          setActiveStudentLessonsProgress([]);
-        }
+        if (res.success && res.progressList) setActiveStudentLessonsProgress(res.progressList);
+        else setActiveStudentLessonsProgress([]);
       });
     } else {
       setActiveStudentProgress([]);
@@ -157,24 +162,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
     }
   }, [expandedCourseId, drawerLessonsCache]);
 
-  // Fetch lookups and learning data on load
-  useEffect(() => {
-    async function loadLearningData() {
-      const actRes = await listAllActivitiesAction(selectedInstId);
-      if (actRes.activities) setActivities(actRes.activities);
-
-      const qaRes = await listQuizAttemptsAction(selectedInstId);
-      if (qaRes.attempts) setQuizAttempts(qaRes.attempts);
-
-      const psRes = await listProjectSubmissionsAction(selectedInstId);
-      if (psRes.submissions) setProjectSubmissions(psRes.submissions);
-
-      const csRes = await listChallengeSubmissionsAction(selectedInstId);
-      if (csRes.submissions) setChallengeSubmissions(csRes.submissions);
-    }
-    loadLearningData();
-  }, [selectedInstId]);
-
   // Load initial lookups
   useEffect(() => {
     async function loadLookups() {
@@ -187,51 +174,8 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
     loadLookups();
   }, []);
 
-  // Reload lists when selected institution changes
-  useEffect(() => {
-    if (selectedInstId) {
-      loadInstitutionData();
-    }
-  }, [selectedInstId]);
-
-  const loadInstitutionData = async () => {
-    setLoading(true);
-    setError("");
-    setSelectedCohortFilter("");
-    
-    // Load programs for academic dropdowns
-    const progRes = await listProgramsAction(selectedInstId);
-    if (progRes.programs) {
-      setPrograms(progRes.programs);
-      
-      // Load all courses for assignments
-      const coursesPromises = progRes.programs.map((p: any) => listCoursesAction(p.id));
-      const coursesResults = await Promise.all(coursesPromises);
-      const combinedCourses = coursesResults.flatMap((r: any) => r.courses || []);
-      setAllCourses(combinedCourses);
-    }
-
-    // Load students for enrollments
-    const stuRes = await listInstitutionStudentsAction(selectedInstId);
-    if (stuRes.students) {
-      setStudents(stuRes.students);
-    }
-
-    // Load delivery records
-    await refreshLists();
-    
-    setLoading(false);
-  };
-
   const refreshLists = async () => {
-    const cRes = await listCohortsAction(selectedInstId);
-    if (cRes.cohorts) setCohorts(cRes.cohorts);
-
-    const eRes = await listEnrollmentsAction(selectedInstId);
-    if (eRes.enrollments) setEnrollments(eRes.enrollments);
-
-    const aRes = await listCourseAssignmentsAction(selectedInstId);
-    if (aRes.assignments) setAssignments(aRes.assignments);
+    await queryClient.invalidateQueries({ queryKey: ["delivery-prefetch", selectedInstId] });
   };
 
   const handleCohortSubmit = async (e: React.FormEvent) => {

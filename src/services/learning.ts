@@ -56,9 +56,11 @@ export async function getStudentAssignedActivities(studentId: string) {
 
   if (progError) throw progError;
 
-  // 5. Combine everything
-  return activities.map(act => {
-    const assignment = assignments.find(a => a.activity_id === act.id);
+  // 5. Combine everything (map over assignments so each cohort-specific assignment gets its correct cohort_id)
+  return assignments.map(assign => {
+    const act = activities.find(a => a.id === assign.activity_id);
+    if (!act) return null;
+
     let progress = progressList?.find(p => p.activity_id === act.id);
 
     // If no progress record exists yet, return a mock/default start state
@@ -74,15 +76,15 @@ export async function getStudentAssignedActivities(studentId: string) {
     return {
       ...act,
       assignment: {
-        id: assignment?.id,
-        cohort_id: assignment?.cohort_id,
-        available_from: assignment?.available_from,
-        available_until: assignment?.available_until,
-        is_required: assignment?.is_required ?? true
+        id: assign.id,
+        cohort_id: assign.cohort_id,
+        available_from: assign.available_from,
+        available_until: assign.available_until,
+        is_required: assign.is_required ?? true
       },
       progress
     };
-  });
+  }).filter(Boolean);
 }
 
 // ----------------------------------------------------

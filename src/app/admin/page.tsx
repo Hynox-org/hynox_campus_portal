@@ -14,27 +14,9 @@ export default async function AdminPage() {
     redirect("/login");
   }
 
-  // Fetch institutions list directly (bypassing public views)
-  let institutions = [];
-  try {
-    institutions = await listInstitutions();
-  } catch (error) {
-    console.error("Failed to load institutions:", error);
-  }
-
-  // Fetch invitations
-  let invitations: any[] = [];
-  try {
-    invitations = await listOnboardingInvitations();
-  } catch (error) {
-    console.error("Failed to load invitations:", error);
-  }
-
   return (
     <AdminPanel 
       adminEmail={userDetails.authUser.email} 
-      initialInstitutions={institutions} 
-      initialInvitations={invitations}
     />
   );
 }

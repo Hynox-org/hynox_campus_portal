@@ -2,6 +2,11 @@
 
 import React, { useState, useTransition, useEffect } from "react";
 import AttendancePanel from "@/components/attendance-panel";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { useCache } from "@/components/cache-provider";
+import { useQueryClient } from "@tanstack/react-query";
+import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
+import { useAcademicPrefetchData } from "@/hooks/use-academics";
 import { 
   Users, 
   BookOpen, 
@@ -103,17 +108,19 @@ function formatDatetimeLocal(isoString?: string) {
   }
 }
 
+import { DashboardLoader } from "@/components/dashboard-loader";
+
+// A module-level fallback keeps effect dependencies stable before the first
+// query result arrives. Creating `[]` during render turns it into a new
+// dependency every render and can create a state-update loop.
+const EMPTY_LIST: never[] = [];
+
 interface TeacherConsoleProps {
   teacherId: string;
   tenantId: string;
   initialCohortId: string;
   initialCohorts: any[];
-  initialActivities: any[];
-  initialProjectSubmissions: any[];
-  initialChallengeSubmissions: any[];
-  initialEnrollments: any[];
   assignedInstitutions: any[];
-  initialPrograms: any[];
 }
 
 export default function TeacherConsole({
@@ -121,17 +128,23 @@ export default function TeacherConsole({
   tenantId,
   initialCohortId,
   initialCohorts,
-  initialActivities,
-  initialProjectSubmissions,
-  initialChallengeSubmissions,
-  initialEnrollments,
   assignedInstitutions,
-  initialPrograms
 }: TeacherConsoleProps) {
+  const queryClient = useQueryClient();
+  const { get, set } = useCache();
+  
+  // React Query Prefetching - one shot for all academic data
+  const { data: deliveryData, isLoading: loadingDelivery, error: deliveryError } = useDeliveryData(tenantId);
+  const { data: learningData, isLoading: loadingLearning, error: learningError } = useLearningData(tenantId);
+  const { data: academicPrefetch, isLoading: loadingPrograms, error: academicError } = useAcademicPrefetchData(tenantId);
+  const acadPrograms = academicPrefetch?.programs;
+  const acadCourses = academicPrefetch?.courses ?? EMPTY_LIST;
+  const acadLessons = academicPrefetch?.lessons ?? EMPTY_LIST;
+
   const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "syllabus" | "delivery" | "auditor" | "attendance">("overview");
   const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum">("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
+  
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setIsSidebarOpen(false);
@@ -139,7 +152,6 @@ export default function TeacherConsole({
   }, []);
   
   // Unified Auditor states
-  const [quizAttempts, setQuizAttempts] = useState<any[]>([]);
   const [selectedQuizAttempt, setSelectedQuizAttempt] = useState<any>(null);
   const [auditorFilter, setAuditorFilter] = useState<"all" | "quiz" | "project" | "programming">("all");
   const [quizAttemptSession, setQuizAttemptSession] = useState<any>(null);
@@ -166,12 +178,10 @@ export default function TeacherConsole({
 
   // Active selected cohort as the primary driver
   const [selectedCohortId, setSelectedCohortId] = useState<string>(initialCohortId || initialCohorts?.[0]?.id || "");
-  const [selectedInstId, setSelectedInstId] = useState<string>(
-    initialCohorts.find(c => c.id === (initialCohortId || initialCohorts?.[0]?.id || ""))?.institution_id || tenantId || ""
-  );
-
-  const [programsList, setProgramsList] = useState<any[]>(initialPrograms || []);
-  const [selectedProgramId, setSelectedProgramId] = useState<string>(initialPrograms?.[0]?.id || "");
+  const [selectedInstId, setSelectedInstId] = useState<string>(assignedInstitutions[0]?.id || "");
+  const [programsList, setProgramsList] = useState<any[]>(acadPrograms || []);
+  const [selectedProgramId, setSelectedProgramId] = useState<string>(acadPrograms?.[0]?.id || "");
+  const [tenantCourses, setTenantCourses] = useState<any[]>(acadCourses || []);
 
   const currentSelectedInst = assignedInstitutions.find(i => i.id === selectedInstId);
   const isSelectedInstDisabled = currentSelectedInst && (currentSelectedInst.status === "inactive" || currentSelectedInst.status === "suspended");
@@ -179,17 +189,19 @@ export default function TeacherConsole({
   const currentSelectedProg = programsList.find(p => p.id === selectedProgramId);
   const isSelectedProgDisabled = currentSelectedProg && (currentSelectedProg.status?.code === "suspended" || currentSelectedProg.status?.code === "disabled");
 
-  // Main collections
-  const [cohorts, setCohorts] = useState(initialCohorts);
-  const [activities, setActivities] = useState(initialActivities);
-  const [projectSubmissions, setProjectSubmissions] = useState(initialProjectSubmissions);
-  const [challengeSubmissions, setChallengeSubmissions] = useState(initialChallengeSubmissions);
-  const [enrollments, setEnrollments] = useState(initialEnrollments);
+  // Main collections derived from React Query instantly
+  const cohorts = deliveryData?.cohorts || initialCohorts;
+  const enrollments = deliveryData?.enrollments || [];
+  const activities = learningData?.activities || [];
+  const projectSubmissions = learningData?.projectSubmissions || [];
+  const challengeSubmissions = learningData?.challengeSubmissions || [];
+  const quizAttempts = learningData?.quizAttempts || [];
+  const assignments = deliveryData?.assignments || [];
 
   const studentsList = React.useMemo(() => {
     const list: any[] = [];
     enrollments.forEach((e: any) => {
-      if (e.student && !list.some(s => s.id === e.student.id)) {
+      if (e.student && !list.some((s: any) => s.id === e.student.id)) {
         list.push(e.student);
       }
     });
@@ -219,8 +231,24 @@ export default function TeacherConsole({
   const [reviewStatus, setReviewStatus] = useState<string>("approved");
 
   // 2. ACTIVITY BUILDER & ASSIGNMENT STATE
-  const [coursesList, setCoursesList] = useState<any[]>(initialPrograms || []);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>(initialPrograms?.[0]?.id || "");
+  const [coursesList, setCoursesList] = useState<any[]>(acadCourses || []);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(acadCourses?.[0]?.id || "");
+
+  // Sync data when academic prefetch lands
+  useEffect(() => {
+    if (academicPrefetch?.programs && academicPrefetch.programs.length > 0) {
+      setProgramsList(academicPrefetch.programs);
+      if (!selectedProgramId) setSelectedProgramId(academicPrefetch.programs[0].id);
+    }
+    if (academicPrefetch?.courses && academicPrefetch.courses.length > 0) {
+      setTenantCourses(academicPrefetch.courses);
+      setCoursesList(academicPrefetch.courses);
+      if (!selectedCourseId) setSelectedCourseId(academicPrefetch.courses[0].id);
+    }
+    // Keep deep course-module queries separate: their result includes lesson
+    // resources, which the lightweight prefetch intentionally does not load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [academicPrefetch]);
   const [lessonsList, setLessonsList] = useState<any[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState<string>("");
 
@@ -331,6 +359,9 @@ export default function TeacherConsole({
   const [newLessonTypeId, setNewLessonTypeId] = useState("");
   const [newLessonPositionOrder, setNewLessonPositionOrder] = useState(1);
   const [newLessonIsPreview, setNewLessonIsPreview] = useState(false);
+  const [lessonStatuses, setLessonStatuses] = useState<any[]>([]);
+
+  // Prefetch seeding is now handled by the useAcademicPrefetchData sync effect above
   const [lessonTypes, setLessonTypes] = useState<any[]>([]);
   const [defaultLessonTypeId, setDefaultLessonTypeId] = useState("");
   const [syllabusViewMode, setSyllabusViewMode] = useState<"preview" | "edit">("preview");
@@ -352,92 +383,9 @@ export default function TeacherConsole({
     loadLookups();
   }, []);
 
-  const [loadingCohortData, setLoadingCohortData] = useState(false);
-
-  // Load new dataset when selected cohort changes
-  useEffect(() => {
-    if (!selectedCohortId) return;
-
-    startTransition(async () => {
-      setLoadingCohortData(true);
-      try {
-        const instId = cohorts.find(c => c.id === selectedCohortId)?.institution_id || tenantId || "";
-        setSelectedInstId(instId);
-
-        const [enrollRes, actRes, projRes, chalRes, quizRes, courseRes] = await Promise.all([
-          listCohortEnrollmentsAction(selectedCohortId),
-          listCohortActivitiesAction(selectedCohortId),
-          listCohortProjectSubmissionsAction(selectedCohortId),
-          listCohortChallengeSubmissionsAction(selectedCohortId),
-          listCohortQuizAttemptsAction(selectedCohortId),
-          listCohortCourseAssignmentsAction(selectedCohortId)
-        ]);
-
-        if (enrollRes.success && enrollRes.enrollments) {
-          setEnrollments(enrollRes.enrollments);
-        } else if (enrollRes.enrollments) {
-          setEnrollments(enrollRes.enrollments);
-        } else {
-          setEnrollments([]);
-        }
-
-        if (actRes.success && actRes.activities) {
-          setActivities(actRes.activities);
-        } else {
-          setActivities([]);
-        }
-
-        if (projRes.submissions) {
-          setProjectSubmissions(projRes.submissions);
-        } else {
-          setProjectSubmissions([]);
-        }
-
-        if (chalRes.submissions) {
-          setChallengeSubmissions(chalRes.submissions);
-        } else {
-          setChallengeSubmissions([]);
-        }
-
-        if (quizRes.success && quizRes.attempts) {
-          setQuizAttempts(quizRes.attempts);
-        } else {
-          setQuizAttempts([]);
-        }
-
-        if (courseRes.success && courseRes.assignments) {
-          const courses = courseRes.assignments.map((a: any) => a.course).filter(Boolean);
-          setCoursesList(courses);
-          setProgramsList(courses);
-          if (courses.length > 0) {
-            setSelectedCourseId(courses[0].id);
-            setSyllabusCourseId(courses[0].id);
-            setSelectedProgramId(courses[0].id);
-          } else {
-            setSelectedCourseId("");
-            setSyllabusCourseId("");
-            setSelectedProgramId("");
-          }
-        } else {
-          setCoursesList([]);
-          setProgramsList([]);
-          setSelectedCourseId("");
-          setSyllabusCourseId("");
-          setSelectedProgramId("");
-        }
-      } catch (err) {
-        console.error("Failed to load dynamic cohort data:", err);
-      } finally {
-        setLoadingCohortData(false);
-      }
-
-      // Reset selection forms
-      setSelectedProjectSub(null);
-      setSelectedChallengeSub(null);
-      setSelectedQuizAttempt(null);
-      setSelectedLessonId("");
-    });
-  }, [selectedCohortId, cohorts, tenantId]);
+  // Removed the huge cohort data loading useEffect block.
+  // The UI will just use the pre-fetched global collections and filter them locally.
+  const loadingCohortData = false;
 
   const filteredCohorts = cohorts;
   const filteredCohortIds = cohorts.map(c => c.id);
@@ -451,19 +399,37 @@ export default function TeacherConsole({
     }
   }, [selectedCourseId]);
 
-  // Load modules & lessons for syllabus manager
+  // Load modules & lessons for syllabus manager - use prefetch cache first
   useEffect(() => {
     if (syllabusCourseId) {
+      // Try cache first (populated by prefetch)
+      const cachedModules = queryClient.getQueryData<any[]>(["course-modules", syllabusCourseId]);
+      if (cachedModules && cachedModules.length > 0) {
+        setSyllabusModules(cachedModules);
+        // Get lessons from prefetch data
+        const courseModuleIds = cachedModules.map((m: any) => m.id);
+        const cachedLessons = acadLessons.filter((l: any) => courseModuleIds.includes(l.module_id));
+        if (cachedLessons.length > 0) {
+          setSyllabusLessons(cachedLessons);
+          setSyllabusModuleId("");
+          setSyllabusLessonId("");
+          setSyllabusResources([]);
+          return;
+        }
+      }
+      // Fallback: fetch from API
       listModulesAction(syllabusCourseId).then(res => setSyllabusModules(res.modules || []));
       listLessonsForCourseAction(syllabusCourseId).then(res => setSyllabusLessons(res.lessons || []));
       setSyllabusModuleId("");
       setSyllabusLessonId("");
       setSyllabusResources([]);
     } else {
-      setSyllabusModules([]);
-      setSyllabusLessons([]);
+      // Preserve the existing empty arrays so a render without prefetch data
+      // cannot keep retriggering this effect.
+      setSyllabusModules(previous => previous.length === 0 ? previous : []);
+      setSyllabusLessons(previous => previous.length === 0 ? previous : []);
     }
-  }, [syllabusCourseId]);
+  }, [syllabusCourseId, acadLessons, queryClient]);
 
   // Load resources when lesson is selected
   useEffect(() => {
@@ -555,8 +521,8 @@ export default function TeacherConsole({
 
   const currentCohortEnrollments = filteredEnrollments.filter(e => e.cohort_id === selectedCohortId);
 
-  // Filter courses list to selected program
-  const filteredCourses = coursesList;
+  // Filter courses list to selected program  
+  const filteredCourses = tenantCourses;
 
   const combinedSubmissions = React.useMemo(() => {
     const list: any[] = [];
@@ -634,9 +600,7 @@ export default function TeacherConsole({
       });
 
       if (result.review) {
-        setProjectSubmissions(prev => 
-          prev.map(p => p.id === selectedProjectSub.id ? { ...p, review: result.review } : p)
-        );
+        queryClient.invalidateQueries({ queryKey: ["learning-prefetch", tenantId] });
         setSelectedProjectSub(null);
         setFeedback("");
         setStatusMessage({ type: "success", text: "Project submission graded successfully!" });
@@ -706,7 +670,7 @@ export default function TeacherConsole({
         }
         
         // Refresh local activity list
-        setActivities(prev => [res.activity, ...prev]);
+        queryClient.invalidateQueries({ queryKey: ["learning-prefetch", tenantId] });
         setTitle("");
         setDescription("");
         setInstructions("");
@@ -913,7 +877,7 @@ export default function TeacherConsole({
       } else if (res.activity) {
         setStatusMessage({ type: "success", text: "Learning activity updated successfully!" });
         // Refresh local activity list
-        setActivities(prev => prev.map(a => a.id === res.activity.id ? res.activity : a));
+        queryClient.invalidateQueries({ queryKey: ["learning-prefetch", tenantId] });
         const updatedActivity = {
           ...selectedActivity,
           title: editForm.title,
@@ -2564,6 +2528,15 @@ export default function TeacherConsole({
     );
   };
 
+  if (loadingDelivery || loadingLearning || loadingPrograms) {
+    return <DashboardLoader message="Setting up your Instructor environment..." />;
+  }
+
+  const initialError = deliveryError || learningError || academicError;
+  if (initialError) {
+    return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load the instructor dashboard. {initialError.message}</div>;
+  }
+
   return (
     <div className="space-y-6">
       
@@ -4211,9 +4184,9 @@ export default function TeacherConsole({
                           {/* Text Content */}
                           {newLessonContentText && (
                             <div className="space-y-1.5 pt-2">
-                              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block">Structured Content / Text</span>
-                              <div className="bg-slate-50 border border-[#E2E8F0] p-5 rounded-xl text-xs leading-relaxed text-[#0F172A] whitespace-pre-wrap font-sans">
-                                {newLessonContentText}
+                              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block">Structured Content / Text (Markdown)</span>
+                              <div className="bg-slate-50 border border-[#E2E8F0] p-5 rounded-xl">
+                                <MarkdownRenderer content={newLessonContentText} />
                               </div>
                             </div>
                           )}

@@ -27,6 +27,10 @@ import {
 } from "@/app/actions/learning-actions";
 import { getStudentAttendanceLogsAction } from "@/app/actions/attendance-actions";
 import Link from "next/link";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { useCache } from "@/components/cache-provider";
+import { useQueryClient } from "@tanstack/react-query";
+import { seedAcademicListCaches, unwrapActionResult } from "@/lib/dashboard-query";
 import { 
   Building, 
   GraduationCap, 
@@ -54,12 +58,15 @@ import {
   Code
 } from "lucide-react";
 
+import { useStudentDeliveryData } from "@/hooks/use-delivery";
+import { useAcademicPrefetchData } from "@/hooks/use-academics";
+import { DashboardLoader } from "@/components/dashboard-loader";
+
 interface StudentConsoleProps {
   studentEmail: string;
   fullName: string;
   primaryRole: string;
   institution: any;
-  initialPrograms: any[];
   studentId: string;
 }
 
@@ -68,16 +75,48 @@ export default function StudentConsole({
   fullName, 
   primaryRole, 
   institution, 
-  initialPrograms,
   studentId
 }: StudentConsoleProps) {
+  const queryClient = useQueryClient();
+  const { data: studentDeliveryRes, isLoading: loadingStudentDelivery, error: studentDeliveryError } = useStudentDeliveryData(studentId);
+  const { data: academicPrefetch } = useAcademicPrefetchData(institution?.id);
+  const initialPrograms = studentDeliveryRes?.programs || [];
+
   const [activeTab, setActiveTab] = useState<"overview" | "academics" | "quizzes" | "projects" | "challenges">("overview");
   const [activeParentTab, setActiveParentTab] = useState<"overview" | "curriculum" | "assessments">("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Academics exploration state
-  const [programs, setPrograms] = useState<any[]>(initialPrograms);
-  const [selectedProgram, setSelectedProgram] = useState<any | null>(initialPrograms[0] || null);
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [selectedCohort, setSelectedCohort] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (initialPrograms.length > 0) {
+      setPrograms(initialPrograms);
+      if (!selectedCohort) {
+        const flat: any[] = [];
+        initialPrograms.forEach(p => {
+          if (p.cohorts) {
+            p.cohorts.forEach((c: any) => {
+              if (!flat.some(item => item.id === c.id)) {
+                flat.push({
+                  ...c,
+                  programId: p.id,
+                  programTitle: p.title,
+                  courses: p.courses ? p.courses.filter((course: any) => course.cohort_id === c.id) : []
+                });
+              }
+            });
+          }
+        });
+        setSelectedCohort(flat[0] || null);
+      }
+    }
+  }, [initialPrograms]);
+
+  const selectedProgram = selectedCohort ? programs.find(p => p.id === selectedCohort.programId) : null;
+  
+  const { get, set } = useCache();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
   const [modules, setModules] = useState<any[]>([]);
@@ -134,7 +173,7 @@ export default function StudentConsole({
 
   useEffect(() => {
     const loadAttendance = async () => {
-      const cohortId = selectedProgram?.cohorts?.[0]?.id;
+      const cohortId = selectedCohort?.id;
       if (!cohortId) {
         setAttendancePercentage(null);
         setAttendanceLogs([]);
@@ -149,13 +188,20 @@ export default function StudentConsole({
       setLoadingAttendance(false);
     };
     loadAttendance();
-  }, [selectedProgram, studentId]);
+  }, [selectedCohort, studentId]);
 
   // Load activities on mount or tab change
   const loadActivities = async () => {
-    setLoadingActivities(true);
+    const cachedActivities = get(`student-activities-${studentId}`);
+    if (cachedActivities) {
+      setActivities(cachedActivities);
+    } else {
+      setLoadingActivities(true);
+    }
+
     const res = await getStudentAssignedActivitiesAction(studentId);
     if (res.activities) {
+      set(`student-activities-${studentId}`, res.activities);
       setActivities(res.activities);
     } else if (res.error) {
       setError(res.error);
@@ -165,91 +211,126 @@ export default function StudentConsole({
 
   useEffect(() => {
     refreshStudentData();
+
   }, [studentId]);
 
+  // The academic prefetch hook owns the request. Reuse its result instead of
+  // starting a second server action whenever this dashboard mounts.
+  useEffect(() => {
+    if (institution?.id && academicPrefetch?.success) {
+      seedAcademicListCaches(queryClient, institution.id, academicPrefetch);
+    }
+  }, [academicPrefetch, institution?.id, queryClient]);
+
   const refreshStudentData = async () => {
-    const res = await getStudentDeliveryDataAction(studentId);
-    if (res.programs) {
-      setPrograms(res.programs);
-      if (selectedProgram) {
-        const updatedProg = res.programs.find(p => p.id === selectedProgram.id);
-        if (updatedProg) {
-          setSelectedProgram(updatedProg);
-          if (selectedCourse) {
-            const updatedCourse = updatedProg.courses.find((c: any) => c.id === selectedCourse.id);
-            if (updatedCourse) {
-              setSelectedCourse(updatedCourse);
+    // Read from client-side memory cache first
+    const cachedData = get(`student-delivery-data-${studentId}`);
+    const applyData = (data: any) => {
+      if (data.programs) {
+        setPrograms(data.programs);
+        
+        const flat: any[] = [];
+        data.programs.forEach((p: any) => {
+          if (p.cohorts) {
+            p.cohorts.forEach((c: any) => {
+              if (!flat.some(item => item.id === c.id)) {
+                flat.push({
+                  ...c,
+                  programId: p.id,
+                  programTitle: p.title,
+                  courses: p.courses ? p.courses.filter((course: any) => course.cohort_id === c.id) : []
+                });
+              }
+            });
+          }
+        });
+
+        if (selectedCohort) {
+          const updatedCohort = flat.find(c => c.id === selectedCohort.id);
+          if (updatedCohort) {
+            setSelectedCohort(updatedCohort);
+            if (selectedCourse) {
+              const updatedCourse = updatedCohort.courses.find((c: any) => c.id === selectedCourse.id);
+              if (updatedCourse) {
+                setSelectedCourse(updatedCourse);
+              }
             }
           }
+        } else if (flat.length > 0) {
+          setSelectedCohort(flat[0]);
         }
-      } else if (res.programs.length > 0) {
-        setSelectedProgram(res.programs[0]);
       }
+    };
+
+    if (cachedData) {
+      applyData(cachedData);
+    }
+
+    // Use the same key as the dashboard observer. TanStack Query deduplicates
+    // this fetch with an in-flight initial/background refresh instead of
+    // issuing a second Supabase request for the same student payload.
+    let res;
+    try {
+      res = await queryClient.fetchQuery({
+        queryKey: ["student-delivery", studentId],
+        queryFn: async () => unwrapActionResult(await getStudentDeliveryDataAction(studentId)),
+        staleTime: 0,
+      });
+    } catch (fetchError) {
+      setError(fetchError instanceof Error ? fetchError.message : "Unable to refresh your dashboard.");
+      return;
+    }
+    if (res.programs) {
+      set(`student-delivery-data-${studentId}`, res);
+      applyData(res);
     }
     await loadActivities();
   };
 
-  const handleSelectProgram = (program: any) => {
-    setSelectedProgram(program);
+  const handleSelectCohort = (cohort: any) => {
+    setSelectedCohort(cohort);
     setSelectedCourse(null);
     setModules([]);
     setActiveLesson(null);
   };
 
   const handleSelectCourse = async (course: any) => {
-    setLoading(true);
-    setError("");
+    setSelectedCourse(course);
     setActiveLesson(null);
+    setError("");
 
-    // Sync and fetch latest program delivery course details (forces real-time progress calculations)
-    const deliverRes = await getStudentDeliveryDataAction(studentId);
-    if (deliverRes.programs) {
-      setPrograms(deliverRes.programs);
-      if (selectedProgram) {
-        const updatedProg = deliverRes.programs.find(p => p.id === selectedProgram.id);
-        if (updatedProg) {
-          setSelectedProgram(updatedProg);
-          const updatedCourse = updatedProg.courses.find((c: any) => c.id === course.id);
-          if (updatedCourse) {
-            setSelectedCourse(updatedCourse);
-          } else {
-            setSelectedCourse(course);
-          }
-        } else {
-          setSelectedCourse(course);
-        }
-      } else {
-        setSelectedCourse(course);
-      }
-    } else {
-      setSelectedCourse(course);
+    // Check if we have modules already cached from the initial prefetch
+    const cachedModules: any[] | undefined = queryClient.getQueryData(["course-modules", course.id]);
+    const prefetchModules = academicPrefetch?.modules?.filter((m: any) => m.course_id === course.id);
+    const prefetchLessons = academicPrefetch?.lessons;
+
+    if ((cachedModules && cachedModules.length > 0) || (prefetchModules && prefetchModules.length > 0)) {
+      const modulesToUse = (cachedModules?.length ? cachedModules : prefetchModules) || [];
+      // Build modules with lessons from prefetch lessons cache
+      const modulesWithLessons = modulesToUse.map((m: any) => {
+        const moduleLessons = prefetchLessons
+          ? prefetchLessons.filter((l: any) => l.module_id === m.id)
+          : [];
+        return { ...m, lessons: moduleLessons.map((l: any) => ({ ...l, resources: [] })) };
+      });
+      setModules(modulesWithLessons);
+      return;
     }
-    
+
+    // Fallback: slow path — fetch from API only when cache is cold
+    setLoading(true);
     const mRes = await listModulesAction(course.id);
     if (mRes.error) {
       setError(mRes.error);
-    } else if (mRes.modules) {
+      setLoading(false);
+      return;
+    }
+    if (mRes.modules) {
       const modulesWithLessons = await Promise.all(
         mRes.modules.map(async (m: any) => {
           const lRes = await listLessonsAction(m.id);
-          const lessons = lRes.lessons || [];
-          const lessonsWithResources = await Promise.all(
-            lessons.map(async (l: any) => {
-              const rRes = await listLessonResourcesAction(l.id);
-              
-              const progRes = await startOrUpdateLessonProgressAction(studentId, l.id, course.id);
-              const progressData = progRes.progress;
-              if (progressData) {
-                setLessonProgressMap(prev => ({
-                  ...prev,
-                  [l.id]: progressData
-                }));
-              }
-
-              return { ...l, resources: rRes.resources || [] };
-            })
-          );
-          return { ...m, lessons: lessonsWithResources };
+          const lessons = (lRes.lessons || []).map((l: any) => ({ ...l, resources: [] }));
+          return { ...m, lessons };
         })
       );
       setModules(modulesWithLessons);
@@ -275,6 +356,18 @@ export default function StudentConsole({
   const handleCompleteLesson = async (lesson: any) => {
     if (!selectedCourse) return;
     setActionLoading(true);
+
+    // Optimistically update progress to completed in local state map
+    setLessonProgressMap(prev => ({
+      ...prev,
+      [lesson.id]: {
+        ...prev[lesson.id],
+        status_code: "completed",
+        progress_percentage: 100,
+        completed_at: new Date().toISOString()
+      }
+    }));
+
     const res = await completeLessonProgressAction(studentId, lesson.id, selectedCourse.id);
     if (res.progress) {
       setLessonProgressMap(prev => ({
@@ -658,13 +751,13 @@ export default function StudentConsole({
   };
 
   // Quick stats calculations
-  const activeCohortIds = selectedProgram?.cohorts?.map((c: any) => c.id) || [];
+  const activeCohortIds = selectedCohort ? [selectedCohort.id] : [];
   const programActivities = activities.filter(a => activeCohortIds.includes(a.assignment?.cohort_id));
-  const activeCoursesList = selectedProgram?.courses || [];
+  const activeCoursesList = selectedCohort?.courses || [];
 
-  const totalEnrolledCourses = selectedProgram?.courses?.length || 0;
-  const inProgressCourses = (selectedProgram?.courses || []).filter((c: any) => c.progress?.status_code === "in_progress").length;
-  const completedCourses = (selectedProgram?.courses || []).filter((c: any) => c.progress?.status_code === "completed").length;
+  const totalEnrolledCourses = activeCoursesList.length;
+  const inProgressCourses = activeCoursesList.filter((c: any) => c.progress?.status_code === "in_progress").length;
+  const completedCourses = activeCoursesList.filter((c: any) => c.progress?.status_code === "completed").length;
 
   const quizCount = programActivities.filter(a => a.activity_type_code === "quiz").length;
   const projectCount = programActivities.filter(a => a.activity_type_code === "project" || a.activity_type_code === "assignment").length;
@@ -688,6 +781,13 @@ export default function StudentConsole({
     .sort((a, b) => new Date(b.progress?.updated_at || b.progress?.submitted_at || 0).getTime() - new Date(a.progress?.updated_at || a.progress?.submitted_at || 0).getTime())
     .slice(0, 3);
 
+  if (loadingStudentDelivery) {
+    return <DashboardLoader message="Setting up your Student Hub..." />;
+  }
+  if (studentDeliveryError) {
+    return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load your student dashboard. {studentDeliveryError.message}</div>;
+  }
+
   return (
     <div className="flex flex-col gap-6 w-full">
       {/* Global Program Selector Bar */}
@@ -702,49 +802,69 @@ export default function StudentConsole({
                 <GraduationCap size={15} />
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-[9px] text-[#475569] font-bold uppercase tracking-wider">Active Learning Program</span>
+                <span className="text-[9px] text-[#475569] font-bold uppercase tracking-wider">Active Group / Cohort</span>
                 <span className="truncate max-w-[200px] sm:max-w-[320px] font-bold">
-                  {selectedProgram ? selectedProgram.title : "No Active Program"}
+                  {selectedCohort ? `${selectedCohort.name} (${selectedCohort.code})` : "No Active Group"}
                 </span>
               </div>
               <ChevronDown size={14} className="text-[#475569] ml-1" />
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-80 bg-white border border-[#E2E8F0] rounded-xl shadow-lg z-50 py-1.5">
+              <div className="absolute left-0 mt-2 w-80 bg-white border border-[#E2E8F0] rounded-xl shadow-lg z-50 py-1.5 animate-fadeIn">
                 <div className="px-4 py-1.5 border-b border-[#E2E8F0] text-[9px] font-bold text-[#475569] uppercase tracking-wider">
-                  Switch Active Program
+                  Switch Active Group / Cohort
                 </div>
                 <div className="max-h-60 overflow-y-auto">
-                  {programs.length > 0 ? (
-                    programs.map((prog) => (
-                      <button
-                        key={prog.id}
-                        onClick={() => {
-                          handleSelectProgram(prog);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-all flex items-center justify-between text-xs ${
-                          selectedProgram?.id === prog.id ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#475569]"
-                        }`}
-                      >
-                        <span className="truncate pr-2">{prog.title}</span>
-                        {selectedProgram?.id === prog.id && <CheckCircle2 size={13} className="text-[#2563EB]" />}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-3 text-xs text-[#475569]">No programs available.</div>
-                  )}
+                  {(() => {
+                    const flatCohorts: any[] = [];
+                    programs.forEach(p => {
+                      if (p.cohorts) {
+                        p.cohorts.forEach((c: any) => {
+                          if (!flatCohorts.some(item => item.id === c.id)) {
+                            flatCohorts.push({
+                              ...c,
+                              programId: p.id,
+                              programTitle: p.title,
+                              courses: p.courses ? p.courses.filter((course: any) => course.cohort_id === c.id) : []
+                            });
+                          }
+                        });
+                      }
+                    });
+
+                    if (flatCohorts.length > 0) {
+                      return flatCohorts.map((coh) => (
+                        <button
+                          key={coh.id}
+                          onClick={() => {
+                            handleSelectCohort(coh);
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-all flex flex-col gap-0.5 text-xs ${
+                            selectedCohort?.id === coh.id ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#475569]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold truncate pr-2">{coh.name} ({coh.code})</span>
+                            {selectedCohort?.id === coh.id && <CheckCircle2 size={13} className="text-[#2563EB]" />}
+                          </div>
+                          <span className="text-[9px] text-[#475569] truncate font-medium">Program: {coh.programTitle}</span>
+                        </button>
+                      ));
+                    }
+                    return <div className="px-4 py-3 text-xs text-[#475569]">No groups available.</div>;
+                  })()}
                 </div>
               </div>
             )}
           </div>
         </div>
         
-        {selectedProgram && selectedProgram.cohorts && (
+        {selectedCohort && (
           <div className="text-[10px] text-[#475569] font-medium flex items-center gap-2">
             <span className="bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[9px]">
-              Cohort: {selectedProgram.cohorts.map((c: any) => c.code).join(", ")}
+              Program: {selectedCohort.programTitle}
             </span>
           </div>
         )}
@@ -979,16 +1099,16 @@ export default function StudentConsole({
                     <GraduationCap className="text-[#2563EB]" size={15} /> Batch Group Details
                   </h3>
                   
-                  {selectedProgram ? (
+                  {selectedCohort ? (
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-slate-50/50 p-4 rounded-xl border border-[#E2E8F0]">
                       <div>
-                        <h4 className="font-bold text-[#0F172A] text-xs">{selectedProgram.title}</h4>
+                        <h4 className="font-bold text-[#0F172A] text-xs">{selectedCohort.name} ({selectedCohort.code})</h4>
                         <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] text-[#475569]">
                           <span className="bg-[#2563EB]/15 text-[#2563EB] px-2 py-0.5 rounded font-bold">
-                            Group: {selectedProgram.cohorts?.map((c: any) => c.code).join(", ") || "N/A"}
+                            Program: {selectedCohort.programTitle}
                           </span>
                           <span>•</span>
-                          <span>{selectedProgram.courses?.length || 0} Assigned Courses</span>
+                          <span>{selectedCohort.courses?.length || 0} Assigned Courses</span>
                         </div>
                       </div>
                       <button
@@ -1017,7 +1137,7 @@ export default function StudentConsole({
                     </h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(selectedProgram?.courses || []).map((course: any) => {
+                      {activeCoursesList.map((course: any) => {
                         const percentage = course.progress?.progress_percentage || 0;
                         return (
                           <div key={course.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-white hover:shadow-md hover:border-[#2563EB]/25 transition-all flex flex-col justify-between">
@@ -1216,19 +1336,19 @@ export default function StudentConsole({
         {/* TAB 2: ACADEMICS / SYLLABUS VIEWER */}
         {activeTab === "academics" && (
           <div className="space-y-6">
-            {!selectedProgram ? (
+            {!selectedCohort ? (
               <div className="text-center py-8 text-[#475569] font-medium bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm">
                 You are not currently enrolled in any active groups. Please contact your administrator.
               </div>
             ) : !selectedCourse ? (
               <div className="bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 text-xs border-b border-[#E2E8F0] pb-3 mb-3">
-                  <span className="font-bold text-[#0F172A]">Courses under {selectedProgram.title}</span>
+                  <span className="font-bold text-[#0F172A]">Courses under {selectedCohort.name} ({selectedCohort.code})</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {selectedProgram.courses?.length > 0 ? (
-                    selectedProgram.courses.map((course: any) => (
+                  {activeCoursesList.length > 0 ? (
+                    activeCoursesList.map((course: any) => (
                       <div
                         key={course.id}
                         onClick={() => handleSelectCourse(course)}
@@ -1468,8 +1588,8 @@ export default function StudentConsole({
                       })()}
  
                       {(activeLesson.content_json?.body || activeLesson.content_json?.text) && (
-                        <div className="bg-white border border-[#E2E8F0] p-5 rounded-xl text-xs leading-relaxed text-[#0F172A] whitespace-pre-wrap">
-                          {activeLesson.content_json.body || activeLesson.content_json.text}
+                        <div className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-xs">
+                          <MarkdownRenderer content={activeLesson.content_json.body || activeLesson.content_json.text} />
                         </div>
                       )}
  

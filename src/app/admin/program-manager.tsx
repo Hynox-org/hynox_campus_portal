@@ -27,6 +27,7 @@ import {
   BookOpen, PlusCircle, CheckCircle2, AlertCircle, 
   FileText, Calendar, Clock, Sparkles, Edit, Play, Video, ExternalLink
 } from "lucide-react";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 interface ProgramManagerProps {
   institutions: any[];
@@ -954,9 +955,14 @@ export default function ProgramManager({
                                               )}
 
                                               {(les.content_json?.text || les.content_json?.body) && (
-                                                <div className="text-[10px] bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 text-[#475569] leading-relaxed whitespace-pre-wrap font-sans">
-                                                  <p className="font-semibold text-slate-700 mb-0.5">Content Description:</p>
-                                                  {les.content_json?.text || les.content_json?.body}
+                                                <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2 shadow-inner">
+                                                  <div className="flex justify-between items-center border-b border-slate-200/50 pb-1">
+                                                    <span className="font-bold text-[#86868b] text-[8px] uppercase tracking-wider font-sans">Content Description (Markdown)</span>
+                                                    <span className="text-[8px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-mono font-bold">Rendered</span>
+                                                  </div>
+                                                  <div className="max-h-80 overflow-y-auto pr-1">
+                                                    <MarkdownRenderer content={les.content_json.text || les.content_json.body} />
+                                                  </div>
                                                 </div>
                                               )}
 

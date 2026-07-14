@@ -18,6 +18,9 @@ import {
   listProjectSubmissionsAction,
   listChallengeSubmissionsAction
 } from "@/app/actions/learning-actions";
+import { useQueryClient } from "@tanstack/react-query";
+import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
+import { usePrograms, useCourses } from "@/hooks/use-academics";
 import { 
   Building, 
   GraduationCap, 
@@ -36,18 +39,41 @@ interface AdminStudentProgressProps {
 export default function AdminStudentProgress({ institutions }: AdminStudentProgressProps) {
   const [selectedInstId, setSelectedInstId] = useState(institutions[0]?.id || "");
   
-  // Selection cascades
-  const [programs, setPrograms] = useState<any[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState("");
-  
-  const [cohorts, setCohorts] = useState<any[]>([]);
   const [selectedCohortId, setSelectedCohortId] = useState("");
-
-  const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Roster detail drawer states
+  const queryClient = useQueryClient();
+
+  // React Query prefetching hooks
+  const { data: deliveryData } = useDeliveryData(selectedInstId);
+  const { data: learningData } = useLearningData(selectedInstId);
+  const { data: acadPrograms } = usePrograms(selectedInstId);
+  const { data: acadCourses } = useCourses(selectedProgramId);
+
+  // Derive list views instantly from cache
+  const allCohorts = deliveryData?.cohorts || [];
+  const allEnrollments = deliveryData?.enrollments || [];
+  
+  const activities = learningData?.activities || [];
+  const quizAttempts = learningData?.quizAttempts || [];
+  const projectSubmissions = learningData?.projectSubmissions || [];
+  const challengeSubmissions = learningData?.challengeSubmissions || [];
+
+  const programs = acadPrograms || [];
+  const allCoursesList = acadCourses || [];
+
+  const cohorts = selectedProgramId 
+    ? allCohorts.filter((c: any) => c.program_id === selectedProgramId)
+    : [];
+    
+  const enrollments = selectedCohortId
+    ? allEnrollments.filter((e: any) => e.cohort_id === selectedCohortId)
+    : [];
+
+  const loading = false;
+
+  // Selected Student Drawer States
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [activeStudentProgress, setActiveStudentProgress] = useState<any[]>([]);
   const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<any[]>([]);
@@ -59,64 +85,10 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
   const [expandedQuizId, setExpandedQuizId] = useState<string | null>(null);
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
-  // Learning activities cached
-  const [allCourses, setAllCourses] = useState<any[]>([]);
-  const [quizAttempts, setQuizAttempts] = useState<any[]>([]);
-  const [projectSubmissions, setProjectSubmissions] = useState<any[]>([]);
-  const [challengeSubmissions, setChallengeSubmissions] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
-
-  // Load programs & reset selection when campus changes
+  // Reset cohort when program changes
   useEffect(() => {
-    if (!selectedInstId) {
-      setPrograms([]);
-      setSelectedProgramId("");
-      return;
-    }
-    setSelectedProgramId("");
     setSelectedCohortId("");
-    listProgramsAction(selectedInstId).then(res => {
-      if (res.programs) setPrograms(res.programs);
-    });
-  }, [selectedInstId]);
-
-  // Load cohorts when program changes
-  useEffect(() => {
-    if (!selectedProgramId) {
-      setCohorts([]);
-      setSelectedCohortId("");
-      return;
-    }
-    setSelectedCohortId("");
-    listCohortsAction(selectedInstId).then(res => {
-      if (res.cohorts) {
-        // Filter cohorts matching selected program
-        const matched = res.cohorts.filter((c: any) => c.program_id === selectedProgramId);
-        setCohorts(matched);
-      }
-    });
-
-    // Also load courses for that program
-    listCoursesAction(selectedProgramId).then(res => {
-      if (res.courses) setAllCourses(res.courses);
-    });
   }, [selectedProgramId]);
-
-  // Load enrollments when cohort is selected
-  useEffect(() => {
-    if (!selectedCohortId) {
-      setEnrollments([]);
-      return;
-    }
-    setLoading(true);
-    listEnrollmentsAction(selectedInstId).then(res => {
-      if (res.enrollments) {
-        const matched = res.enrollments.filter((e: any) => e.cohort_id === selectedCohortId);
-        setEnrollments(matched);
-      }
-      setLoading(false);
-    });
-  }, [selectedCohortId]);
 
   // Load selection drawer details
   useEffect(() => {
@@ -146,24 +118,6 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
       });
     }
   }, [expandedCourseId, drawerLessonsCache]);
-
-  // Load learning logs cache on load
-  useEffect(() => {
-    if (selectedInstId) {
-      listAllActivitiesAction(selectedInstId).then(res => {
-        if (res.activities) setActivities(res.activities);
-      });
-      listQuizAttemptsAction(selectedInstId).then(res => {
-        if (res.attempts) setQuizAttempts(res.attempts);
-      });
-      listProjectSubmissionsAction(selectedInstId).then(res => {
-        if (res.submissions) setProjectSubmissions(res.submissions);
-      });
-      listChallengeSubmissionsAction(selectedInstId).then(res => {
-        if (res.submissions) setChallengeSubmissions(res.submissions);
-      });
-    }
-  }, [selectedInstId]);
 
   const filteredEnrollments = enrollments.filter(enr => {
     if (!searchQuery) return true;
@@ -339,7 +293,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
           };
         });
 
-        const studentSyllabus = allCourses.map((course) => {
+        const studentSyllabus = allCoursesList.map((course) => {
           const courseLessons = drawerLessonsCache[course.id] || [];
           return {
             id: course.id,

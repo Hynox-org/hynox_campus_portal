@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCache } from "@/components/cache-provider";
+import { usePrograms, useTenantInstructors, useCourses, useCourseModules, useCourseInstructors, useAcademicLookups } from "@/hooks/use-academics";
+import { DataTable } from "@/components/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { useAcademicPrefetchData } from "@/hooks/use-academics";
+import { seedAcademicListCaches } from "@/lib/dashboard-query";
 import { 
   createNewInstitutionAction, 
   assignAdminAction, 
@@ -99,13 +106,19 @@ import DeliveryManager from "./delivery-manager";
 import LearningManager from "./learning-manager";
 import AdminStudentProgress from "./student-progress";
 
+import { useAdminData } from "@/hooks/use-admin";
+import { DashboardLoader } from "@/components/dashboard-loader";
+
 interface AdminPanelProps {
   adminEmail: string;
-  initialInstitutions: any[];
-  initialInvitations?: any[];
 }
 
-export default function AdminPanel({ adminEmail, initialInstitutions, initialInvitations = [] }: AdminPanelProps) {
+export default function AdminPanel({ adminEmail }: AdminPanelProps) {
+  const queryClient = useQueryClient();
+  const { get, set } = useCache();
+  
+  const { data: adminData, isLoading: loadingAdmin, error: adminError } = useAdminData();
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   React.useEffect(() => {
@@ -118,8 +131,18 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
 
   const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "program_student_progress" | "super_admin_invite">("institutions");
-  const [institutions, setInstitutions] = useState<any[]>(initialInstitutions);
-  const [invitations, setInvitations] = useState<any[]>(initialInvitations);
+  
+  // Use data from hook as initial state or direct derivation
+  const [institutions, setInstitutions] = useState<any[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (adminData) {
+      setInstitutions(adminData.institutions || []);
+      setInvitations(adminData.invitations || []);
+    }
+  }, [adminData]);
+
   const [inviteSearch, setInviteSearch] = useState("");
   const [inviteFilter, setInviteFilter] = useState<"all" | "pending" | "accepted" | "expired" | "failed" | "revoked">("all");
   const [inviteInstitutionFilter, setInviteInstitutionFilter] = useState("all");
@@ -362,21 +385,24 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
 
   // Academic Builder states
   const [acadSelectedInstId, setAcadSelectedInstId] = useState("");
-  const [acadPrograms, setAcadPrograms] = useState<any[]>([]);
+  const { data: academicPrefetch } = useAcademicPrefetchData(acadSelectedInstId);
+  const { data: acadPrograms = [] } = usePrograms(acadSelectedInstId);
   const [acadSelectedProgram, setAcadSelectedProgram] = useState<any | null>(null);
-  const [acadCourses, setAcadCourses] = useState<any[]>([]);
+  const { data: acadCourses = [] } = useCourses(acadSelectedProgram?.id);
   const [acadSelectedCourse, setAcadSelectedCourse] = useState<any | null>(null);
-  const [acadModules, setAcadModules] = useState<any[]>([]);
-  const [acadInstructors, setAcadInstructors] = useState<any[]>([]);
-  const [acadTenantTeachers, setAcadTenantTeachers] = useState<any[]>([]);
+  const { data: acadModules = [] } = useCourseModules(acadSelectedCourse?.id);
+  const { data: acadInstructors = [] } = useCourseInstructors(acadSelectedCourse?.id);
+  
+  const setAcadInstructors = (newInstructors: any[]) => {
+    if (acadSelectedCourse?.id) {
+      queryClient.setQueryData(["course-instructors", acadSelectedCourse.id], newInstructors);
+    }
+  };
+
+  const { data: acadTenantTeachers = [] } = useTenantInstructors(acadSelectedInstId);
   
   // Lookup states
-  const [acadLookups, setAcadLookups] = useState<any>({
-    courseTypes: [],
-    lessonTypes: [],
-    statuses: [],
-    visibilityTypes: []
-  });
+  const { data: acadLookups = { courseTypes: [], lessonTypes: [], statuses: [], visibilityTypes: [] } } = useAcademicLookups();
 
   // Modal / Form Open States
   const [programModalOpen, setProgramModalOpen] = useState(false);
@@ -499,165 +525,36 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
     }
   }, [activeTab]);
 
-  React.useEffect(() => {
-    async function loadLookups() {
-      const res = await getAcademicLookupsAction();
-      if (res.success && res.lookups) {
-        setAcadLookups(res.lookups);
-        
-        const activeStatus = res.lookups.statuses.find((s: any) => s.code === "active")?.id || "";
-        const publicVisibility = res.lookups.visibilityTypes.find((v: any) => v.code === "public")?.id || "";
-        
-        setProgramForm(f => ({ ...f, status_id: activeStatus, visibility_type_id: publicVisibility }));
-        setCourseForm(f => ({ ...f, status_id: activeStatus, visibility_type_id: publicVisibility }));
-        setModuleForm(f => ({ ...f, status_id: activeStatus }));
-        setLessonForm(f => ({ ...f, status_id: activeStatus }));
-      }
+  // Data fetching is now handled by React Query hooks (usePrograms, useCourses, etc.)
+
+  useEffect(() => {
+    if (!acadSelectedInstId) return;
+    
+    if (academicPrefetch?.success) {
+      seedAcademicListCaches(queryClient, acadSelectedInstId, academicPrefetch);
     }
-    loadLookups();
-  }, []);
-
-  React.useEffect(() => {
-    if (!acadSelectedInstId) {
-      setAcadPrograms([]);
-      setAcadSelectedProgram(null);
-      setAcadCourses([]);
-      setAcadSelectedCourse(null);
-      setAcadModules([]);
-      setAcadTenantTeachers([]);
-      return;
-    }
-
-    async function loadProgramsAndTeachers() {
-      setLoading(true);
-      setError("");
-      
-      const pRes = await listProgramsAction(acadSelectedInstId);
-      if (pRes.error) {
-        setError(pRes.error);
-      } else if (pRes.programs) {
-        setAcadPrograms(pRes.programs);
-      }
-
-      const tRes = await listTenantInstructorsAction(acadSelectedInstId);
-      if (tRes.error) {
-        setError(tRes.error);
-      } else if (tRes.instructors) {
-        setAcadTenantTeachers(tRes.instructors);
-      }
-      
-      setLoading(false);
-    }
-    loadProgramsAndTeachers();
-  }, [acadSelectedInstId]);
-
-  React.useEffect(() => {
-    if (!acadSelectedProgram) {
-      setAcadCourses([]);
-      setAcadSelectedCourse(null);
-      setAcadModules([]);
-      return;
-    }
-
-    async function loadCourses() {
-      setLoading(true);
-      setError("");
-      const res = await listCoursesAction(acadSelectedProgram.id);
-      if (res.error) {
-        setError(res.error);
-      } else if (res.courses) {
-        setAcadCourses(res.courses);
-      }
-      setLoading(false);
-    }
-    loadCourses();
-  }, [acadSelectedProgram]);
-
-  React.useEffect(() => {
-    if (!acadSelectedCourse) {
-      setAcadModules([]);
-      setAcadInstructors([]);
-      return;
-    }
-
-    async function loadCourseDetails() {
-      setLoading(true);
-      setError("");
-      
-      const mRes = await listModulesAction(acadSelectedCourse.id);
-      if (mRes.error) {
-        setError(mRes.error);
-      } else if (mRes.modules) {
-        const modulesWithLessons = await Promise.all(
-          mRes.modules.map(async (m: any) => {
-            const lRes = await listLessonsAction(m.id);
-            const lessons = lRes.lessons || [];
-            const lessonsWithResources = await Promise.all(
-              lessons.map(async (l: any) => {
-                const rRes = await listLessonResourcesAction(l.id);
-                return { ...l, resources: rRes.resources || [] };
-              })
-            );
-            return { ...m, lessons: lessonsWithResources };
-          })
-        );
-        setAcadModules(modulesWithLessons);
-      }
-
-      const iRes = await getCourseInstructorsAction(acadSelectedCourse.id);
-      if (iRes.error) {
-        setError(iRes.error);
-      } else if (iRes.instructors) {
-        setAcadInstructors(iRes.instructors);
-      }
-
-      setLoading(false);
-    }
-    loadCourseDetails();
-  }, [acadSelectedCourse]);
-
+  }, [acadSelectedInstId, academicPrefetch, queryClient]);
   const refreshCourseDetails = async (courseId: string) => {
-    const mRes = await listModulesAction(courseId);
-    if (mRes.modules) {
-      const modulesWithLessons = await Promise.all(
-        mRes.modules.map(async (m: any) => {
-          const lRes = await listLessonsAction(m.id);
-          const lessons = lRes.lessons || [];
-          const lessonsWithResources = await Promise.all(
-            lessons.map(async (l: any) => {
-              const rRes = await listLessonResourcesAction(l.id);
-              return { ...l, resources: rRes.resources || [] };
-            })
-          );
-          return { ...m, lessons: lessonsWithResources };
-        })
-      );
-      setAcadModules(modulesWithLessons);
-    }
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["course-modules", courseId] }),
+      queryClient.invalidateQueries({ queryKey: ["academic-prefetch", acadSelectedInstId] }),
+    ]);
   };
 
   const refreshPrograms = async () => {
     if (!acadSelectedInstId) return;
-    const res = await listProgramsAction(acadSelectedInstId);
-    if (res.programs) {
-      setAcadPrograms(res.programs);
-      if (acadSelectedProgram) {
-        const updated = res.programs.find((p: any) => p.id === acadSelectedProgram.id);
-        if (updated) setAcadSelectedProgram(updated);
-      }
-    }
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["programs", acadSelectedInstId] }),
+      queryClient.invalidateQueries({ queryKey: ["academic-prefetch", acadSelectedInstId] }),
+    ]);
   };
 
   const refreshCourses = async () => {
     if (!acadSelectedProgram) return;
-    const res = await listCoursesAction(acadSelectedProgram.id);
-    if (res.courses) {
-      setAcadCourses(res.courses);
-      if (acadSelectedCourse) {
-        const updated = res.courses.find((c: any) => c.id === acadSelectedCourse.id);
-        if (updated) setAcadSelectedCourse(updated);
-      }
-    }
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["courses", acadSelectedProgram.id] }),
+      queryClient.invalidateQueries({ queryKey: ["academic-prefetch", acadSelectedInstId] }),
+    ]);
   };
 
   const handleProgramSubmit = async (e: React.FormEvent) => {
@@ -1383,6 +1280,73 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
     );
   };
 
+  const institutionColumns = React.useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => <span className="font-semibold text-[#1d1d1f]">{row.original.name}</span>,
+    },
+    {
+      accessorKey: "institution_code",
+      header: "Code",
+      cell: ({ row }) => <span className="text-[#86868b] font-mono">{row.original.institution_code}</span>,
+    },
+    {
+      accessorKey: "institution_type",
+      header: "Type",
+      cell: ({ row }) => <span className="text-[#86868b] font-medium">{row.original.institution_type}</span>,
+    },
+    {
+      accessorKey: "slug",
+      header: "Slug",
+      cell: ({ row }) => <span className="text-[#86868b]">{row.original.slug}</span>,
+    },
+    {
+      accessorKey: "status",
+      header: () => <div className="text-right w-full">Status</div>,
+      cell: ({ row }) => {
+        const inst = row.original;
+        return (
+          <div className="text-right">
+            <select
+              value={inst.status}
+              onChange={async (e) => {
+                const newStatus = e.target.value;
+                if (confirm(`Are you sure you want to change the status of ${inst.name} to ${newStatus}?`)) {
+                  const res = await updateInstitutionStatusAction(inst.id, newStatus);
+                  if (res.error) {
+                    alert(res.error);
+                  } else {
+                    setInstitutions(prev => prev.map(i => i.id === inst.id ? { ...i, status: newStatus } : i));
+                  }
+                }
+              }}
+              className={`px-2 py-1 rounded-lg text-[10px] font-bold border focus:outline-none cursor-pointer ${
+                inst.status === "active"
+                  ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
+                  : inst.status === "onboarding"
+                  ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
+                  : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
+              }`}
+            >
+              <option value="active">Active</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="inactive">Inactive</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
+        );
+      },
+    },
+  ], []);
+
+  if (loadingAdmin) {
+    return <DashboardLoader message="Setting up your Super Admin environment..." />;
+  }
+  if (adminError) {
+    return <div role="alert" className="m-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load the admin dashboard. {adminError.message}</div>;
+  }
+
   return (
     <div className="min-h-screen bg-[#f5f5f7] flex flex-col text-[#1d1d1f]">
       
@@ -1949,69 +1913,15 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
             <div className="space-y-6">
 
               {/* Institutions Listing Table */}
-              <div className="bg-white border border-[#d2d2d7] rounded-xl overflow-hidden shadow-sm">
-                <div className="bg-slate-50 px-6 py-3 border-b border-[#d2d2d7]">
+              <div className="bg-white border border-[#d2d2d7] rounded-xl overflow-hidden shadow-sm p-4">
+                <div className="mb-4">
                   <h4 className="text-xs font-bold text-[#1d1d1f]">REGISTERED INSTITUTIONS</h4>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-50/50 border-b border-[#d2d2d7] font-bold text-[#86868b]">
-                        <th className="px-6 py-2.5">Name</th>
-                        <th className="px-6 py-2.5">Code</th>
-                        <th className="px-6 py-2.5">Type</th>
-                        <th className="px-6 py-2.5">Slug</th>
-                        <th className="px-6 py-2.5 text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#d2d2d7]">
-                      {institutions.length > 0 ? (
-                        institutions.map((inst, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
-                            <td className="px-6 py-3 font-semibold text-[#1d1d1f]">{inst.name}</td>
-                            <td className="px-6 py-3 text-[#86868b] font-mono">{inst.institution_code}</td>
-                            <td className="px-6 py-3 text-[#86868b] font-medium">{inst.institution_type}</td>
-                            <td className="px-6 py-3 text-[#86868b]">{inst.slug}</td>
-                             <td className="px-6 py-3 text-right">
-                               <select
-                                 value={inst.status}
-                                 onChange={async (e) => {
-                                   const newStatus = e.target.value;
-                                   if (confirm(`Are you sure you want to change the status of ${inst.name} to ${newStatus}?`)) {
-                                     const res = await updateInstitutionStatusAction(inst.id, newStatus);
-                                     if (res.error) {
-                                       alert(res.error);
-                                     } else {
-                                       setInstitutions(prev => prev.map(i => i.id === inst.id ? { ...i, status: newStatus } : i));
-                                     }
-                                   }
-                                 }}
-                                 className={`px-2 py-1 rounded-lg text-[10px] font-bold border focus:outline-none cursor-pointer ${
-                                   inst.status === "active"
-                                     ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                                     : inst.status === "onboarding"
-                                     ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
-                                     : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
-                                 }`}
-                               >
-                                 <option value="active">Active</option>
-                                 <option value="onboarding">Onboarding</option>
-                                 <option value="inactive">Inactive</option>
-                                 <option value="suspended">Suspended</option>
-                               </select>
-                             </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={5} className="px-6 py-6 text-center text-[#86868b]">
-                            No registered institutions found.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <DataTable 
+                  columns={institutionColumns} 
+                  data={institutions} 
+                  searchKey="institutions" 
+                />
               </div>
 
             </div>
@@ -3557,7 +3467,7 @@ export default function AdminPanel({ adminEmail, initialInstitutions, initialInv
                             <form onSubmit={handleSaveInstructors} className="space-y-4">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[160px] overflow-y-auto p-1 border border-[#d2d2d7] rounded-lg">
                                 {acadTenantTeachers.length > 0 ? (
-                                  acadTenantTeachers.map((teach) => {
+                                  acadTenantTeachers.map((teach: any) => {
                                     const isAssigned = acadInstructors.some(i => i.user_id === teach.id);
                                     return (
                                       <label key={teach.id} className="flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg cursor-pointer text-xs transition-colors">

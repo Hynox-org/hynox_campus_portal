@@ -642,15 +642,22 @@ export async function getStudentDeliveryData(userId: string) {
         courses = courseData || [];
       }
 
-      for (const assignment of assignments) {
+      const progressPromises = assignments.map(async (assignment) => {
         const course = courses.find(c => c.id === assignment.course_id);
-        if (!course) continue;
+        if (!course) return null;
 
         // Recalculate/Sync course progress to account for dynamic teacher modifications
         const progressRecord = await syncCourseProgress(userId, course.id);
+        return { assignment, course, progressRecord };
+      });
+
+      const resolvedProgressList = (await Promise.all(progressPromises)).filter(Boolean);
+
+      for (const item of resolvedProgressList) {
+        const { assignment, course, progressRecord } = item!;
 
         // Check if course is already added from another cohort to avoid duplicates
-        const existingCourse = resultProgramsMap[program.id].courses.find((c: any) => c.id === course.id);
+        const existingCourse = resultProgramsMap[program.id].courses.find((c: any) => c.id === course.id && c.cohort_id === cohort.id);
         if (!existingCourse) {
           resultProgramsMap[program.id].courses.push({
             id: course.id,
@@ -661,6 +668,7 @@ export async function getStudentDeliveryData(userId: string) {
             isRequired: assignment.is_required,
             startDate: assignment.start_date,
             dueDate: assignment.due_date,
+            cohort_id: cohort.id,
             progress: progressRecord || {
               completed_lessons: 0,
               total_lessons: 0,

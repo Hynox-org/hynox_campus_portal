@@ -22,42 +22,51 @@ import { listLessonsForCourseAction } from "@/app/actions/academic-actions";
 import { getCohortAttendanceReportAction } from "@/app/actions/attendance-actions";
 import { AlertTriangle, Calendar } from "lucide-react";
 
+import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
+import { useAcademicPrefetchData } from "@/hooks/use-academics";
+import { DashboardLoader } from "@/components/dashboard-loader";
+
 interface InstitutionPanelProps {
   adminEmail: string;
   institution: any;
-  initialInvitations: any[];
-  initialPrograms: any[];
-  initialInstructors: any[];
-  initialCohorts: any[];
-  initialEnrollments: any[];
-  initialProjectSubmissions: any[];
-  initialChallengeSubmissions: any[];
-  initialActivities: any[];
-  initialCoursesList: any[];
-  initialQuizAttempts: any[];
-  lookups: any;
+  tenantId: string;
+  primaryRole: string;
 }
 
 export default function InstitutionPanel({ 
   adminEmail, 
   institution, 
-  initialInvitations, 
-  initialPrograms,
-  initialInstructors,
-  initialCohorts,
-  initialEnrollments,
-  initialProjectSubmissions,
-  initialChallengeSubmissions,
-  initialActivities,
-  initialCoursesList,
-  initialQuizAttempts,
-  lookups 
+  tenantId,
+  primaryRole
 }: InstitutionPanelProps) {
   // Navigation states
   const [activeTab, setActiveTab] = useState<"overview" | "roster">("overview");
 
+  // React Query Data Fetching
+  const { data: deliveryData, isLoading: loadingDelivery, error: deliveryError } = useDeliveryData(tenantId);
+  const { data: learningData, isLoading: loadingLearning, error: learningError } = useLearningData(tenantId);
+  const { data: academicData, isLoading: loadingAcademic, error: academicError } = useAcademicPrefetchData(tenantId);
+
+  // Default fallbacks during initial hydration
+  const initialCohorts = deliveryData?.cohorts || [];
+  const enrollments = deliveryData?.enrollments || [];
+  const instructors = deliveryData?.instructors || [];
+  const activities = learningData?.activities || [];
+  const projectSubmissions = learningData?.projectSubmissions || [];
+  const challengeSubmissions = learningData?.challengeSubmissions || [];
+  const quizAttempts = learningData?.quizAttempts || [];
+  const programs = academicData?.programs || [];
+  const coursesList = academicData?.courses || [];
+
   // Roster and Drawer states
-  const [selectedCohortId, setSelectedCohortId] = useState<string>(initialCohorts[0]?.id || "");
+  const [selectedCohortId, setSelectedCohortId] = useState<string>("");
+
+  useEffect(() => {
+    if (initialCohorts.length > 0 && !selectedCohortId) {
+      setSelectedCohortId(initialCohorts[0].id);
+    }
+  }, [initialCohorts, selectedCohortId]);
+
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [activeStudentProgress, setActiveStudentProgress] = useState<any[]>([]);
   const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<any[]>([]);
@@ -71,14 +80,7 @@ export default function InstitutionPanel({
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
   // Derived datasets
-  const cohorts = initialCohorts || [];
-  const enrollments = initialEnrollments || [];
-  const projectSubmissions = initialProjectSubmissions || [];
-  const challengeSubmissions = initialChallengeSubmissions || [];
-  const activities = initialActivities || [];
-  const coursesList = initialCoursesList || [];
-  const quizAttempts = initialQuizAttempts || [];
-
+  const cohorts = initialCohorts;
   const currentCohortEnrollments = enrollments.filter(e => e.cohort_id === selectedCohortId);
 
   const [cohortReports, setCohortReports] = useState<Record<string, any>>({});
@@ -327,7 +329,7 @@ export default function InstitutionPanel({
                     <div className="py-3 flex justify-between">
                       <span className="text-[#475569] font-medium">Primary Program</span>
                       <span className="font-bold text-[#0F172A]">
-                        {initialPrograms.find(p => p.id === selectedStudent.cohort?.program_id)?.title || "Educational Program"}
+                        {programs.find(p => p.id === selectedStudent.cohort?.program_id)?.title || "N/A"}
                       </span>
                     </div>
                     <div className="py-3 flex justify-between">
@@ -596,6 +598,15 @@ export default function InstitutionPanel({
     );
   };
 
+  if (loadingDelivery || loadingLearning || loadingAcademic) {
+    return <DashboardLoader message="Setting up your Campus environment..." />;
+  }
+
+  const initialError = deliveryError || learningError || academicError;
+  if (initialError) {
+    return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load the campus dashboard. {initialError.message}</div>;
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
       
@@ -679,21 +690,21 @@ export default function InstitutionPanel({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {initialPrograms.map(prog => (
-                  <div key={prog.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-slate-50/50 space-y-2">
+                {programs.map(prog => (
+                  <div key={prog.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-white/50 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <BookOpen size={16} className="text-[#2563EB]" />
                         <h4 className="font-bold text-xs text-[#0F172A]">{prog.title}</h4>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border capitalize ${
-                        prog.status?.code === "active"
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                        (prog.status as any)?.code === "active"
                           ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                          : prog.status?.code === "suspended"
+                          : (prog.status as any)?.code === "suspended"
                           ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
-                          : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
+                          : "bg-[#64748B]/10 text-[#64748B] border-[#64748B]/20"
                       }`}>
-                        {prog.status?.code || "active"}
+                        {(prog.status as any)?.label || "Active"}
                       </span>
                     </div>
                     <p className="text-[10px] text-[#475569] line-clamp-2">{prog.description || "No description provided."}</p>
@@ -705,7 +716,7 @@ export default function InstitutionPanel({
                     </div>
                   </div>
                 ))}
-                {initialPrograms.length === 0 && (
+                {programs.length === 0 && (
                   <div className="col-span-2 text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
                     No program curricula mapped to this campus yet.
                   </div>

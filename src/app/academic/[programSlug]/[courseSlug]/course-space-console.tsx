@@ -7,6 +7,7 @@ import {
   Users, Save, Settings, X, GraduationCap, Clock, ExternalLink 
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { 
   assignCourseInstructorsAction,
   createModuleAction, updateModuleAction, deleteModuleAction,
@@ -526,8 +527,12 @@ export default function CourseSpaceConsole({
             {/* Lesson Structured Content */}
             <div className="space-y-2 text-xs">
               <span className="font-semibold text-[#475569] block">Lesson Overview & Content</span>
-              <div className="bg-slate-50 border border-[#E2E8F0] p-4 rounded-xl text-xs text-[#0F172A] leading-relaxed max-w-none whitespace-pre-wrap">
-                {selectedLesson.content_json?.text || "No learning text content provided for this lesson."}
+              <div className="bg-slate-50 border border-[#E2E8F0] p-5 rounded-xl">
+                {selectedLesson.content_json?.text ? (
+                  <MarkdownRenderer content={selectedLesson.content_json.text} />
+                ) : (
+                  <span className="text-xs text-[#475569] italic">No learning text content provided for this lesson.</span>
+                )}
               </div>
             </div>
 

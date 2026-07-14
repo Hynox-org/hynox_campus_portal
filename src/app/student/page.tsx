@@ -16,14 +16,6 @@ export default async function StudentPage() {
 
   const { authUser, primaryRole, institution } = userDetails;
 
-  // Fetch active delivery programs/courses/cohorts under their enrollment
-  let programs: any[] = [];
-  try {
-    programs = await getStudentDeliveryData(userDetails.user.id);
-  } catch (error) {
-    console.error("Failed to load student programs:", error);
-  }
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#0F172A] font-sans">
       <header className="bg-white border-b border-[#E2E8F0] shadow-sm sticky top-0 z-40">
@@ -57,7 +49,6 @@ export default async function StudentPage() {
           fullName={userDetails.user.full_name || "Student"}
           primaryRole={primaryRole}
           institution={institution}
-          initialPrograms={programs}
           studentId={userDetails.user.id}
         />
       </main>

@@ -1,0 +1,139 @@
+import { useQuery } from "@tanstack/react-query";
+import { 
+  listProgramsAction,
+  listTenantInstructorsAction,
+  listCoursesAction,
+  listModulesAction,
+  listLessonsAction,
+  listLessonResourcesAction,
+  getCourseInstructorsAction,
+  getAcademicLookupsAction
+} from "@/app/actions/academic-actions";
+import { getInstitutionPrefetchDataAction } from "@/app/actions/prefetch-actions";
+import { DASHBOARD_GC_TIME, DASHBOARD_REFETCH_INTERVAL, DASHBOARD_STALE_TIME, unwrapActionResult } from "@/lib/dashboard-query";
+
+type CourseLesson = {
+  id: string;
+  resources?: unknown[];
+  [key: string]: unknown;
+};
+
+type CourseModule = {
+  id: string;
+  title: string;
+  description: string | null;
+  position: number;
+  status_id: string;
+  lessons?: CourseLesson[];
+  [key: string]: unknown;
+};
+
+export function useAcademicLookups() {
+  return useQuery({
+    queryKey: ["academic-lookups"],
+    queryFn: async () => {
+      const res = await getAcademicLookupsAction();
+      if (res.error) throw new Error(res.error);
+      return unwrapActionResult(res).lookups;
+    },
+    staleTime: Infinity, // Lookups rarely change
+  });
+}
+
+export function usePrograms(institutionId: string) {
+  return useQuery({
+    queryKey: ["programs", institutionId],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const res = await listProgramsAction(institutionId);
+      if (res.error) throw new Error(res.error);
+      return res.programs || [];
+    },
+    enabled: !!institutionId,
+  });
+}
+
+export function useTenantInstructors(institutionId: string) {
+  return useQuery({
+    queryKey: ["tenant-instructors", institutionId],
+    queryFn: async () => {
+      if (!institutionId) return [];
+      const res = await listTenantInstructorsAction(institutionId);
+      if (res.error) throw new Error(res.error);
+      return res.instructors || [];
+    },
+    enabled: !!institutionId,
+  });
+}
+
+export function useCourses(programId: string) {
+  return useQuery({
+    queryKey: ["courses", programId],
+    queryFn: async () => {
+      if (!programId) return [];
+      const res = await listCoursesAction(programId);
+      if (res.error) throw new Error(res.error);
+      return res.courses || [];
+    },
+    enabled: !!programId,
+  });
+}
+
+// Full module with lessons and resources fetching
+export function useCourseModules(courseId: string) {
+  return useQuery({
+    queryKey: ["course-modules", courseId],
+    queryFn: async () => {
+      if (!courseId) return [];
+      const mRes = await listModulesAction(courseId);
+      if (mRes.error) throw new Error(mRes.error);
+      
+      if (!mRes.modules) return [];
+
+      const modulesWithLessons = await Promise.all(
+        mRes.modules.map(async (m: CourseModule) => {
+          const lRes = await listLessonsAction(m.id);
+          const lessons = lRes.lessons || [];
+          const lessonsWithResources = await Promise.all(
+          lessons.map(async (l: CourseLesson) => {
+              const rRes = await listLessonResourcesAction(l.id);
+              return { ...l, resources: rRes.resources || [] };
+            })
+          );
+          return { ...m, lessons: lessonsWithResources };
+        })
+      );
+      
+      return modulesWithLessons;
+    },
+    enabled: !!courseId,
+  });
+}
+
+export function useCourseInstructors(courseId: string) {
+  return useQuery({
+    queryKey: ["course-instructors", courseId],
+    queryFn: async () => {
+      if (!courseId) return [];
+      const res = await getCourseInstructorsAction(courseId);
+      if (res.error) throw new Error(res.error);
+      return res.instructors || [];
+    },
+    enabled: !!courseId,
+  });
+}
+
+export function useAcademicPrefetchData(institutionId: string | undefined | null) {
+  return useQuery({
+    queryKey: ["academic-prefetch", institutionId],
+    queryFn: async () => {
+      if (!institutionId) return null;
+      return unwrapActionResult(await getInstitutionPrefetchDataAction(institutionId));
+    },
+    enabled: !!institutionId,
+    staleTime: DASHBOARD_STALE_TIME,
+    gcTime: DASHBOARD_GC_TIME,
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
+  });
+}

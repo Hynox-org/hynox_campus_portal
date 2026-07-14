@@ -23,10 +23,12 @@ import {
   Folder, ArrowRight, Save, Clock, ChevronRight, 
   ChevronDown, FileText, Link2, ExternalLink, Sparkles, Play
 } from "lucide-react";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 export default function LibraryBuilder() {
   const [courseTemplates, setCourseTemplates] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Lazy Loaded Cache States (Consistent with program-manager.tsx)
   const [modulesCache, setModulesCache] = useState<Record<string, any[]>>({});
@@ -343,34 +345,68 @@ export default function LibraryBuilder() {
                 });
                 setCourseDrawerOpen(true);
               }}
-              className="flex items-center gap-1 bg-[#2563EB] text-white px-2 py-1 rounded-lg hover:bg-[#2563EB]/95 transition-all text-[10px] font-bold shadow-sm cursor-pointer"
+              className="flex items-center gap-1 bg-[#2563EB] text-white px-2.5 py-1 rounded-lg hover:bg-[#2563EB]/95 transition-all text-[10px] font-bold shadow-sm cursor-pointer"
             >
               <Plus size={12} /> New Template
             </button>
           </div>
 
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search blueprints..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:bg-white transition-all pl-7"
+            />
+            <span className="absolute left-2.5 top-2 text-[#475569]/60 text-[10px]">🔍</span>
+          </div>
+
           <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-            {courseTemplates.length > 0 ? (
-              courseTemplates.map((template) => (
-                <div
-                  key={template.id}
-                  onClick={() => handleSelectCourse(template.id)}
-                  className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
-                    selectedCourse?.id === template.id
-                      ? "bg-[#2563EB]/10 border-[#2563EB]/30 text-[#2563EB]"
-                      : "bg-slate-50/50 hover:bg-slate-50 border-[#E2E8F0] text-[#0F172A]"
-                  }`}
-                >
-                  <div className="min-w-0 pr-2">
-                    <p className="font-semibold truncate">{template.title}</p>
-                    <p className="text-[10px] text-[#475569] font-mono truncate">/{template.slug}</p>
+            {(() => {
+              const filtered = courseTemplates.filter(c =>
+                c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                c.slug.toLowerCase().includes(searchQuery.toLowerCase())
+              );
+
+              if (filtered.length > 0) {
+                return filtered.map((template) => (
+                  <div
+                    key={template.id}
+                    onClick={() => handleSelectCourse(template.id)}
+                    className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex flex-col gap-2 relative ${
+                      selectedCourse?.id === template.id
+                        ? "bg-[#2563EB]/5 border-[#2563EB]/40 text-[#2563EB] shadow-xs"
+                        : "bg-white hover:bg-slate-50 border-[#E2E8F0] text-[#0F172A]"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="min-w-0 pr-2">
+                        <p className="font-bold text-slate-800 hover:text-[#2563EB] transition-colors truncate">{template.title}</p>
+                        <p className="text-[9px] text-[#475569] font-mono truncate">/{template.slug}</p>
+                      </div>
+                      <span className="text-[8px] bg-slate-100 text-[#475569] px-1 rounded uppercase font-bold shrink-0 font-mono border border-slate-200">
+                        {template.course_type_code || "theory"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] text-[#475569] border-t border-slate-100/80 pt-1.5 mt-0.5">
+                      <div className="flex gap-2">
+                        <span className="flex items-center gap-0.5">
+                          📂 {modulesCache[template.id]?.length ?? 0} modules
+                        </span>
+                      </div>
+                      <span className="font-semibold text-[#2563EB] flex items-center gap-0.5">
+                        View details <ChevronRight size={10} />
+                      </span>
+                    </div>
                   </div>
-                  <ChevronRight size={13} className={selectedCourse?.id === template.id ? "text-[#2563EB]" : "text-[#475569]"} />
-                </div>
-              ))
-            ) : (
-              <p className="text-[11px] text-[#475569] text-center py-4 bg-slate-50/50 rounded-lg">No course templates created yet.</p>
-            )}
+                ));
+              }
+
+              return (
+                <p className="text-[11px] text-[#475569] text-center py-4 bg-slate-50/50 rounded-lg">No course templates found.</p>
+              );
+            })()}
           </div>
         </div>
 
@@ -621,9 +657,14 @@ export default function LibraryBuilder() {
                                               </div>
                                             )}
                                             {(les.content_json?.body || les.content_json?.text) && (
-                                              <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg text-[10px] text-slate-700 leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto">
-                                                <div className="font-bold text-[#86868b] text-[8px] uppercase tracking-wider mb-1 font-sans">Blueprint Learning Content</div>
-                                                {les.content_json.body || les.content_json.text}
+                                              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2 shadow-inner">
+                                                <div className="flex justify-between items-center border-b border-slate-200/50 pb-1">
+                                                  <span className="font-bold text-[#86868b] text-[8px] uppercase tracking-wider font-sans">Blueprint Learning Content (Markdown)</span>
+                                                  <span className="text-[8px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-mono font-bold">Rendered</span>
+                                                </div>
+                                                <div className="max-h-80 overflow-y-auto pr-1">
+                                                  <MarkdownRenderer content={les.content_json.body || les.content_json.text} />
+                                                </div>
                                               </div>
                                             )}
                                             <div className="flex items-center justify-between border-b border-slate-50 pb-1 mb-1">

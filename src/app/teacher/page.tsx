@@ -40,26 +40,6 @@ export default async function TeacherPage() {
   });
   const assignedInstitutions = Array.from(instMap.values());
 
-  let activities: any[] = [];
-  let projectSubmissions: any[] = [];
-  let challengeSubmissions: any[] = [];
-  let enrollments: any[] = [];
-  let programs: any[] = [];
-
-  if (resolvedCohortId) {
-    try {
-      [activities, projectSubmissions, challengeSubmissions, enrollments, programs] = await Promise.all([
-        listCohortActivities(resolvedCohortId),
-        listCohortProjectSubmissions(resolvedCohortId),
-        listCohortChallengeSubmissions(resolvedCohortId),
-        listCohortEnrollments(resolvedCohortId),
-        listCohortCourseAssignments(resolvedCohortId).then(list => list.map(l => l.course).filter(Boolean))
-      ]);
-    } catch (err) {
-      console.error("Failed to load teacher dashboard datasets for cohort:", err);
-    }
-  }
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#0F172A] font-sans">
       <header className="bg-white border-b border-[#E2E8F0] shadow-sm sticky top-0 z-40">
@@ -90,12 +70,7 @@ export default async function TeacherPage() {
           tenantId={resolvedTenantId}
           initialCohortId={resolvedCohortId}
           initialCohorts={cohorts}
-          initialActivities={activities}
-          initialProjectSubmissions={projectSubmissions}
-          initialChallengeSubmissions={challengeSubmissions}
-          initialEnrollments={enrollments}
           assignedInstitutions={assignedInstitutions}
-          initialPrograms={programs}
         />
       </main>
     </div>

@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { DASHBOARD_GC_TIME, DASHBOARD_REFETCH_INTERVAL, DASHBOARD_STALE_TIME, seedAcademicListCaches, unwrapActionResult } from "@/lib/dashboard-query";
+import { getInstitutionPrefetchDataAction, getDeliveryPrefetchDataAction } from "@/app/actions/prefetch-actions";
 import { 
   listProgramsAction,
   listCoursesAction,
@@ -49,6 +52,7 @@ interface LearningManagerProps {
 }
 
 export default function LearningManager({ institutions, mode = "create" }: LearningManagerProps) {
+  const queryClient = useQueryClient();
   const [selectedInstId, setSelectedInstId] = useState("");
   const [programs, setPrograms] = useState<any[]>([]);
   const [selectedProgId, setSelectedProgId] = useState("");
@@ -212,29 +216,62 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   const [assignFrom, setAssignFrom] = useState("");
   const [assignUntil, setAssignUntil] = useState("");
 
-  // Load activities
-  const loadActivitiesList = async (tenantId: string) => {
-    const res = await listAllActivitiesAction(tenantId);
-    if (res.activities) setActivities(res.activities);
-  };
+  // React Query prefetch for academic & delivery data per institution
+  const { data: instAcademicData } = useQuery({
+    queryKey: ["academic-prefetch", selectedInstId],
+    queryFn: async () => unwrapActionResult(await getInstitutionPrefetchDataAction(selectedInstId)),
+    enabled: !!selectedInstId,
+    staleTime: DASHBOARD_STALE_TIME,
+    gcTime: DASHBOARD_GC_TIME,
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
+  });
+  const { data: instDeliveryData } = useQuery({
+    queryKey: ["delivery-prefetch", selectedInstId],
+    queryFn: async () => unwrapActionResult(await getDeliveryPrefetchDataAction(selectedInstId)),
+    enabled: !!selectedInstId,
+    staleTime: DASHBOARD_STALE_TIME,
+    gcTime: DASHBOARD_GC_TIME,
+    refetchInterval: DASHBOARD_REFETCH_INTERVAL,
+    refetchIntervalInBackground: true,
+  });
+  const { data: instActivitiesData } = useQuery({
+    queryKey: ["all-activities", selectedInstId],
+    queryFn: async () => {
+      const res = await listAllActivitiesAction(selectedInstId);
+      return res.activities || [];
+    },
+    enabled: !!selectedInstId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-  // Hierarchy updates
+  // Sync state from React Query data
   useEffect(() => {
-    if (!selectedInstId) {
-      setPrograms([]);
-      setCourses([]);
-      setAllTenantCourses([]);
-      return;
+    if (instAcademicData?.success) {
+      const allPrograms = instAcademicData.programs || [];
+      const allCourses = instAcademicData.courses || [];
+      setPrograms(allPrograms);
+      setCourses(allCourses);
+      setAllTenantCourses(allCourses);
+      // Only seed list keys with an identical data contract. The module query
+      // is deliberately deeper (modules + lessons + resources).
+      seedAcademicListCaches(queryClient, selectedInstId, instAcademicData);
     }
-    listProgramsAction(selectedInstId).then(res => setPrograms(res.programs || []));
-    listTenantCoursesAction(selectedInstId).then(res => {
-      setCourses(res.courses || []);
-      setAllTenantCourses(res.courses || []);
-    });
-    listCohortsAction(selectedInstId).then(res => setCohorts(res.cohorts || []));
-    loadActivitiesList(selectedInstId);
-  }, [selectedInstId]);
+  }, [instAcademicData, queryClient, selectedInstId]);
 
+  useEffect(() => {
+    if (instDeliveryData?.success) {
+      setCohorts(instDeliveryData.cohorts || []);
+    }
+  }, [instDeliveryData]);
+
+  useEffect(() => {
+    if (instActivitiesData) {
+      setActivities(instActivitiesData);
+    }
+  }, [instActivitiesData]);
+
+  // Hierarchy updates - only for program/course level navigation
   useEffect(() => {
     if (!selectedProgId) {
       setCourses(allTenantCourses);
@@ -250,12 +287,27 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       setAllCourseLessons([]);
       return;
     }
+    // Try cache first (seeded from prefetch)
+    const cachedMods: any[] | undefined = queryClient.getQueryData(["course-modules", selectedCourseId]);
+    if (cachedMods && cachedMods.length > 0) {
+      setModules(cachedMods);
+      // Get lessons from prefetch data
+      const prefetchLessons = instAcademicData?.lessons || [];
+      const moduleIds = cachedMods.map((m: any) => m.id);
+      const cachedLessons = prefetchLessons.filter((l: any) => moduleIds.includes(l.module_id));
+      if (cachedLessons.length > 0) {
+        setLessons(cachedLessons);
+        setAllCourseLessons(cachedLessons);
+        return;
+      }
+    }
+    // Fallback: fetch from API
     listModulesAction(selectedCourseId).then(res => setModules(res.modules || []));
     listLessonsForCourseAction(selectedCourseId).then(res => {
       setLessons(res.lessons || []);
       setAllCourseLessons(res.lessons || []);
     });
-  }, [selectedCourseId]);
+  }, [selectedCourseId, instAcademicData, queryClient]);
 
   useEffect(() => {
     if (!selectedModuleId) {
@@ -328,7 +380,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
         setCreatedChallengeId(details.challenge.id);
       }
 
-      loadActivitiesList(selectedInstId);
+      queryClient.invalidateQueries({ queryKey: ["all-activities", selectedInstId] });
       setTitle("");
       setDescription("");
       setInstructions("");
@@ -622,7 +674,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       setError(res.error);
     } else if (res.activity) {
       setSuccess("Learning activity updated successfully!");
-      await loadActivitiesList(selectedInstId);
+      await queryClient.invalidateQueries({ queryKey: ["all-activities", selectedInstId] });
       const updatedActivity = {
         ...selectedActivity,
         title: editForm.title,
