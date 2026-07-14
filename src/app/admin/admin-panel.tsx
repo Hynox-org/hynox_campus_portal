@@ -125,10 +125,42 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     }
   }, []);
 
-  const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager">("institutions");
+  const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const parent = params.get("parentTab");
+      if (parent && ["institutions", "onboarding", "library", "programs", "learning_manager"].includes(parent)) {
+        return parent as any;
+      }
+    }
+    return "institutions";
+  });
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "program_student_progress" | "super_admin_invite">("institutions");
+  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "program_student_progress" | "super_admin_invite">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "program_student_progress", "super_admin_invite"];
+      if (tab && validTabs.includes(tab)) {
+        return tab as any;
+      }
+    }
+    return "institutions";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("parentTab") !== activeParentTab || params.get("tab") !== activeTab) {
+        params.set("parentTab", activeParentTab);
+        params.set("tab", activeTab);
+        const newSearch = params.toString();
+        const newUrl = `${window.location.pathname}${newSearch ? "?" + newSearch : ""}`;
+        window.history.replaceState(null, "", newUrl);
+      }
+    }
+  }, [activeParentTab, activeTab]);
   
   // Use data from hook as initial state or direct derivation
   const [institutions, setInstitutions] = useState<any[]>([]);

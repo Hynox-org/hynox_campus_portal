@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   listModulesAction, 
   listLessonsAction, 
@@ -82,8 +82,26 @@ export default function StudentConsole({
   const { data: academicPrefetch } = useAcademicPrefetchData(institution?.id);
   const initialPrograms = studentDeliveryRes?.programs || [];
 
-  const [activeTab, setActiveTab] = useState<"overview" | "academics" | "quizzes" | "projects" | "challenges">("overview");
-  const [activeParentTab, setActiveParentTab] = useState<"overview" | "curriculum" | "assessments">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "academics" | "quizzes" | "projects" | "challenges">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab && ["overview", "academics", "quizzes", "projects", "challenges"].includes(tab)) {
+        return tab as any;
+      }
+    }
+    return "overview";
+  });
+  const [activeParentTab, setActiveParentTab] = useState<"overview" | "curriculum" | "assessments">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const parent = params.get("parentTab");
+      if (parent && ["overview", "curriculum", "assessments"].includes(parent)) {
+        return parent as any;
+      }
+    }
+    return "overview";
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Academics exploration state
@@ -122,6 +140,112 @@ export default function StudentConsole({
   const [modules, setModules] = useState<any[]>([]);
   const [lessonProgressMap, setLessonProgressMap] = useState<Record<string, any>>({});
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      let changed = false;
+      if (params.get("tab") !== activeTab) {
+        params.set("tab", activeTab);
+        changed = true;
+      }
+      if (params.get("parentTab") !== activeParentTab) {
+        params.set("parentTab", activeParentTab);
+        changed = true;
+      }
+
+      // Clean up legacy URL search params
+      if (params.has("courseId")) { params.delete("courseId"); changed = true; }
+      if (params.has("lessonId")) { params.delete("lessonId"); changed = true; }
+
+      if (selectedCourse && selectedCohort && selectedCohort.courses) {
+        const cIdx = selectedCohort.courses.findIndex((c: any) => c.id === selectedCourse.id);
+        if (cIdx !== -1) {
+          if (params.get("c") !== String(cIdx)) {
+            params.set("c", String(cIdx));
+            changed = true;
+          }
+        } else if (params.has("c")) {
+          params.delete("c");
+          changed = true;
+        }
+      } else {
+        if (params.has("c")) {
+          params.delete("c");
+          changed = true;
+        }
+      }
+
+      if (activeLesson && modules.length > 0) {
+        const flatLessons = modules.flatMap(m => m.lessons || []);
+        const lIdx = flatLessons.findIndex((l: any) => l.id === activeLesson.id);
+        if (lIdx !== -1) {
+          if (params.get("l") !== String(lIdx)) {
+            params.set("l", String(lIdx));
+            changed = true;
+          }
+        } else if (params.has("l")) {
+          params.delete("l");
+          changed = true;
+        }
+      } else {
+        if (params.has("l")) {
+          params.delete("l");
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        const newSearch = params.toString();
+        const newUrl = `${window.location.pathname}${newSearch ? "?" + newSearch : ""}`;
+        window.history.replaceState(null, "", newUrl);
+      }
+    }
+  }, [activeTab, activeParentTab, selectedCourse, activeLesson, selectedCohort, modules]);
+
+  // Guards: restore from URL only once per session to prevent background
+  // React Query refetches from overriding the user's active selections.
+  const hasRestoredCourse = useRef(false);
+  const hasRestoredLesson = useRef(false);
+
+  // Restore selectedCourse from query params when selectedCohort loads
+  useEffect(() => {
+    if (hasRestoredCourse.current) return;
+    if (selectedCohort && selectedCohort.courses && selectedCohort.courses.length > 0 && typeof window !== "undefined" && !selectedCourse) {
+      const params = new URLSearchParams(window.location.search);
+      const cIdxStr = params.get("c");
+      if (cIdxStr) {
+        const idx = parseInt(cIdxStr, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < selectedCohort.courses.length) {
+          setSelectedCourse(selectedCohort.courses[idx]);
+          hasRestoredCourse.current = true;
+        }
+      } else {
+        // No ?c= in URL — mark as restored so we don't loop
+        hasRestoredCourse.current = true;
+      }
+    }
+  }, [selectedCohort, selectedCourse]);
+
+  // Restore activeLesson from query params when modules load
+  useEffect(() => {
+    if (hasRestoredLesson.current) return;
+    if (modules.length > 0 && typeof window !== "undefined" && !activeLesson) {
+      const params = new URLSearchParams(window.location.search);
+      const lIdxStr = params.get("l");
+      if (lIdxStr) {
+        const idx = parseInt(lIdxStr, 10);
+        const flatLessons = modules.flatMap(m => m.lessons || []);
+        if (!isNaN(idx) && idx >= 0 && idx < flatLessons.length) {
+          setActiveLesson(flatLessons[idx]);
+          hasRestoredLesson.current = true;
+        }
+      } else {
+        // No ?l= in URL — mark as restored so we don't loop
+        hasRestoredLesson.current = true;
+      }
+    }
+  }, [modules, activeLesson]);
 
   // Learning activities state
   const [activities, setActivities] = useState<any[]>([]);

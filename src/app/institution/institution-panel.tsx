@@ -40,7 +40,28 @@ export default function InstitutionPanel({
   primaryRole
 }: InstitutionPanelProps) {
   // Navigation states
-  const [activeTab, setActiveTab] = useState<"overview" | "roster">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "roster">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab && ["overview", "roster"].includes(tab)) {
+        return tab as any;
+      }
+    }
+    return "overview";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") !== activeTab) {
+        params.set("tab", activeTab);
+        const newSearch = params.toString();
+        const newUrl = `${window.location.pathname}${newSearch ? "?" + newSearch : ""}`;
+        window.history.replaceState(null, "", newUrl);
+      }
+    }
+  }, [activeTab]);
 
   // React Query Data Fetching
   const { data: deliveryData, isLoading: loadingDelivery, error: deliveryError } = useDeliveryData(tenantId);

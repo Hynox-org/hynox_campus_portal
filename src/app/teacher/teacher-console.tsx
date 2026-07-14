@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition, useEffect } from "react";
+import React, { useState, useTransition, useEffect, useRef } from "react";
 import AttendancePanel from "@/components/attendance-panel";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useQueryClient } from "@tanstack/react-query";
@@ -139,8 +139,28 @@ export default function TeacherConsole({
   const acadCourses = academicPrefetch?.courses ?? EMPTY_LIST;
   const acadLessons = academicPrefetch?.lessons ?? EMPTY_LIST;
 
-  const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "syllabus" | "delivery" | "auditor" | "attendance">("overview");
-  const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "syllabus" | "delivery" | "auditor" | "attendance">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      const validTabs = ["overview", "roster", "projects", "challenges", "activities-manager", "syllabus", "delivery", "auditor", "attendance"];
+      if (tab && validTabs.includes(tab)) {
+        return tab as any;
+      }
+    }
+    return "overview";
+  });
+  const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const parent = params.get("parentTab");
+      const validParents = ["overview", "students", "assessments", "curriculum"];
+      if (parent && validParents.includes(parent)) {
+        return parent as any;
+      }
+    }
+    return "overview";
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   useEffect(() => {
@@ -181,12 +201,6 @@ export default function TeacherConsole({
   const [selectedProgramId, setSelectedProgramId] = useState<string>(acadPrograms?.[0]?.id || "");
   const [tenantCourses, setTenantCourses] = useState<any[]>(acadCourses || []);
 
-  const currentSelectedInst = assignedInstitutions.find(i => i.id === selectedInstId);
-  const isSelectedInstDisabled = currentSelectedInst && (currentSelectedInst.status === "inactive" || currentSelectedInst.status === "suspended");
-
-  const currentSelectedProg = programsList.find(p => p.id === selectedProgramId);
-  const isSelectedProgDisabled = currentSelectedProg && (currentSelectedProg.status?.code === "suspended" || currentSelectedProg.status?.code === "disabled");
-
   // Main collections derived from React Query instantly
   const cohorts = deliveryData?.cohorts || initialCohorts;
   const enrollments = deliveryData?.enrollments || [];
@@ -195,6 +209,119 @@ export default function TeacherConsole({
   const challengeSubmissions = learningData?.challengeSubmissions || [];
   const quizAttempts = learningData?.quizAttempts || [];
   const assignments = deliveryData?.assignments || [];
+
+  // Guard: restore from URL only once – prevents background React Query refetches
+  // from overriding the user's in-session selections.
+  const hasRestoredFromUrl = useRef(false);
+
+  // Sync state values from indices in URL query params on initial load/mount
+  useEffect(() => {
+    if (hasRestoredFromUrl.current) return;
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      let restored = false;
+
+      const cohortIndexStr = params.get("c");
+      if (cohortIndexStr !== null && cohorts.length > 0) {
+        const idx = parseInt(cohortIndexStr, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < cohorts.length) {
+          const cId = cohorts[idx]?.id;
+          if (cId && cId !== selectedCohortId) { setSelectedCohortId(cId); restored = true; }
+        }
+      }
+
+      const instIndexStr = params.get("i");
+      if (instIndexStr !== null && assignedInstitutions.length > 0) {
+        const idx = parseInt(instIndexStr, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < assignedInstitutions.length) {
+          const iId = assignedInstitutions[idx]?.id;
+          if (iId && iId !== selectedInstId) { setSelectedInstId(iId); restored = true; }
+        }
+      }
+
+      const programIndexStr = params.get("p");
+      if (programIndexStr !== null && programsList.length > 0) {
+        const idx = parseInt(programIndexStr, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < programsList.length) {
+          const pId = programsList[idx]?.id;
+          if (pId && pId !== selectedProgramId) { setSelectedProgramId(pId); restored = true; }
+        }
+      }
+
+      // Mark as restored only once all required lists are non-empty
+      if (cohorts.length > 0 && assignedInstitutions.length > 0 && programsList.length > 0) {
+        hasRestoredFromUrl.current = true;
+      }
+    }
+  }, [cohorts, assignedInstitutions, programsList]);
+
+  // Sync state modifications back to clean index-based query parameters
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      let changed = false;
+
+      if (params.get("tab") !== activeTab) {
+        params.set("tab", activeTab);
+        changed = true;
+      }
+      if (params.get("parentTab") !== activeParentTab) {
+        params.set("parentTab", activeParentTab);
+        changed = true;
+      }
+
+      // Cleanup old UUID query parameter keys to prevent cluttering
+      if (params.has("cohortId")) { params.delete("cohortId"); changed = true; }
+      if (params.has("instId")) { params.delete("instId"); changed = true; }
+      if (params.has("programId")) { params.delete("programId"); changed = true; }
+
+      const cIdx = cohorts.findIndex((c: any) => c.id === selectedCohortId);
+      if (cIdx !== -1) {
+        if (params.get("c") !== String(cIdx)) {
+          params.set("c", String(cIdx));
+          changed = true;
+        }
+      } else if (params.has("c")) {
+        params.delete("c");
+        changed = true;
+      }
+
+      const iIdx = assignedInstitutions.findIndex((i: any) => i.id === selectedInstId);
+      if (iIdx !== -1) {
+        if (params.get("i") !== String(iIdx)) {
+          params.set("i", String(iIdx));
+          changed = true;
+        }
+      } else if (params.has("i")) {
+        params.delete("i");
+        changed = true;
+      }
+
+      const pIdx = programsList.findIndex((p: any) => p.id === selectedProgramId);
+      if (pIdx !== -1) {
+        if (params.get("p") !== String(pIdx)) {
+          params.set("p", String(pIdx));
+          changed = true;
+        }
+      } else if (params.has("p")) {
+        params.delete("p");
+        changed = true;
+      }
+
+      if (changed) {
+        const newSearch = params.toString();
+        const newUrl = `${window.location.pathname}${newSearch ? "?" + newSearch : ""}`;
+        window.history.replaceState(null, "", newUrl);
+      }
+    }
+  }, [activeTab, activeParentTab, selectedCohortId, selectedInstId, selectedProgramId, cohorts, assignedInstitutions, programsList]);
+
+  const currentSelectedInst = assignedInstitutions.find(i => i.id === selectedInstId);
+  const isSelectedInstDisabled = currentSelectedInst && (currentSelectedInst.status === "inactive" || currentSelectedInst.status === "suspended");
+
+  const currentSelectedProg = programsList.find(p => p.id === selectedProgramId);
+  const isSelectedProgDisabled = currentSelectedProg && (currentSelectedProg.status?.code === "suspended" || currentSelectedProg.status?.code === "disabled");
+
 
   const studentsList = React.useMemo(() => {
     const list: any[] = [];
