@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCache } from "@/components/cache-provider";
 import { usePrograms, useTenantInstructors, useCourses, useCourseModules, useCourseInstructors, useAcademicLookups } from "@/hooks/use-academics";
 import { DataTable } from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
@@ -115,7 +114,6 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const queryClient = useQueryClient();
-  const { get, set } = useCache();
   
   const { data: adminData, isLoading: loadingAdmin, error: adminError } = useAdminData();
   

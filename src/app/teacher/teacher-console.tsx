@@ -3,7 +3,6 @@
 import React, { useState, useTransition, useEffect } from "react";
 import AttendancePanel from "@/components/attendance-panel";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
-import { useCache } from "@/components/cache-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
 import { useAcademicPrefetchData } from "@/hooks/use-academics";
@@ -131,7 +130,6 @@ export default function TeacherConsole({
   assignedInstitutions,
 }: TeacherConsoleProps) {
   const queryClient = useQueryClient();
-  const { get, set } = useCache();
   
   // React Query Prefetching - one shot for all academic data
   const { data: deliveryData, isLoading: loadingDelivery, error: deliveryError } = useDeliveryData(tenantId);

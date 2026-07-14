@@ -29,10 +29,9 @@ function ensureTempDir() {
 // Resolve Supabase client statically based on environment (Next.js server context vs standalone background worker process)
 let cachedSupabase: any = null;
 export async function getSupabaseClient() {
-  if (cachedSupabase) return cachedSupabase;
-
   // Standalone node script execution fallback (worker mode or non-Next.js runtime)
   if (process.env.IS_WORKER === "true" || !process.env.NEXT_RUNTIME) {
+    if (cachedSupabase) return cachedSupabase;
     cachedSupabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -61,11 +60,11 @@ export async function getSupabaseClient() {
       }
     );
   } catch (e) {
-    cachedSupabase = createClient(
+    // If standard cookies fail or we aren't in HTTP context, construct a client dynamically
+    return createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-    return cachedSupabase;
   }
 }
 

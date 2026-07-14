@@ -3,20 +3,38 @@
 import React, { createContext, useContext, useRef } from "react";
 
 interface CacheContextProps {
-  get: (key: string) => any;
-  set: (key: string, value: any) => void;
+  get: <T = any>(key: string) => T | undefined;
+  set: (key: string, value: any, ttlMs?: number) => void;
   clear: () => void;
 }
 
 const CacheContext = createContext<CacheContextProps | null>(null);
 
-export function CacheProvider({ children }: { children: React.ReactNode }) {
-  const cacheRef = useRef<Record<string, any>>({});
+type CacheEntry = {
+  value: any;
+  expiresAt?: number;
+};
 
-  const get = (key: string) => cacheRef.current[key];
-  const set = (key: string, value: any) => {
-    cacheRef.current[key] = value;
+export function CacheProvider({ children }: { children: React.ReactNode }) {
+  const cacheRef = useRef<Record<string, CacheEntry>>({});
+
+  const get = <T = any,>(key: string): T | undefined => {
+    const entry = cacheRef.current[key];
+    if (!entry) return undefined;
+    if (entry.expiresAt && Date.now() > entry.expiresAt) {
+      delete cacheRef.current[key];
+      return undefined;
+    }
+    return entry.value as T;
   };
+
+  const set = (key: string, value: any, ttlMs?: number) => {
+    cacheRef.current[key] = {
+      value,
+      expiresAt: ttlMs ? Date.now() + ttlMs : undefined,
+    };
+  };
+
   const clear = () => {
     cacheRef.current = {};
   };
