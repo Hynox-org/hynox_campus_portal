@@ -20,7 +20,11 @@ import {
   unmapTeacherFromInstitutionAction,
   getTeacherInstitutionDetailsAction,
   updateInstitutionStatusAction,
-  onboardSuperAdminAction
+  onboardSuperAdminAction,
+  updateInstitutionAction,
+  getInstitutionRelationsCountAction,
+  deleteInstitutionAction,
+  deleteUserAction
 } from "@/app/actions/institution-actions";
 import { 
   createProgramAction,
@@ -132,7 +136,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager">("institutions");
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "program_student_progress" | "super_admin_invite">("institutions");
+  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "teacher_assignments" | "program_student_progress" | "super_admin_invite">("institutions");
 
   // Sync state with URL params after hydration on client
   useEffect(() => {
@@ -143,7 +147,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         setActiveParentTab(parent as any);
       }
       const tab = params.get("tab");
-      const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "program_student_progress", "super_admin_invite"];
+      const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "teacher_assignments", "program_student_progress", "super_admin_invite"];
       if (tab && validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -173,6 +177,134 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       setInvitations(adminData.invitations || []);
     }
   }, [adminData]);
+
+  // Sidebar for Institution Details
+  const [selectedInstForSidebar, setSelectedInstForSidebar] = useState<any | null>(null);
+  const [isInstSidebarOpen, setIsInstSidebarOpen] = useState(false);
+  const [isEditingInst, setIsEditingInst] = useState(false);
+  
+  // Editing Form State (for sidebar)
+  const [editInstForm, setEditInstForm] = useState({
+    name: "",
+    institution_code: "",
+    institution_type: "college",
+    email: "",
+    phone: "",
+    address: "",
+    website: "",
+    status: "onboarding"
+  });
+
+  // Deletion warnings and confirmation states
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [instToDelete, setInstToDelete] = useState<any | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [relationCounts, setRelationCounts] = useState<{ cohorts: number; programs: number; users: number } | null>(null);
+  const [checkingRelations, setCheckingRelations] = useState(false);
+
+  // User deletion states
+  const [isUserDeleteModalOpen, setIsUserDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; email: string; callback: () => void } | null>(null);
+  const [userDeleteConfirmEmail, setUserDeleteConfirmEmail] = useState("");
+  const [userDeleteLoading, setUserDeleteLoading] = useState(false);
+
+  const handleOpenSidebar = (inst: any) => {
+    setSelectedInstForSidebar(inst);
+    setEditInstForm({
+      name: inst.name || "",
+      institution_code: inst.institution_code || "",
+      institution_type: inst.institution_type || "college",
+      email: inst.email || "",
+      phone: inst.phone || "",
+      address: inst.address || "",
+      website: inst.website || "",
+      status: inst.status || "onboarding"
+    });
+    setIsEditingInst(false);
+    setIsInstSidebarOpen(true);
+  };
+
+  const handleSaveEditInst = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInstForSidebar) return;
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    const res = await updateInstitutionAction(selectedInstForSidebar.id, editInstForm);
+    if (res.error) {
+      setError(res.error);
+    } else if (res.institution) {
+      setSuccess(`Institution updated successfully!`);
+      setInstitutions(prev => prev.map(i => i.id === selectedInstForSidebar.id ? res.institution : i));
+      setSelectedInstForSidebar(res.institution);
+      setIsEditingInst(false);
+    }
+    setLoading(false);
+  };
+
+  const handleOpenDeleteModal = async (inst: any) => {
+    setInstToDelete(inst);
+    setDeleteConfirmName("");
+    setCheckingRelations(true);
+    setIsDeleteModalOpen(true);
+    try {
+      const res = await getInstitutionRelationsCountAction(inst.id);
+      if (res.success && res.counts) {
+        setRelationCounts(res.counts);
+      } else {
+        setRelationCounts({ cohorts: 0, programs: 0, users: 0 });
+      }
+    } catch (err) {
+      setRelationCounts({ cohorts: 0, programs: 0, users: 0 });
+    }
+    setCheckingRelations(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!instToDelete) return;
+    if (deleteConfirmName !== instToDelete.name) {
+      alert("Name does not match.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    const res = await deleteInstitutionAction(instToDelete.id);
+    if (res.error) {
+      setError(res.error);
+    } else {
+      setSuccess(`Institution '${instToDelete.name}' successfully deleted.`);
+      setInstitutions(prev => prev.filter(i => i.id !== instToDelete.id));
+      setIsDeleteModalOpen(false);
+      setInstToDelete(null);
+      setIsInstSidebarOpen(false);
+    }
+    setLoading(false);
+  };
+
+  const handleConfirmUserDelete = async () => {
+    if (!userToDelete) return;
+    if (userDeleteConfirmEmail.trim() !== userToDelete.email) {
+      alert("Email does not match.");
+      return;
+    }
+    setUserDeleteLoading(true);
+    setError("");
+    setSuccess("");
+    const res = await deleteUserAction(userToDelete.id);
+    if (res.error) {
+      setError(res.error);
+      alert(res.error);
+    } else {
+      setSuccess(`User successfully deleted.`);
+      userToDelete.callback();
+      setIsUserDeleteModalOpen(false);
+      setUserToDelete(null);
+      setUserDeleteConfirmEmail("");
+    }
+    setUserDeleteLoading(false);
+  };
 
   const [inviteSearch, setInviteSearch] = useState("");
   const [inviteFilter, setInviteFilter] = useState<"all" | "pending" | "accepted" | "expired" | "failed" | "revoked">("all");
@@ -255,7 +387,10 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   };
 
   const computedStats = React.useMemo(() => {
-    let total = invitations.length;
+    const filteredInvs = invitations.filter((inv) =>
+      ["student_onboarding", "institution_admin_invite"].includes(inv.invitation_type)
+    );
+    let total = filteredInvs.length;
     let accepted = 0;
     let pending = 0;
     let expired = 0;
@@ -264,7 +399,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
     const now = new Date();
 
-    invitations.forEach((inv) => {
+    filteredInvs.forEach((inv) => {
       const isExpired = inv.status === "expired" || (["pending", "created", "sent"].includes(inv.status) && new Date(inv.expires_at) < now);
       if (inv.status === "accepted") {
         accepted++;
@@ -284,6 +419,11 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
   const filteredInvitations = React.useMemo(() => {
     return invitations.filter((inv) => {
+      // 0. Only Student Onboarding and Institution Admin Onboarding
+      if (!["student_onboarding", "institution_admin_invite"].includes(inv.invitation_type)) {
+        return false;
+      }
+
       // 1. Search filter
       const searchLower = inviteSearch.toLowerCase();
       const nameMatch = inv.user?.full_name?.toLowerCase().includes(searchLower);
@@ -397,6 +537,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [instPhone, setInstPhone] = useState("");
   const [instAddress, setInstAddress] = useState("");
   const [instWebsite, setInstWebsite] = useState("");
+  const [instFormErrors, setInstFormErrors] = useState<Record<string, string>>({});
 
   const [adminEmailInput, setAdminEmailInput] = useState("");
   const [selectedInstId, setSelectedInstId] = useState(institutions[0]?.id || "");
@@ -468,7 +609,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     video_url: "",
     duration: 0,
     position: 1,
-    is_preview: false,
     status_id: ""
   });
 
@@ -551,7 +691,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   };
 
   React.useEffect(() => {
-    if (activeTab === "teacher_mapping") {
+    if (activeTab === "teacher_mapping" || activeTab === "teacher_assignments") {
       loadAllTeachersData();
     }
   }, [activeTab]);
@@ -694,7 +834,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         video_url: lessonForm.video_url || undefined,
         duration: lessonForm.duration,
         position: lessonForm.position,
-        is_preview: lessonForm.is_preview,
         status_id: lessonForm.status_id
       });
     } else {
@@ -706,7 +845,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         video_url: lessonForm.video_url || undefined,
         duration: lessonForm.duration,
         position: lessonForm.position,
-        is_preview: lessonForm.is_preview,
         status_id: lessonForm.status_id,
         tenant_id: acadSelectedInstId,
         institution_id: acadSelectedInstId
@@ -775,14 +913,40 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     setUploadedFileName("");
   };
 
+  const validateInstForm = () => {
+    const errors: Record<string, string> = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[0-9+()\-\s]{7,20}$/;
+
+    if (!instName.trim() || instName.trim().length < 2) {
+      errors.name = "Institution name is required (min 2 characters).";
+    }
+    if (!instCode.trim()) {
+      errors.code = "Institution code is required.";
+    }
+    if (!instEmail.trim()) {
+      errors.email = "Contact email is required.";
+    } else if (!emailRegex.test(instEmail.trim())) {
+      errors.email = "Enter a valid email address.";
+    }
+    if (instPhone.trim() && !phoneRegex.test(instPhone.trim())) {
+      errors.phone = "Enter a valid phone number.";
+    }
+
+    setInstFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleCreateInstitution = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateInstForm()) {
+      return;
+    }
     setLoading(true);
     clearStatuses();
 
     const formData = new FormData();
     formData.append("name", instName);
-    formData.append("slug", instSlug);
     formData.append("code", instCode);
     formData.append("type", instType);
     formData.append("email", instEmail);
@@ -802,12 +966,12 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       }
       // Reset form
       setInstName("");
-      setInstSlug("");
       setInstCode("");
       setInstEmail("");
       setInstPhone("");
       setInstAddress("");
       setInstWebsite("");
+      setInstFormErrors({});
     }
     setLoading(false);
   };
@@ -935,6 +1099,10 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         setTeacherOnboardName("");
         setTeacherOnboardEmail("");
         loadAllTeachersData();
+        const freshInvites = await listInvitationsAction();
+        if (freshInvites.invitations) {
+          setInvitations(freshInvites.invitations);
+        }
       } else {
         alert(res.result.error || "Failed to onboard teacher.");
       }
@@ -983,7 +1151,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       return;
     }
     const inst = institutions.find((i) => i.id === selectedInstId);
-    const slug = inst ? inst.slug : "campus";
+    const code = inst ? inst.institution_code : "campus";
 
     // Build template data
     const templateData = [
@@ -1012,7 +1180,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Student Onboarding Template");
-      XLSX.writeFile(workbook, `hynox_student_onboarding_${slug}.xlsx`);
+      XLSX.writeFile(workbook, `hynox_student_onboarding_${code}.xlsx`);
       setSuccess("Excel template generated successfully!");
     } catch (err: any) {
       setError(`Failed to generate Excel template: ${err.message}`);
@@ -1313,7 +1481,14 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     {
       accessorKey: "name",
       header: "Name",
-      cell: ({ row }) => <span className="font-semibold text-[#1d1d1f]">{row.original.name}</span>,
+      cell: ({ row }) => (
+        <button
+          onClick={() => handleOpenSidebar(row.original)}
+          className="font-semibold text-[#0066cc] hover:underline text-left cursor-pointer transition-all"
+        >
+          {row.original.name}
+        </button>
+      ),
     },
     {
       accessorKey: "institution_code",
@@ -1323,47 +1498,12 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     {
       accessorKey: "institution_type",
       header: "Type",
-      cell: ({ row }) => <span className="text-[#86868b] font-medium">{row.original.institution_type}</span>,
-    },
-    {
-      accessorKey: "slug",
-      header: "Slug",
-      cell: ({ row }) => <span className="text-[#86868b]">{row.original.slug}</span>,
-    },
-    {
-      accessorKey: "status",
-      header: () => <div className="text-right w-full">Status</div>,
       cell: ({ row }) => {
-        const inst = row.original;
+        const type = row.original.institution_type;
         return (
-          <div className="text-right">
-            <select
-              value={inst.status}
-              onChange={async (e) => {
-                const newStatus = e.target.value;
-                if (confirm(`Are you sure you want to change the status of ${inst.name} to ${newStatus}?`)) {
-                  const res = await updateInstitutionStatusAction(inst.id, newStatus);
-                  if (res.error) {
-                    alert(res.error);
-                  } else {
-                    setInstitutions(prev => prev.map(i => i.id === inst.id ? { ...i, status: newStatus } : i));
-                  }
-                }
-              }}
-              className={`px-2 py-1 rounded-lg text-[10px] font-bold border focus:outline-none cursor-pointer ${
-                inst.status === "active"
-                  ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                  : inst.status === "onboarding"
-                  ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
-                  : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
-              }`}
-            >
-              <option value="active">Active</option>
-              <option value="onboarding">Onboarding</option>
-              <option value="inactive">Inactive</option>
-              <option value="suspended">Suspended</option>
-            </select>
-          </div>
+          <span className="text-[#86868b] font-medium capitalize">
+            {type === "college" ? "College" : type === "school" ? "School" : "Others"}
+          </span>
         );
       },
     },
@@ -1407,25 +1547,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 Logged in as: <strong className="text-[#1d1d1f] font-semibold">{adminEmail}</strong>
               </span>
             </div>
-            <button
-              onClick={() => {
-                setShowPreviewLoader(true);
-                setTimeout(() => setShowPreviewLoader(false), 6000);
-              }}
-              className="flex items-center gap-1.5 bg-[#0066cc]/10 hover:bg-[#0066cc]/20 text-[#0066cc] border border-[#0066cc]/20 px-2 sm:px-3 py-1 rounded-md transition-all font-semibold cursor-pointer shrink-0"
-              title="Test Caching Loader"
-            >
-              <Building size={11} />
-              <span>Test Loader</span>
-            </button>
-            <button
-              onClick={() => setShowSecondaryPreview(!showSecondaryPreview)}
-              className="flex items-center gap-1.5 bg-[#06B6D4]/10 hover:bg-[#06B6D4]/20 text-[#0891B2] border border-[#06B6D4]/20 px-2 sm:px-3 py-1 rounded-md transition-all font-semibold cursor-pointer shrink-0"
-              title="Test Secondary Loaders"
-            >
-              <Layers size={11} />
-              <span>Test Local Loader</span>
-            </button>
             <button
               onClick={() => signOutAction()}
               className="flex items-center gap-1.5 bg-transparent hover:bg-black/5 text-[#1d1d1f] border border-black/15 hover:border-black/30 px-2 sm:px-3 py-1 rounded-md transition-all font-medium cursor-pointer shrink-0"
@@ -1680,7 +1801,22 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-slate-50"
                   }`}
                 >
-                  Teacher Mapping
+                  Teacher Onboarding
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("teacher_assignments");
+                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                      setIsSidebarOpen(false);
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
+                    activeTab === "teacher_assignments"
+                      ? "bg-[#0066cc]/10 text-[#0066cc]"
+                      : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-slate-50"
+                  }`}
+                >
+                  Teacher Assignments
                 </button>
                 <button
                   onClick={() => {
@@ -2008,11 +2144,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 <div className="mb-4">
                   <h4 className="text-xs font-bold text-[#1d1d1f]">REGISTERED INSTITUTIONS</h4>
                 </div>
-                <DataTable 
-                  columns={institutionColumns} 
-                  data={institutions} 
-                  searchKey="institutions" 
-                />
+                <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                  <DataTable
+                    columns={institutionColumns}
+                    data={institutions}
+                    searchKey="institutions"
+                  />
+                </div>
               </div>
 
             </div>
@@ -2026,39 +2164,34 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                   <Plus size={14} /> Register New Campus Institution
                 </h3>
                 
-                <form onSubmit={handleCreateInstitution} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <form onSubmit={handleCreateInstitution} noValidate className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div>
                     <label className="block font-semibold mb-1 text-[#86868b]">Institution Name *</label>
                     <input
                       type="text"
                       placeholder="e.g. Stanford University"
-                      required
                       value={instName}
-                      onChange={(e) => setInstName(e.target.value)}
-                      className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                      onChange={(e) => {
+                        setInstName(e.target.value);
+                        if (instFormErrors.name) setInstFormErrors((prev) => ({ ...prev, name: "" }));
+                      }}
+                      className={`w-full bg-white border rounded-lg px-3 py-2 text-xs focus:outline-none shadow-sm text-[#1d1d1f] ${instFormErrors.name ? "border-red-400 focus:border-red-500" : "border-[#d2d2d7] focus:border-[#0066cc]"}`}
                     />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-1 text-[#86868b]">Subdomain Slug (Unique) *</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. stanford"
-                      required
-                      value={instSlug}
-                      onChange={(e) => setInstSlug(e.target.value)}
-                      className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
-                    />
+                    {instFormErrors.name && <p className="mt-1 text-[10px] font-semibold text-red-600">{instFormErrors.name}</p>}
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-[#86868b]">Institution Code (Unique) *</label>
                     <input
                       type="text"
                       placeholder="e.g. SU-CAMPUS"
-                      required
                       value={instCode}
-                      onChange={(e) => setInstCode(e.target.value)}
-                      className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                      onChange={(e) => {
+                        setInstCode(e.target.value);
+                        if (instFormErrors.code) setInstFormErrors((prev) => ({ ...prev, code: "" }));
+                      }}
+                      className={`w-full bg-white border rounded-lg px-3 py-2 text-xs focus:outline-none shadow-sm text-[#1d1d1f] ${instFormErrors.code ? "border-red-400 focus:border-red-500" : "border-[#d2d2d7] focus:border-[#0066cc]"}`}
                     />
+                    {instFormErrors.code && <p className="mt-1 text-[10px] font-semibold text-red-600">{instFormErrors.code}</p>}
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-[#86868b]">Category Type *</label>
@@ -2067,22 +2200,24 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       onChange={(e) => setInstType(e.target.value)}
                       className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
                     >
-                      <option value="school">School</option>
                       <option value="college">College</option>
-                      <option value="university">University</option>
-                      <option value="training_center">Training Center</option>
-                      <option value="corporate_partner">Corporate Partner</option>
+                      <option value="school">School</option>
+                      <option value="others">Others</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block font-semibold mb-1 text-[#86868b]">Contact Email</label>
+                    <label className="block font-semibold mb-1 text-[#86868b]">Contact Email *</label>
                     <input
                       type="email"
                       placeholder="admin@college.edu"
                       value={instEmail}
-                      onChange={(e) => setInstEmail(e.target.value)}
-                      className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                      onChange={(e) => {
+                        setInstEmail(e.target.value);
+                        if (instFormErrors.email) setInstFormErrors((prev) => ({ ...prev, email: "" }));
+                      }}
+                      className={`w-full bg-white border rounded-lg px-3 py-2 text-xs focus:outline-none shadow-sm text-[#1d1d1f] ${instFormErrors.email ? "border-red-400 focus:border-red-500" : "border-[#d2d2d7] focus:border-[#0066cc]"}`}
                     />
+                    {instFormErrors.email && <p className="mt-1 text-[10px] font-semibold text-red-600">{instFormErrors.email}</p>}
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-[#86868b]">Contact Phone</label>
@@ -2090,11 +2225,15 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       type="text"
                       placeholder="+1 (555) 019-2834"
                       value={instPhone}
-                      onChange={(e) => setInstPhone(e.target.value)}
-                      className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                      onChange={(e) => {
+                        setInstPhone(e.target.value);
+                        if (instFormErrors.phone) setInstFormErrors((prev) => ({ ...prev, phone: "" }));
+                      }}
+                      className={`w-full bg-white border rounded-lg px-3 py-2 text-xs focus:outline-none shadow-sm text-[#1d1d1f] ${instFormErrors.phone ? "border-red-400 focus:border-red-500" : "border-[#d2d2d7] focus:border-[#0066cc]"}`}
                     />
+                    {instFormErrors.phone && <p className="mt-1 text-[10px] font-semibold text-red-600">{instFormErrors.phone}</p>}
                   </div>
-                  <div className="md:col-span-2">
+                  <div>
                     <label className="block font-semibold mb-1 text-[#86868b]">Website Address</label>
                     <input
                       type="text"
@@ -2488,7 +2627,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full min-w-[640px] text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50/30 border-b border-[#d2d2d7] font-bold text-[#86868b]">
                         <th className="px-6 py-3">Administrator Name</th>
@@ -2502,7 +2641,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       {superAdminInvitations.length > 0 ? (
                         superAdminInvitations.map((inv) => {
                           const now = new Date();
-                          const isExpired = inv.status === "expired" || (["pending", "created", "sent"].includes(inv.status) && new Date(inv.expires_at) < now);
+                          const isAccepted = inv.status === "accepted" || inv.user?.status === "active";
+                          const isExpired = !isAccepted && (inv.status === "expired" || (["pending", "created", "sent"].includes(inv.status) && new Date(inv.expires_at) < now));
                           const appUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
                           const fullInviteLink = `${appUrl}/onboarding/verify?token=${inv.token}&email=${encodeURIComponent(inv.user?.email || "")}`;
 
@@ -2512,7 +2652,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             </span>
                           );
 
-                          if (inv.status === "accepted") {
+                          if (isAccepted) {
                             statusBadge = (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20 flex items-center gap-1 w-fit">
                                 <CheckCircle size={10} /> Accepted
@@ -2568,28 +2708,49 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                               </td>
                               <td className="px-6 py-4">{statusBadge}</td>
                               <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  {!isExpired && inv.status !== "accepted" && inv.status !== "revoked" && (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {!isExpired && !isAccepted && inv.status !== "revoked" && (
                                     <button
-                                      onClick={() => copyToClipboard(fullInviteLink)}
-                                      className="flex items-center gap-1 border border-[#d2d2d7] bg-white px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-all font-semibold text-[10px]"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(fullInviteLink);
+                                        alert("Super Admin onboarding link copied!");
+                                      }}
+                                      className="p-1 hover:bg-slate-100 rounded text-[#0066cc] cursor-pointer"
+                                      title="Copy Invite Link"
                                     >
-                                      <Copy size={11} /> Copy Link
+                                      <Copy size={12} />
                                     </button>
                                   )}
                                   
-                                  {inv.status !== "accepted" && (
+                                  {!isAccepted && (
                                     <button
-                                      disabled={regeneratingId === inv.id}
                                       onClick={() => handleRegenerateInvite(inv.id)}
-                                      className="flex items-center gap-1.5 bg-[#0066cc] text-white px-2.5 py-1.5 rounded-lg hover:bg-[#0066cc]/95 transition-all font-semibold text-[10px] disabled:opacity-50"
+                                      disabled={regeneratingId === inv.id}
+                                      className="p-1 hover:bg-slate-100 rounded text-slate-600 hover:text-slate-900 cursor-pointer disabled:opacity-50"
+                                      title="Regenerate Invite Token"
                                     >
-                                      {regeneratingId === inv.id ? (
-                                        <RefreshCw size={11} className="animate-spin" />
-                                      ) : (
-                                        <RefreshCw size={11} />
-                                      )}
-                                      Regenerate Token
+                                      <RefreshCw size={12} className={regeneratingId === inv.id ? "animate-spin" : ""} />
+                                    </button>
+                                  )}
+
+                                  {inv.user?.id && (
+                                    <button
+                                      onClick={() => {
+                                        setUserToDelete({
+                                          id: inv.user.id,
+                                          name: inv.user.full_name || "N/A",
+                                          email: inv.user.email,
+                                          callback: () => {
+                                            queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
+                                          }
+                                        });
+                                        setUserDeleteConfirmEmail("");
+                                        setIsUserDeleteModalOpen(true);
+                                      }}
+                                      className="p-1 hover:bg-slate-100 rounded text-red-600 hover:text-red-700 cursor-pointer"
+                                      title="Delete User Completely"
+                                    >
+                                      <Trash2 size={12} />
                                     </button>
                                   )}
                                 </div>
@@ -2712,9 +2873,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       >
                         <option value="all">All Roles</option>
                         <option value="student_onboarding">Student</option>
-                        <option value="trainer_onboarding">Teacher / Trainer</option>
                         <option value="institution_admin_invite">Institution Admin</option>
-                        <option value="super_admin_invite">Super Admin</option>
                       </select>
                     </div>
 
@@ -2754,7 +2913,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
                 {/* Table Content */}
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full min-w-[640px] text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50/30 border-b border-[#d2d2d7] font-bold text-[#86868b]">
                         <th className="px-6 py-3">Invitee Details</th>
@@ -2768,7 +2927,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       {filteredInvitations.length > 0 ? (
                         filteredInvitations.map((inv) => {
                           const now = new Date();
-                          const isExpired = inv.status === "expired" || (["pending", "created", "sent"].includes(inv.status) && new Date(inv.expires_at) < now);
+                          const isAccepted = inv.status === "accepted" || inv.user?.status === "active";
+                          const isExpired = !isAccepted && (inv.status === "expired" || (["pending", "created", "sent"].includes(inv.status) && new Date(inv.expires_at) < now));
                           const appUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
                           const fullInviteLink = `${appUrl}/onboarding/verify?token=${inv.token}&email=${encodeURIComponent(inv.user?.email || "")}`;
 
@@ -2788,7 +2948,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             </span>
                           );
 
-                          if (inv.status === "accepted") {
+                          if (isAccepted) {
                             statusBadge = (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20 flex items-center gap-1 w-fit">
                                 <CheckCircle size={10} /> Accepted
@@ -2848,28 +3008,49 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                               </td>
                               <td className="px-6 py-4">{statusBadge}</td>
                               <td className="px-6 py-4 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  {!isExpired && inv.status !== "accepted" && inv.status !== "revoked" && (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {!isExpired && !isAccepted && inv.status !== "revoked" && (
                                     <button
-                                      onClick={() => copyToClipboard(fullInviteLink)}
-                                      className="flex items-center gap-1 border border-[#d2d2d7] bg-white px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-all font-semibold text-[10px]"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(fullInviteLink);
+                                        alert("Onboarding link copied!");
+                                      }}
+                                      className="p-1 hover:bg-slate-100 rounded text-[#0066cc] cursor-pointer"
+                                      title="Copy Invite Link"
                                     >
-                                      <Copy size={11} /> Copy Link
+                                      <Copy size={12} />
                                     </button>
                                   )}
                                   
-                                  {inv.status !== "accepted" && (
+                                  {!isAccepted && (
                                     <button
-                                      disabled={regeneratingId === inv.id}
                                       onClick={() => handleRegenerateInvite(inv.id)}
-                                      className="flex items-center gap-1.5 bg-[#0066cc] text-white px-2.5 py-1.5 rounded-lg hover:bg-[#0066cc]/95 transition-all font-semibold text-[10px] disabled:opacity-50"
+                                      disabled={regeneratingId === inv.id}
+                                      className="p-1 hover:bg-slate-100 rounded text-slate-600 hover:text-slate-900 cursor-pointer disabled:opacity-50"
+                                      title="Regenerate Invite Token"
                                     >
-                                      {regeneratingId === inv.id ? (
-                                        <RefreshCw size={11} className="animate-spin" />
-                                      ) : (
-                                        <RefreshCw size={11} />
-                                      )}
-                                      Regenerate Token
+                                      <RefreshCw size={12} className={regeneratingId === inv.id ? "animate-spin" : ""} />
+                                    </button>
+                                  )}
+
+                                  {inv.user?.id && (
+                                    <button
+                                      onClick={() => {
+                                        setUserToDelete({
+                                          id: inv.user.id,
+                                          name: inv.user.full_name || "N/A",
+                                          email: inv.user.email,
+                                          callback: () => {
+                                            queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
+                                          }
+                                        });
+                                        setUserDeleteConfirmEmail("");
+                                        setIsUserDeleteModalOpen(true);
+                                      }}
+                                      className="p-1 hover:bg-slate-100 rounded text-red-600 hover:text-red-700 cursor-pointer"
+                                      title="Delete User Completely"
+                                    >
+                                      <Trash2 size={12} />
                                     </button>
                                   )}
                                 </div>
@@ -2936,6 +3117,143 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 </form>
               </div>
 
+              {/* Teacher Onboarding Status list */}
+              {(() => {
+                const teacherInvs = invitations.filter(inv => inv.invitation_type === "trainer_onboarding");
+
+                return (
+                  <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-sm p-6 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#1d1d1f]">Teacher Onboarding Status</h3>
+                      <p className="text-[11px] text-[#86868b] mt-0.5">Track invitation tokens and status of teachers invited to the platform.</p>
+                    </div>                     <div className="overflow-x-auto border border-[#d2d2d7] rounded-lg">
+                      <table className="w-full min-w-[640px] text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50/30 border-b border-[#d2d2d7] font-bold text-[#86868b]">
+                            <th className="px-6 py-3">Teacher Name</th>
+                            <th className="px-6 py-3">Email Address</th>
+                            <th className="px-6 py-3">Created / Expires At</th>
+                            <th className="px-6 py-3">Status</th>
+                            <th className="px-6 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#d2d2d7]">
+                          {teacherInvs.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-6 py-8 text-center text-[#86868b] font-medium">
+                                No teacher invitations found.
+                              </td>
+                            </tr>
+                          ) : teacherInvs.map((inv) => {
+                            const now = new Date();
+                            const isAccepted = inv.status === "accepted" || inv.user?.status === "active";
+                            const isExpired = !isAccepted && (inv.status === "expired" || (["pending", "created", "sent"].includes(inv.status) && new Date(inv.expires_at) < now));
+                            const appUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+                            const fullInviteLink = `${appUrl}/onboarding/verify?token=${inv.token}&email=${encodeURIComponent(inv.user?.email || "")}`;
+
+                            let statusBadge = (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#0066cc]/10 text-[#0066cc] border-[#0066cc]/20 flex items-center gap-1 w-fit">
+                                <Clock size={10} /> Pending
+                              </span>
+                            );
+
+                            if (isAccepted) {
+                              statusBadge = (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20 flex items-center gap-1 w-fit">
+                                  <CheckCircle size={10} /> Accepted
+                                </span>
+                              );
+                            } else if (isExpired) {
+                              statusBadge = (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20 flex items-center gap-1 w-fit">
+                                  <AlertCircle size={10} /> Expired
+                                </span>
+                              );
+                            } else if (inv.status === "revoked") {
+                              statusBadge = (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20 flex items-center gap-1 w-fit">
+                                  <Ban size={10} /> Revoked
+                                </span>
+                              );
+                            }
+
+                            return (
+                              <tr key={inv.id} className="hover:bg-slate-50/20 transition-colors">
+                                <td className="px-6 py-4 font-semibold text-[#1d1d1f]">
+                                  {inv.user?.full_name || "N/A"}
+                                </td>
+                                <td className="px-6 py-4 font-mono text-[11px] text-[#86868b]">
+                                  {inv.user?.email}
+                                </td>
+                                <td className="px-6 py-4 text-[#86868b] leading-normal">
+                                  <div className="text-[#1d1d1f] font-medium text-[11px]">{new Date(inv.created_at).toLocaleDateString()}</div>
+                                  <div className={`text-[10px] ${isExpired ? "text-[#DC2626]" : "text-[#86868b]"}`}>Expires: {new Date(inv.expires_at).toLocaleDateString()}</div>
+                                </td>
+                                <td className="px-6 py-4">
+                                  {statusBadge}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    {!isExpired && !isAccepted && (
+                                      <button
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(fullInviteLink);
+                                          alert("Teacher onboarding link copied!");
+                                        }}
+                                        className="p-1 hover:bg-slate-100 rounded text-[#0066cc] cursor-pointer"
+                                        title="Copy Invite Link"
+                                      >
+                                        <Copy size={12} />
+                                      </button>
+                                    )}
+                                    {!isAccepted && (
+                                      <button
+                                        onClick={() => handleRegenerateInvite(inv.id)}
+                                        disabled={regeneratingId === inv.id}
+                                        className="p-1 hover:bg-slate-100 rounded text-slate-600 hover:text-slate-900 cursor-pointer disabled:opacity-50"
+                                        title="Regenerate Invite Token"
+                                      >
+                                        <RefreshCw size={12} className={regeneratingId === inv.id ? "animate-spin" : ""} />
+                                      </button>
+                                    )}
+                                    {inv.user?.id && (
+                                      <button
+                                        onClick={() => {
+                                          setUserToDelete({
+                                            id: inv.user.id,
+                                            name: inv.user.full_name || "N/A",
+                                            email: inv.user.email,
+                                            callback: () => {
+                                              queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
+                                              loadAllTeachersData();
+                                            }
+                                          });
+                                          setUserDeleteConfirmEmail("");
+                                          setIsUserDeleteModalOpen(true);
+                                        }}
+                                        className="p-1 hover:bg-slate-100 rounded text-red-600 hover:text-red-700 cursor-pointer"
+                                        title="Delete User Completely"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* TAB: TEACHER COHORT MAPPING & ASSIGNMENTS */}
+          {activeTab === "teacher_assignments" && (
+            <div className="space-y-6 animate-fadeIn">
               <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-sm p-6">
                 <div>
                   <h3 className="text-sm font-bold text-[#1d1d1f]">Teacher Cohort Mapping & Assignments</h3>
@@ -2993,9 +3311,31 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             <p className="text-[10px] text-[#86868b]">{teacher.email}</p>
                             
                           </div>
-                          <div className="text-xs text-[#0066cc] font-semibold flex items-center gap-1 hover:underline">
-                            View details & assign
-                            <ChevronRight size={14} />
+                          <div className="flex items-center gap-4">
+                            <div className="text-xs text-[#0066cc] font-semibold flex items-center gap-1 hover:underline">
+                              View details & assign
+                              <ChevronRight size={14} />
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setUserToDelete({
+                                  id: teacher.id,
+                                  name: teacher.full_name || "N/A",
+                                  email: teacher.email,
+                                  callback: () => {
+                                    queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
+                                    loadAllTeachersData();
+                                  }
+                                });
+                                setUserDeleteConfirmEmail("");
+                                setIsUserDeleteModalOpen(true);
+                              }}
+                              className="p-1.5 hover:bg-red-50 text-red-600 hover:text-red-700 rounded-lg cursor-pointer transition-all border border-transparent hover:border-red-100"
+                              title="Delete Teacher completely"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
                       );
@@ -3109,6 +3449,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                 <th className="px-6 py-3">Assigned Role</th>
                                 <th className="px-6 py-3">Status</th>
                                 <th className="px-6 py-3">Joined Date</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-[#d2d2d7]">
@@ -3163,22 +3504,44 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                   }
 
                                   return (
-                                    <tr key={user.id} onClick={() => setSelectedUserDetail(user)} className="hover:bg-slate-50/50 transition-colors cursor-pointer">
-                                      <td className="px-6 py-4">
+                                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                                      <td className="px-6 py-4 cursor-pointer" onClick={() => setSelectedUserDetail(user)}>
                                         <div className="font-semibold text-[#1d1d1f]">{user.full_name || "N/A"}</div>
                                         <div className="text-[#86868b] text-[11px] font-medium">{user.email}</div>
                                       </td>
-                                      <td className="px-6 py-4">{roleBadge}</td>
-                                      <td className="px-6 py-4">{statusBadge}</td>
-                                      <td className="px-6 py-4 text-[#86868b] font-medium">
+                                      <td className="px-6 py-4 cursor-pointer" onClick={() => setSelectedUserDetail(user)}>{roleBadge}</td>
+                                      <td className="px-6 py-4 cursor-pointer" onClick={() => setSelectedUserDetail(user)}>{statusBadge}</td>
+                                      <td className="px-6 py-4 text-[#86868b] font-medium cursor-pointer" onClick={() => setSelectedUserDetail(user)}>
                                         {new Date(user.created_at).toLocaleDateString()}
+                                      </td>
+                                      <td className="px-6 py-4 text-right">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setUserToDelete({
+                                              id: user.id,
+                                              name: user.full_name || "N/A",
+                                              email: user.email,
+                                              callback: () => {
+                                                queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
+                                                handleSelectInstitutionForExplorer(explorerSelectedId);
+                                              }
+                                            });
+                                            setUserDeleteConfirmEmail("");
+                                            setIsUserDeleteModalOpen(true);
+                                          }}
+                                          className="p-1 hover:bg-slate-100 rounded text-red-600 hover:text-red-700 cursor-pointer"
+                                          title="Delete User Completely"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
                                       </td>
                                     </tr>
                                   );
                                 })
                               ) : (
                                 <tr>
-                                  <td colSpan={4} className="px-6 py-8 text-center text-[#86868b] font-medium">
+                                  <td colSpan={5} className="px-6 py-8 text-center text-[#86868b] font-medium">
                                     No users found in this role group.
                                   </td>
                                 </tr>
@@ -3639,7 +4002,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                             video_url: "",
                                             duration: 15,
                                             position: (mod.lessons?.length || 0) + 1,
-                                            is_preview: false,
                                             status_id: activeStatus
                                           });
                                           setLessonModalOpen(true);
@@ -3693,11 +4055,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                                 <span className="text-[9px] bg-slate-100 text-[#86868b] px-1.5 py-0.5 rounded font-bold font-mono">
                                                   {les.lesson_type?.code || "lesson"}
                                                 </span>
-                                                {les.is_preview && (
-                                                  <span className="text-[9px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-100">
-                                                    Preview
-                                                  </span>
-                                                )}
                                               </div>
                                               <p className="text-[10px] text-[#86868b] mt-0.5 font-mono font-medium">
                                                 Position: {les.position} • {les.duration || 0} mins
@@ -3731,7 +4088,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                                     video_url: les.video_url || "",
                                                     duration: les.duration || 0,
                                                     position: les.position || 1,
-                                                    is_preview: les.is_preview || false,
                                                     status_id: les.status_id
                                                   });
                                                   setLessonModalOpen(true);
@@ -3837,7 +4193,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               {/* Program Modal */}
               {programModalOpen && (
                 <div className="fixed inset-0 bg-[#1d1d1f]/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
+                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
                     <h3 className="font-bold text-sm text-[#1d1d1f]">{editingProgram ? "Edit Academic Program" : "Create New Program"}</h3>
                     <form onSubmit={handleProgramSubmit} className="space-y-4 text-xs">
                       <div>
@@ -3872,7 +4228,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f] resize-none"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold mb-1 text-[#86868b]">Status *</label>
                           <select
@@ -3922,7 +4278,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               {/* Course Modal */}
               {courseModalOpen && (
                 <div className="fixed inset-0 bg-[#1d1d1f]/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
+                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
                     <h3 className="font-bold text-sm text-[#1d1d1f]">{editingCourse ? "Edit Course" : "Create New Course"}</h3>
                     <form onSubmit={handleCourseSubmit} className="space-y-4 text-xs">
                       <div>
@@ -3957,7 +4313,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f] resize-none"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold mb-1 text-[#86868b]">Course Type *</label>
                           <select
@@ -3984,7 +4340,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           </select>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="col-span-1">
                           <label className="block font-semibold mb-1 text-[#86868b]">Duration (Mins)</label>
                           <input
@@ -4043,7 +4399,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               {/* Module Modal */}
               {moduleModalOpen && (
                 <div className="fixed inset-0 bg-[#1d1d1f]/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
+                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
                     <h3 className="font-bold text-sm text-[#1d1d1f]">{editingModule ? "Edit Module" : "Create New Module"}</h3>
                     <form onSubmit={handleModuleSubmit} className="space-y-4 text-xs">
                       <div>
@@ -4067,7 +4423,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f] resize-none"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold mb-1 text-[#86868b]">Position Order *</label>
                           <input
@@ -4115,7 +4471,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               {/* Lesson Modal */}
               {lessonModalOpen && (
                 <div className="fixed inset-0 bg-[#1d1d1f]/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
+                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
                     <h3 className="font-bold text-sm text-[#1d1d1f]">{editingLesson ? "Edit Lesson" : "Create New Lesson"}</h3>
                     <form onSubmit={handleLessonSubmit} className="space-y-4 text-xs">
                       <div>
@@ -4129,7 +4485,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold mb-1 text-[#86868b]">Lesson Type *</label>
                           <select
@@ -4155,8 +4511,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           </select>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="col-span-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
                           <label className="block font-semibold mb-1 text-[#86868b]">Position Order *</label>
                           <input
                             type="number"
@@ -4166,7 +4522,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
                           />
                         </div>
-                        <div className="col-span-1">
+                        <div>
                           <label className="block font-semibold mb-1 text-[#86868b]">Duration (Mins) *</label>
                           <input
                             type="number"
@@ -4175,17 +4531,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setLessonForm({ ...lessonForm, duration: Number(e.target.value) })}
                             className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
                           />
-                        </div>
-                        <div className="col-span-1 flex items-center pt-5">
-                          <label className="flex items-center gap-1.5 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={lessonForm.is_preview}
-                              onChange={(e) => setLessonForm({ ...lessonForm, is_preview: e.target.checked })}
-                              className="rounded border-[#d2d2d7] text-[#0066cc] focus:ring-[#0066cc]"
-                            />
-                            <span className="font-semibold text-[#86868b]">Is Preview?</span>
-                          </label>
                         </div>
                       </div>
                       <div>
@@ -4233,7 +4578,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               {/* Resource Attachment Modal */}
               {resourceModalOpen && (
                 <div className="fixed inset-0 bg-[#1d1d1f]/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4">
+                  <div className="bg-white border border-[#d2d2d7] rounded-xl max-w-md w-full p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
                     <h3 className="font-bold text-sm text-[#1d1d1f]">Attach Lesson Resource</h3>
                     <form onSubmit={handleResourceSubmit} className="space-y-4 text-xs">
                       <div>
@@ -4247,7 +4592,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                           <label className="block font-semibold mb-1 text-[#86868b]">Resource Type *</label>
                           <select
@@ -4352,6 +4697,352 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
       {renderUserDetailDrawer()}
       {renderTeacherDetailDrawer()}
+
+      {(() => {
+        if (!selectedInstForSidebar || !isInstSidebarOpen) return null;
+
+        const inst = selectedInstForSidebar;
+        
+        return (
+          <div className="fixed inset-0 z-50 overflow-hidden text-xs">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity" onClick={() => setIsInstSidebarOpen(false)} />
+            <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+              <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col h-full transform transition-transform duration-300 ease-out" style={{ animation: "slide-over 0.3s cubic-bezier(0.16, 1, 0.3, 1) both" }}>
+                <style dangerouslySetInnerHTML={{ __html: `
+                  @keyframes slide-over {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(0); }
+                  }
+                `}} />
+                
+                {/* Header */}
+                <div className="px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between bg-slate-50 shrink-0">
+                  <div>
+                    <h3 className="font-bold text-[#1d1d1f] text-sm uppercase tracking-wider">Institution Details</h3>
+                    <p className="text-[10px] text-[#86868b] mt-0.5 font-mono">{inst.id}</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsInstSidebarOpen(false)} 
+                    className="p-1.5 hover:bg-black/5 rounded-full text-[#86868b] hover:text-[#1d1d1f] transition-all cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  {isEditingInst ? (
+                    <form onSubmit={handleSaveEditInst} className="space-y-4">
+                      <div>
+                        <label className="block font-semibold mb-1 text-[#86868b]">Institution Name *</label>
+                        <input
+                          type="text"
+                          required
+                          value={editInstForm.name}
+                          onChange={(e) => setEditInstForm({ ...editInstForm, name: e.target.value })}
+                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block font-semibold mb-1 text-[#86868b]">Institution Code *</label>
+                        <input
+                          type="text"
+                          required
+                          value={editInstForm.institution_code}
+                          onChange={(e) => setEditInstForm({ ...editInstForm, institution_code: e.target.value })}
+                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold mb-1 text-[#86868b]">Category Type *</label>
+                        <select
+                          value={editInstForm.institution_type}
+                          onChange={(e) => setEditInstForm({ ...editInstForm, institution_type: e.target.value })}
+                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                        >
+                          <option value="college">College</option>
+                          <option value="school">School</option>
+                          <option value="others">Others</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold mb-1 text-[#86868b]">Status *</label>
+                        <select
+                          value={editInstForm.status}
+                          onChange={(e) => setEditInstForm({ ...editInstForm, status: e.target.value })}
+                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                        >
+                          <option value="active">Active</option>
+                          <option value="onboarding">Onboarding</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="suspended">Suspended</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold mb-1 text-[#86868b]">Contact Email</label>
+                        <input
+                          type="email"
+                          value={editInstForm.email}
+                          onChange={(e) => setEditInstForm({ ...editInstForm, email: e.target.value })}
+                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold mb-1 text-[#86868b]">Contact Phone</label>
+                        <input
+                          type="text"
+                          value={editInstForm.phone}
+                          onChange={(e) => setEditInstForm({ ...editInstForm, phone: e.target.value })}
+                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold mb-1 text-[#86868b]">Website Address</label>
+                        <input
+                          type="text"
+                          value={editInstForm.website}
+                          onChange={(e) => setEditInstForm({ ...editInstForm, website: e.target.value })}
+                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold mb-1 text-[#86868b]">Physical Address</label>
+                        <textarea
+                          value={editInstForm.address}
+                          onChange={(e) => setEditInstForm({ ...editInstForm, address: e.target.value })}
+                          rows={3}
+                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm resize-none text-[#1d1d1f]"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-4">
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="flex-1 bg-[#0066cc] text-white px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#0066cc]/95 transition-all disabled:opacity-50 text-center cursor-pointer"
+                        >
+                          Save Changes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingInst(false)}
+                          className="bg-white border border-[#d2d2d7] text-[#1d1d1f] hover:bg-slate-50 px-4 py-2 rounded-lg font-semibold cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="border-b border-[#d2d2d7]/50 pb-3">
+                          <span className="block font-semibold text-[#86868b] uppercase tracking-wider text-[9px] mb-1">Name</span>
+                          <span className="text-sm font-semibold text-[#1d1d1f]">{inst.name}</span>
+                        </div>
+
+                        <div className="border-b border-[#d2d2d7]/50 pb-3">
+                          <span className="block font-semibold text-[#86868b] uppercase tracking-wider text-[9px] mb-1">Code</span>
+                          <span className="font-mono font-semibold text-[#1d1d1f]">{inst.institution_code}</span>
+                        </div>
+
+                        <div className="border-b border-[#d2d2d7]/50 pb-3">
+                          <span className="block font-semibold text-[#86868b] uppercase tracking-wider text-[9px] mb-1">Category Type</span>
+                          <span className="font-semibold text-[#1d1d1f] capitalize">{inst.institution_type}</span>
+                        </div>
+
+                        <div className="border-b border-[#d2d2d7]/50 pb-3">
+                          <span className="block font-semibold text-[#86868b] uppercase tracking-wider text-[9px] mb-1">Contact Email</span>
+                          <span className="font-semibold text-[#1d1d1f]">{inst.email || <span className="text-[#86868b] italic">Not Provided</span>}</span>
+                        </div>
+
+                        <div className="border-b border-[#d2d2d7]/50 pb-3">
+                          <span className="block font-semibold text-[#86868b] uppercase tracking-wider text-[9px] mb-1">Contact Phone</span>
+                          <span className="font-semibold text-[#1d1d1f]">{inst.phone || <span className="text-[#86868b] italic">Not Provided</span>}</span>
+                        </div>
+
+                        <div className="border-b border-[#d2d2d7]/50 pb-3">
+                          <span className="block font-semibold text-[#86868b] uppercase tracking-wider text-[9px] mb-1">Website</span>
+                          {inst.website ? (
+                            <a href={inst.website} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#0066cc] hover:underline flex items-center gap-1">
+                              {inst.website} <ExternalLink size={12} />
+                            </a>
+                          ) : (
+                            <span className="text-[#86868b] italic">Not Provided</span>
+                          )}
+                        </div>
+
+                        <div className="border-b border-[#d2d2d7]/50 pb-3">
+                          <span className="block font-semibold text-[#86868b] uppercase tracking-wider text-[9px] mb-1">Physical Address</span>
+                          <span className="font-semibold text-[#1d1d1f] whitespace-pre-wrap">{inst.address || <span className="text-[#86868b] italic">Not Provided</span>}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-6 shrink-0 border-t border-[#d2d2d7]">
+                        <button
+                          onClick={() => setIsEditingInst(true)}
+                          className="flex-1 bg-white border border-[#d2d2d7] text-[#1d1d1f] hover:bg-slate-50 font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Edit size={14} /> Edit Details
+                        </button>
+                        <button
+                          onClick={() => handleOpenDeleteModal(inst)}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {(() => {
+        if (!isDeleteModalOpen || !instToDelete) return null;
+
+        const deleteButtonDisabled = deleteConfirmName !== instToDelete.name || loading || checkingRelations;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden text-xs">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsDeleteModalOpen(false)} />
+            <div className="bg-white rounded-2xl border border-[#d2d2d7] max-w-md w-full overflow-hidden shadow-2xl z-10 transform transition-all duration-300" style={{ animation: "modal-fade 0.2s ease-out both" }}>
+              <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes modal-fade {
+                  from { opacity: 0; transform: scale(0.95); }
+                  to { opacity: 1; transform: scale(1); }
+                }
+              `}} />
+              
+              <div className="p-6 border-b border-[#d2d2d7] bg-red-50 text-red-800 flex items-center gap-2">
+                <AlertCircle size={20} className="shrink-0" />
+                <h3 className="font-bold text-sm">CRITICAL: Confirm Deletion</h3>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="leading-relaxed text-[#1d1d1f]">
+                  You are about to permanently delete <strong>{instToDelete.name}</strong>. This action is irreversible.
+                </p>
+
+                {checkingRelations ? (
+                  <div className="flex items-center gap-2 text-[#86868b]">
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Checking linked resources...</span>
+                  </div>
+                ) : relationCounts && (relationCounts.cohorts > 0 || relationCounts.programs > 0 || relationCounts.users > 0) && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 space-y-2">
+                    <h4 className="font-bold flex items-center gap-1 text-[11px]">
+                      <AlertCircle size={14} /> WARN: Cascading Deletion Detected
+                    </h4>
+                    <p className="text-[11px] leading-normal text-amber-900">
+                      Deleting this institution will cascade delete all linked data. The following records will be permanently removed from all tables:
+                    </p>
+                    <ul className="list-disc pl-4 text-[10px] space-y-1 font-semibold text-amber-950">
+                      <li>{relationCounts.cohorts} Cohort(s)</li>
+                      <li>{relationCounts.programs} Academic Program(s)</li>
+                      <li>{relationCounts.users} User(s) (will be unlinked/tenant set to NULL)</li>
+                    </ul>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="block font-semibold text-[#86868b]">
+                    Type the name of the institution to confirm (case-sensitive):
+                    <span className="block text-[#1d1d1f] font-bold mt-1 select-all">{instToDelete.name}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmName}
+                    onChange={(e) => setDeleteConfirmName(e.target.value)}
+                    placeholder="Type the exact name here"
+                    className="w-full bg-white border border-red-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-red-500 shadow-sm text-red-700 font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-[#d2d2d7] bg-slate-50 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="bg-white border border-[#d2d2d7] text-[#1d1d1f] hover:bg-slate-100 font-bold py-2 px-4 rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteButtonDisabled}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl transition-all disabled:opacity-30 cursor-pointer"
+                >
+                  {loading ? "Deleting..." : "Permanently Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {(() => {
+        if (!isUserDeleteModalOpen || !userToDelete) return null;
+
+        const deleteButtonDisabled = userDeleteConfirmEmail.trim() !== userToDelete.email || userDeleteLoading;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden text-xs">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsUserDeleteModalOpen(false)} />
+            <div className="bg-white rounded-2xl border border-[#d2d2d7] max-w-md w-full overflow-hidden shadow-2xl z-10 transform transition-all duration-300" style={{ animation: "modal-fade 0.2s ease-out both" }}>
+              <div className="p-6 border-b border-[#d2d2d7] bg-red-50 text-red-800 flex items-center gap-2">
+                <AlertCircle size={20} className="shrink-0" />
+                <h3 className="font-bold text-sm">CRITICAL: Confirm User Deletion</h3>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="leading-relaxed text-[#1d1d1f]">
+                  You are about to permanently delete the user <strong>{userToDelete.name}</strong> ({userToDelete.email}).
+                  This will completely remove them and all their invitations, roles, and records from our system. This action is irreversible.
+                </p>
+
+                <div className="space-y-2">
+                  <label className="block font-semibold text-[#86868b]">
+                    Type the email address of the user to confirm:
+                    <span className="block text-[#1d1d1f] font-bold mt-1 select-all">{userToDelete.email}</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={userDeleteConfirmEmail}
+                    onChange={(e) => setUserDeleteConfirmEmail(e.target.value)}
+                    placeholder="Type user's exact email here"
+                    className="w-full bg-white border border-red-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-red-500 shadow-sm text-red-700 font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-[#d2d2d7] bg-slate-50 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setIsUserDeleteModalOpen(false)}
+                  className="bg-white border border-[#d2d2d7] text-[#1d1d1f] hover:bg-slate-100 font-bold py-2 px-4 rounded-xl transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmUserDelete}
+                  disabled={deleteButtonDisabled}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl transition-all disabled:opacity-30 cursor-pointer"
+                >
+                  {userDeleteLoading ? "Deleting..." : "Permanently Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
     </>

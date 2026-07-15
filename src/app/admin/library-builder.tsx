@@ -1,23 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { 
-  listCourseTemplatesAction, 
-  createCourseTemplateAction, 
-  updateCourseTemplateAction, 
+import React, { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  createCourseTemplateAction,
+  updateCourseTemplateAction,
   deleteCourseTemplateAction,
-  listModuleTemplatesAction,
   createModuleTemplateAction,
   updateModuleTemplateAction,
   deleteModuleTemplateAction,
-  listLessonTemplatesAction,
   createLessonTemplateAction,
   updateLessonTemplateAction,
   deleteLessonTemplateAction,
-  listResourceTemplatesAction,
   createResourceTemplateAction,
   deleteResourceTemplateAction
 } from "@/app/actions/library-actions";
+import {
+  useCourseTemplates,
+  libraryKeys,
+  fetchModuleTemplates,
+  fetchLessonTemplates,
+  fetchResourceTemplates
+} from "@/hooks/use-library";
 import { 
   BookOpen, Plus, Edit, Trash2, X, FolderPlus, 
   Folder, ArrowRight, Save, Clock, ChevronRight, 
@@ -27,7 +31,8 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SecondaryLoader } from "@/components/secondary-loader";
 
 export default function LibraryBuilder() {
-  const [courseTemplates, setCourseTemplates] = useState<any[]>([]);
+  const queryClient = useQueryClient();
+  const { data: courseTemplates = [], isLoading: loading } = useCourseTemplates();
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -40,7 +45,8 @@ export default function LibraryBuilder() {
   const [modulesLoading, setModulesLoading] = useState<Record<string, boolean>>({});
   const [lessonsLoading, setLessonsLoading] = useState<Record<string, boolean>>({});
   
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [courseDataLoading, setCourseDataLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -51,6 +57,7 @@ export default function LibraryBuilder() {
   // Drawer states
   const [courseDrawerOpen, setCourseDrawerOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any | null>(null);
+  const [isCourseTypeDropdownOpen, setIsCourseTypeDropdownOpen] = useState(false);
   const [courseForm, setCourseForm] = useState({
     title: "",
     slug: "",
@@ -79,8 +86,7 @@ export default function LibraryBuilder() {
     content_text: "",
     video_url: "",
     duration: 15,
-    position: 1,
-    is_preview: false
+    position: 1
   });
 
   const [resourceDrawerOpen, setResourceDrawerOpen] = useState(false);
@@ -93,42 +99,61 @@ export default function LibraryBuilder() {
     position: 1
   });
 
-  // Fetch course templates on mount
-  useEffect(() => {
-    async function loadCourses() {
-      setLoading(true);
-      const res = await listCourseTemplatesAction();
-      if (res.templates) {
-        setCourseTemplates(res.templates);
-      } else if (res.error) {
-        setError(res.error);
-      }
-      setLoading(false);
-    }
-    loadCourses();
-  }, []);
-
-  // Lazy load modules for a specific course
+  // Lazy load modules for a specific course, backed by the React Query cache
   const handleSelectCourse = async (courseId: string) => {
-    const course = courseTemplates.find(c => c.id === courseId);
+    const course = courseTemplates.find((c: any) => c.id === courseId);
     if (course) setSelectedCourse(course);
-    
-    if (modulesCache[courseId]) return; // use cache
 
-    setModulesLoading(prev => ({ ...prev, [courseId]: true }));
-    const res = await listModuleTemplatesAction(courseId);
-    if (res.modules) {
-      setModulesCache(prev => ({ ...prev, [courseId]: res.modules }));
+    if (modulesCache[courseId]) return; // use local cache
+
+    setCourseDataLoading(true);
+    try {
+      const modulesList = await fetchModuleTemplates(queryClient, courseId);
+      setModulesCache(prev => ({ ...prev, [courseId]: modulesList }));
+
+      // Fetch lessons for all modules in parallel
+      const lessonsResults = await Promise.all(
+        modulesList.map(async (mod: any) => ({
+          moduleId: mod.id,
+          lessons: await fetchLessonTemplates(queryClient, mod.id)
+        }))
+      );
+      const newLessonsCache: Record<string, any[]> = {};
+      const allLessonsToFetch: any[] = [];
+
+      lessonsResults.forEach(item => {
+        newLessonsCache[item.moduleId] = item.lessons;
+        allLessonsToFetch.push(...item.lessons);
+      });
+
+      setLessonsCache(prev => ({ ...prev, ...newLessonsCache }));
+
+      // Fetch resources for all lessons in parallel
+      const resourcesResults = await Promise.all(
+        allLessonsToFetch.map(async (les: any) => ({
+          lessonId: les.id,
+          resources: await fetchResourceTemplates(queryClient, les.id)
+        }))
+      );
+      const newResourcesCache: Record<string, any[]> = {};
+
+      resourcesResults.forEach(item => {
+        newResourcesCache[item.lessonId] = item.resources;
+      });
+
+      setResourcesCache(prev => ({ ...prev, ...newResourcesCache }));
+    } catch (err) {
+      console.error("Error loading complete course blueprint curriculum:", err);
+    } finally {
+      setCourseDataLoading(false);
     }
-    setModulesLoading(prev => ({ ...prev, [courseId]: false }));
   };
 
   const refreshModules = async (courseId: string) => {
     setModulesLoading(prev => ({ ...prev, [courseId]: true }));
-    const res = await listModuleTemplatesAction(courseId);
-    if (res.modules) {
-      setModulesCache(prev => ({ ...prev, [courseId]: res.modules }));
-    }
+    await queryClient.invalidateQueries({ queryKey: libraryKeys.moduleTemplates(courseId) });
+    const modules = await fetchModuleTemplates(queryClient, courseId);
+    setModulesCache(prev => ({ ...prev, [courseId]: modules }));
     setModulesLoading(prev => ({ ...prev, [courseId]: false }));
   };
 
@@ -140,19 +165,16 @@ export default function LibraryBuilder() {
     if (isExpanded || lessonsCache[moduleId]) return; // already loaded or collapsing
 
     setLessonsLoading(prev => ({ ...prev, [moduleId]: true }));
-    const res = await listLessonTemplatesAction(moduleId);
-    if (res.lessons) {
-      setLessonsCache(prev => ({ ...prev, [moduleId]: res.lessons }));
-    }
+    const lessons = await fetchLessonTemplates(queryClient, moduleId);
+    setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
     setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
   };
 
   const refreshLessons = async (moduleId: string) => {
     setLessonsLoading(prev => ({ ...prev, [moduleId]: true }));
-    const res = await listLessonTemplatesAction(moduleId);
-    if (res.lessons) {
-      setLessonsCache(prev => ({ ...prev, [moduleId]: res.lessons }));
-    }
+    await queryClient.invalidateQueries({ queryKey: libraryKeys.lessonTemplates(moduleId) });
+    const lessons = await fetchLessonTemplates(queryClient, moduleId);
+    setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
     setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
   };
 
@@ -163,33 +185,28 @@ export default function LibraryBuilder() {
 
     if (isExpanded || resourcesCache[lessonId]) return;
 
-    const res = await listResourceTemplatesAction(lessonId);
-    if (res.resources) {
-      setResourcesCache(prev => ({ ...prev, [lessonId]: res.resources }));
-    }
+    const resources = await fetchResourceTemplates(queryClient, lessonId);
+    setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
   };
 
   const refreshResources = async (lessonId: string) => {
-    const res = await listResourceTemplatesAction(lessonId);
-    if (res.resources) {
-      setResourcesCache(prev => ({ ...prev, [lessonId]: res.resources }));
-    }
+    await queryClient.invalidateQueries({ queryKey: libraryKeys.resourceTemplates(lessonId) });
+    const resources = await fetchResourceTemplates(queryClient, lessonId);
+    setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
   };
 
-  const refreshCourseList = async () => {
-    const res = await listCourseTemplatesAction();
-    if (res.templates) {
-      setCourseTemplates(res.templates);
-      if (selectedCourse) {
-        const updated = res.templates.find(t => t.id === selectedCourse.id);
-        if (updated) setSelectedCourse(updated);
-      }
+  const refreshCourseList = async (keepSelectedId?: string) => {
+    await queryClient.invalidateQueries({ queryKey: libraryKeys.courseTemplates });
+    if (keepSelectedId) {
+      const templates = queryClient.getQueryData<any[]>(libraryKeys.courseTemplates) || [];
+      const updated = templates.find((t: any) => t.id === keepSelectedId);
+      if (updated) setSelectedCourse(updated);
     }
   };
 
   const handleCourseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -205,15 +222,16 @@ export default function LibraryBuilder() {
     } else {
       setSuccess("Course template saved successfully!");
       setCourseDrawerOpen(false);
+      const savedId = editingCourse?.id;
       setEditingCourse(null);
-      await refreshCourseList();
+      await refreshCourseList(savedId);
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   const handleModuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -235,12 +253,12 @@ export default function LibraryBuilder() {
       setEditingModule(null);
       await refreshModules(selectedCourse.id);
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   const handleLessonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -257,8 +275,7 @@ export default function LibraryBuilder() {
         content_json,
         video_url: lessonForm.video_url || undefined,
         duration: lessonForm.duration,
-        position: lessonForm.position,
-        is_preview: lessonForm.is_preview
+        position: lessonForm.position
       });
     } else {
       res = await createLessonTemplateAction({
@@ -268,8 +285,7 @@ export default function LibraryBuilder() {
         content_json,
         video_url: lessonForm.video_url || undefined,
         duration: lessonForm.duration,
-        position: lessonForm.position,
-        is_preview: lessonForm.is_preview
+        position: lessonForm.position
       });
     }
 
@@ -281,12 +297,12 @@ export default function LibraryBuilder() {
       setEditingLesson(null);
       await refreshLessons(selectedModuleId);
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   const handleResourceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -306,7 +322,7 @@ export default function LibraryBuilder() {
       setResourceDrawerOpen(false);
       await refreshResources(selectedLessonId);
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   return (
@@ -334,6 +350,7 @@ export default function LibraryBuilder() {
             <button
               onClick={() => {
                 setEditingCourse(null);
+                setIsCourseTypeDropdownOpen(false);
                 setCourseForm({
                   title: "",
                   slug: "",
@@ -364,7 +381,9 @@ export default function LibraryBuilder() {
           </div>
 
           <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-            {(() => {
+            {loading ? (
+              <SecondaryLoader variant="skeleton" message="Loading course blueprints..." className="!border-0 !p-0 shadow-none mt-2" />
+            ) : (() => {
               const filtered = courseTemplates.filter(c =>
                 c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 c.slug.toLowerCase().includes(searchQuery.toLowerCase())
@@ -383,19 +402,13 @@ export default function LibraryBuilder() {
                   >
                     <div className="flex justify-between items-start">
                       <div className="min-w-0 pr-2">
-                        <p className="font-bold text-slate-800 hover:text-[#2563EB] transition-colors truncate">{template.title}</p>
-                        <p className="text-[9px] text-[#475569] font-mono truncate">/{template.slug}</p>
+                        <p className="font-sans font-semibold text-[13px] text-slate-800 hover:text-[#2563EB] transition-colors truncate">{template.title}</p>
                       </div>
                       <span className="text-[8px] bg-slate-100 text-[#475569] px-1 rounded uppercase font-bold shrink-0 font-mono border border-slate-200">
                         {template.course_type_code || "theory"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-[9px] text-[#475569] border-t border-slate-100/80 pt-1.5 mt-0.5">
-                      <div className="flex gap-2">
-                        <span className="flex items-center gap-0.5">
-                          📂 {modulesCache[template.id]?.length ?? 0} modules
-                        </span>
-                      </div>
+                    <div className="flex items-center justify-end text-[9px] text-[#475569] border-t border-slate-100/80 pt-1.5 mt-0.5">
                       <span className="font-semibold text-[#2563EB] flex items-center gap-0.5">
                         View details <ChevronRight size={10} />
                       </span>
@@ -413,7 +426,11 @@ export default function LibraryBuilder() {
 
         {/* Right workspace details column */}
         <div className="lg:col-span-8 space-y-6">
-          {selectedCourse ? (
+          {courseDataLoading ? (
+            <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center text-xs text-[#475569] shadow-sm flex flex-col items-center justify-center min-h-[300px]">
+              <SecondaryLoader variant="spinner" message="Loading full course blueprint data (modules, lessons & resources)..." />
+            </div>
+          ) : selectedCourse ? (
             <div className="space-y-6">
               
               {/* Selected Blueprint Detail Header */}
@@ -442,6 +459,7 @@ export default function LibraryBuilder() {
                     <button
                       onClick={() => {
                         setEditingCourse(selectedCourse);
+                        setIsCourseTypeDropdownOpen(false);
                         setCourseForm({
                           title: selectedCourse.title,
                           slug: selectedCourse.slug,
@@ -476,9 +494,6 @@ export default function LibraryBuilder() {
                     >
                       <Trash2 size={14} />
                     </button>
-                    <div className="bg-slate-100 px-3 py-1.5 rounded-lg text-[10px] text-[#0F172A] border border-[#E2E8F0] font-mono font-semibold shrink-0">
-                      Duration: {selectedCourse.duration_minutes || 0} mins
-                    </div>
                   </div>
                 </div>
               </div>
@@ -557,8 +572,9 @@ export default function LibraryBuilder() {
                             </div>
 
                             {/* Lessons container */}
-                            {isModExpanded && (
-                              <div className="p-3 pl-6 space-y-2 bg-slate-50/30 border-t border-slate-50">
+                            <div className={`grid transition-all duration-300 ease-in-out ${isModExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                              <div className="overflow-hidden">
+                                <div className="p-3 pl-6 space-y-2 bg-slate-50/30 border-t border-slate-50">
                                 <div className="flex justify-end mb-1">
                                   <button
                                     onClick={() => {
@@ -569,9 +585,8 @@ export default function LibraryBuilder() {
                                         lesson_type_code: "text",
                                         content_text: "",
                                         video_url: "",
-                                        duration: 15, 
-                                        position: (lessonsCache[mod.id]?.length || 0) + 1,
-                                        is_preview: false
+                                        duration: 15,
+                                        position: (lessonsCache[mod.id]?.length || 0) + 1
                                       });
                                       setLessonDrawerOpen(true);
                                     }}
@@ -599,14 +614,8 @@ export default function LibraryBuilder() {
                                             {isLesExpanded ? <ChevronDown size={12} className="text-[#475569]" /> : <ChevronRight size={12} className="text-[#475569]" />}
                                             <span className="font-medium text-[#0F172A] truncate">{les.title}</span>
                                             <span className="text-[8px] bg-slate-100 text-[#475569] px-1 rounded uppercase font-mono font-bold shrink-0">{les.lesson_type_code || "text"}</span>
-                                            {les.is_preview && (
-                                              <span className="text-[8px] bg-emerald-50 text-emerald-600 px-1 rounded font-bold border border-emerald-100 shrink-0">
-                                                Preview
-                                              </span>
-                                            )}
                                           </div>
                                           <div className="flex items-center gap-2.5 shrink-0">
-                                            <span className="text-[10px] text-[#475569] font-mono shrink-0">{les.duration || 0} mins</span>
                                             <button
                                               onClick={() => {
                                                 setSelectedModuleId(mod.id);
@@ -616,9 +625,8 @@ export default function LibraryBuilder() {
                                                   lesson_type_code: les.lesson_type_code,
                                                   content_text: les.content_json?.body || les.content_json?.text || "",
                                                   video_url: les.video_url || "",
-                                                  duration: les.duration || 15, 
-                                                  position: les.position || 1,
-                                                  is_preview: les.is_preview || false
+                                                  duration: les.duration || 15,
+                                                  position: les.position || 1
                                                 });
                                                 setLessonDrawerOpen(true);
                                               }}
@@ -644,8 +652,9 @@ export default function LibraryBuilder() {
                                         </div>
 
                                         {/* Lesson resources list (lazy loaded) */}
-                                        {isLesExpanded && (
-                                          <div className="border-t border-slate-100 pt-2 mt-2 space-y-2 pl-4">
+                                        <div className={`grid transition-all duration-300 ease-in-out ${isLesExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                                          <div className="overflow-hidden">
+                                            <div className="border-t border-slate-100 pt-2 mt-2 space-y-2 pl-4">
                                             {les.video_url && (
                                               <div className="flex items-center gap-1.5 text-[10px] bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200">
                                                 <Play size={10} className="fill-[#2563EB] text-[#2563EB] shrink-0" />
@@ -719,8 +728,9 @@ export default function LibraryBuilder() {
                                             ) : (
                                               <SecondaryLoader variant="skeleton" message="Loading resource attachments..." className="!border-0 !p-1 shadow-none bg-transparent" />
                                             )}
+                                            </div>
                                           </div>
-                                        )}
+                                        </div>
 
                                       </div>
                                     );
@@ -728,8 +738,9 @@ export default function LibraryBuilder() {
                                 ) : (
                                   <p className="text-[10px] text-[#475569] italic">No lessons in this module.</p>
                                 )}
+                                </div>
                               </div>
-                            )}
+                            </div>
 
                           </div>
                         );
@@ -826,30 +837,53 @@ export default function LibraryBuilder() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block font-bold text-[#475569]">Course Type *</label>
-                    <select
-                      value={courseForm.course_type_code}
-                      onChange={(e) => setCourseForm({ ...courseForm, course_type_code: e.target.value })}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-medium text-[#0F172A]"
-                    >
-                      <option value="theory">Theory</option>
-                      <option value="practical">Practical/Lab</option>
-                      <option value="hybrid">Hybrid</option>
-                      <option value="project">Project-based</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-bold text-[#475569]">Duration (minutes)</label>
-                    <input
-                      type="number"
-                      value={courseForm.duration_minutes}
-                      onChange={(e) => setCourseForm({ ...courseForm, duration_minutes: parseInt(e.target.value) || 0 })}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
-                      min={0}
-                    />
-                  </div>
+                <div className="space-y-1 relative">
+                  <label className="block font-bold text-[#475569]">Course Type *</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCourseTypeDropdownOpen(!isCourseTypeDropdownOpen)}
+                    onBlur={() => setTimeout(() => setIsCourseTypeDropdownOpen(false), 200)}
+                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-medium text-[#0F172A] flex justify-between items-center cursor-pointer"
+                  >
+                    <span>
+                      {courseForm.course_type_code === "theory" && "Theory"}
+                      {courseForm.course_type_code === "hybrid" && "Hybrid"}
+                      {courseForm.course_type_code === "project" && "Project-based"}
+                    </span>
+                    <ChevronDown size={14} className={`text-[#475569] transition-transform duration-200 ${isCourseTypeDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isCourseTypeDropdownOpen && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
+                      <div
+                        onMouseDown={() => {
+                          setCourseForm({ ...courseForm, course_type_code: "theory" });
+                          setIsCourseTypeDropdownOpen(false);
+                        }}
+                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 transition-colors ${courseForm.course_type_code === "theory" ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#0F172A]"}`}
+                      >
+                        Theory
+                      </div>
+                      <div
+                        onMouseDown={() => {
+                          setCourseForm({ ...courseForm, course_type_code: "hybrid" });
+                          setIsCourseTypeDropdownOpen(false);
+                        }}
+                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 transition-colors ${courseForm.course_type_code === "hybrid" ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#0F172A]"}`}
+                      >
+                        Hybrid
+                      </div>
+                      <div
+                        onMouseDown={() => {
+                          setCourseForm({ ...courseForm, course_type_code: "project" });
+                          setIsCourseTypeDropdownOpen(false);
+                        }}
+                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 transition-colors ${courseForm.course_type_code === "project" ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#0F172A]"}`}
+                      >
+                        Project-based
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -864,10 +898,10 @@ export default function LibraryBuilder() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={saving}
                   className="bg-[#2563EB] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {loading ? "Saving..." : "Save Blueprint"}
+                  {saving ? "Saving..." : "Save Blueprint"}
                 </button>
               </div>
             </form>
@@ -951,10 +985,10 @@ export default function LibraryBuilder() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={saving}
                   className="bg-[#2563EB] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {loading ? "Saving..." : "Save Module"}
+                  {saving ? "Saving..." : "Save Module"}
                 </button>
               </div>
             </form>
@@ -1004,29 +1038,17 @@ export default function LibraryBuilder() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block font-bold text-[#475569]">Lesson Type *</label>
-                    <select
-                      value={lessonForm.lesson_type_code}
-                      onChange={(e) => setLessonForm({ ...lessonForm, lesson_type_code: e.target.value })}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-medium text-[#0F172A]"
-                    >
-                      <option value="text">Text Document</option>
-                      <option value="video">Video Lecture</option>
-                      <option value="pdf">PDF Document</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-bold text-[#475569]">Duration (minutes)</label>
-                    <input
-                      type="number"
-                      value={lessonForm.duration}
-                      onChange={(e) => setLessonForm({ ...lessonForm, duration: parseInt(e.target.value) || 0 })}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
-                      min={0}
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <label className="block font-bold text-[#475569]">Lesson Type *</label>
+                  <select
+                    value={lessonForm.lesson_type_code}
+                    onChange={(e) => setLessonForm({ ...lessonForm, lesson_type_code: e.target.value })}
+                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-medium text-[#0F172A]"
+                  >
+                    <option value="text">Text Document</option>
+                    <option value="video">Video Lecture</option>
+                    <option value="pdf">PDF Document</option>
+                  </select>
                 </div>
 
                 <div className="space-y-1">
@@ -1052,16 +1074,6 @@ export default function LibraryBuilder() {
                   />
                 </div>
 
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="isPreview"
-                    checked={lessonForm.is_preview}
-                    onChange={(e) => setLessonForm({ ...lessonForm, is_preview: e.target.checked })}
-                    className="rounded border-[#E2E8F0] text-[#2563EB] focus:ring-[#2563EB]"
-                  />
-                  <label htmlFor="isPreview" className="font-semibold text-[#475569] select-none cursor-pointer">Previewable by non-enrolled students</label>
-                </div>
               </div>
 
               {/* Actions Footer */}
@@ -1075,10 +1087,10 @@ export default function LibraryBuilder() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={saving}
                   className="bg-[#2563EB] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {loading ? "Saving..." : "Save Lesson"}
+                  {saving ? "Saving..." : "Save Lesson"}
                 </button>
               </div>
             </form>
@@ -1176,10 +1188,10 @@ export default function LibraryBuilder() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={saving}
                   className="bg-[#2563EB] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  {loading ? "Adding..." : "Add Resource Template"}
+                  {saving ? "Adding..." : "Add Resource Template"}
                 </button>
               </div>
             </form>

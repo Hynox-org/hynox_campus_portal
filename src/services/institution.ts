@@ -2,7 +2,6 @@ import { createClient } from "@/utils/supabase/server";
 
 export async function createInstitution(data: {
   name: string;
-  slug: string;
   institution_code: string;
   institution_type: string;
   email?: string;
@@ -19,7 +18,6 @@ export async function createInstitution(data: {
     .from("institutions")
     .insert({
       name: data.name,
-      slug: data.slug,
       institution_code: data.institution_code,
       institution_type: data.institution_type,
       email: data.email || null,
@@ -283,6 +281,102 @@ export async function updateInstitutionStatus(institutionId: string, status: str
   if (error) throw error;
   return true;
 }
+
+export async function updateInstitution(
+  institutionId: string,
+  data: {
+    name: string;
+    institution_code: string;
+    institution_type: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    website?: string;
+    logo_url?: string;
+    status: string;
+  }
+) {
+  const supabase = await createClient();
+
+  const { data: institution, error } = await supabase
+    .schema("institution")
+    .from("institutions")
+    .update({
+      name: data.name,
+      institution_code: data.institution_code,
+      institution_type: data.institution_type,
+      email: data.email || null,
+      phone: data.phone || null,
+      address: data.address || null,
+      website: data.website || null,
+      logo_url: data.logo_url || null,
+      status: data.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", institutionId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return institution;
+}
+
+export async function getInstitutionRelationsCount(institutionId: string) {
+  const supabase = await createClient();
+
+  // Count cohorts
+  const { count: cohortsCount, error: cohortsError } = await supabase
+    .schema("delivery")
+    .from("cohorts")
+    .select("*", { count: "exact", head: true })
+    .eq("institution_id", institutionId);
+
+  if (cohortsError) throw cohortsError;
+
+  // Count programs
+  const { count: programsCount, error: programsError } = await supabase
+    .schema("academic")
+    .from("programs")
+    .select("*", { count: "exact", head: true })
+    .eq("institution_id", institutionId);
+
+  if (programsError) throw programsError;
+
+  // Count users linked to this tenant
+  const { count: usersCount, error: usersError } = await supabase
+    .schema("core")
+    .from("users")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", institutionId);
+
+  if (usersError) throw usersError;
+
+  return {
+    cohorts: cohortsCount || 0,
+    programs: programsCount || 0,
+    users: usersCount || 0,
+  };
+}
+
+export async function deleteInstitution(institutionId: string) {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .schema("institution")
+    .from("institutions")
+    .delete()
+    .eq("id", institutionId);
+
+  if (error) {
+    throw error;
+  }
+
+  return true;
+}
+
 
 
 

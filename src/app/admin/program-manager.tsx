@@ -1,14 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  createProgramAction, 
-  deleteProgramAction, 
-  listProgramsAction,
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  createProgramAction,
+  deleteProgramAction,
   listCoursesAction,
-  listModulesAction,
-  listLessonsAction,
-  listLessonResourcesAction,
   createModuleAction,
   updateModuleAction,
   deleteModuleAction,
@@ -21,7 +18,9 @@ import {
   getAcademicLookupsAction,
   updateProgramAction
 } from "@/app/actions/academic-actions";
-import { listCourseTemplatesAction, instantiateCourseTemplateAction } from "@/app/actions/library-actions";
+import { instantiateCourseTemplateAction } from "@/app/actions/library-actions";
+import { useCourseTemplates } from "@/hooks/use-library";
+import { usePrograms, useCourses, liveCurriculumKeys, fetchModules, fetchLessons, fetchResources } from "@/hooks/use-academics";
 import { 
   Folder, Plus, Trash2, X, ChevronRight, ChevronDown, 
   BookOpen, PlusCircle, CheckCircle2, AlertCircle, 
@@ -47,9 +46,10 @@ export default function ProgramManager({
   selectedProgram,
   setSelectedProgram
 }: ProgramManagerProps) {
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [blueprints, setBlueprints] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
+  const queryClient = useQueryClient();
+  const { data: programs = [], isLoading: loadingPrograms } = usePrograms(selectedInstId);
+  const { data: blueprints = [] } = useCourseTemplates();
+  const { data: courses = [], isLoading: loadingCourses } = useCourses(selectedProgram?.id || "");
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
@@ -61,7 +61,8 @@ export default function ProgramManager({
   const [resourcesCache, setResourcesCache] = useState<Record<string, any[]>>({});
 
   // Loading states
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const loading = loadingPrograms || loadingCourses || saving;
   const [modulesLoading, setModulesLoading] = useState<Record<string, boolean>>({});
   const [lessonsLoading, setLessonsLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
@@ -98,8 +99,7 @@ export default function ProgramManager({
     position: 1,
     lesson_type_id: "",
     video_url: "",
-    content_text: "",
-    is_preview: false
+    content_text: ""
   });
 
   // Modals / forms for Resources
@@ -112,13 +112,9 @@ export default function ProgramManager({
     file_url: ""
   });
 
-  // Fetch blueprints and lookups on mount
+  // Fetch lookups on mount (course template blueprints come from the shared useCourseTemplates cache)
   useEffect(() => {
-    async function loadInitialData() {
-      const bRes = await listCourseTemplatesAction();
-      if (bRes.templates) {
-        setBlueprints(bRes.templates);
-      }
+    async function loadLookups() {
       const lRes = await getAcademicLookupsAction();
       if (lRes.success && lRes.lookups) {
         setLessonTypes(lRes.lookups.lessonTypes);
@@ -129,78 +125,43 @@ export default function ProgramManager({
         if (activeStatus) setDefaultStatusId(activeStatus.id);
       }
     }
-    loadInitialData();
+    loadLookups();
   }, []);
 
-  // Fetch programs when institution changes
+  // Reset selection to prevent cross-institution leakage; usePrograms(selectedInstId) handles the fetch/cache.
   useEffect(() => {
-    if (!selectedInstId) {
-      setPrograms([]);
-      setSelectedProgram(null);
-      return;
-    }
-    // Reset selection to prevent cross-institution leakage
     setSelectedProgram(null);
-
-    async function loadPrograms() {
-      setLoading(true);
-      setError("");
-      const res = await listProgramsAction(selectedInstId);
-      if (res.programs) {
-        setPrograms(res.programs);
-      } else if (res.error) {
-        setError(res.error);
-      }
-      setLoading(false);
-    }
-    loadPrograms();
   }, [selectedInstId]);
 
-  // Fetch courses when selected program changes (Examine mode)
+  // Auto-select the first course when the selected program's courses load (Examine mode); useCourses handles the fetch/cache.
   useEffect(() => {
     if (!selectedProgram) {
-      setCourses([]);
       setSelectedCourseId(null);
       return;
     }
-    async function loadCourses() {
-      setLoading(true);
-      setError("");
-      const res = await listCoursesAction(selectedProgram.id);
-      if (res.courses) {
-        setCourses(res.courses);
-        if (res.courses.length > 0) {
-          handleSelectCourse(res.courses[0].id);
-        } else {
-          setSelectedCourseId(null);
-        }
-      } else if (res.error) {
-        setError(res.error);
-      }
-      setLoading(false);
+    if (courses.length > 0) {
+      handleSelectCourse(courses[0].id);
+    } else {
+      setSelectedCourseId(null);
     }
-    loadCourses();
-  }, [selectedProgram]);
+  }, [selectedProgram, courses]);
 
-  // Lazy load modules for a specific course
+  // Lazy load modules for a specific course, backed by the React Query cache
   const handleSelectCourse = async (courseId: string) => {
     setSelectedCourseId(courseId);
-    if (modulesCache[courseId]) return; // use cache
+    if (modulesCache[courseId]) return; // use local cache
 
     setModulesLoading(prev => ({ ...prev, [courseId]: true }));
-    const res = await listModulesAction(courseId);
-    if (res.modules) {
-      setModulesCache(prev => ({ ...prev, [courseId]: res.modules }));
-    }
+    const modules = await fetchModules(queryClient, courseId);
+    setModulesCache(prev => ({ ...prev, [courseId]: modules }));
     setModulesLoading(prev => ({ ...prev, [courseId]: false }));
   };
 
   const refreshModules = async (courseId: string) => {
     setModulesLoading(prev => ({ ...prev, [courseId]: true }));
-    const res = await listModulesAction(courseId);
-    if (res.modules) {
-      setModulesCache(prev => ({ ...prev, [courseId]: res.modules }));
-    }
+    await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.modules(courseId) });
+    const modules = await fetchModules(queryClient, courseId);
+    setModulesCache(prev => ({ ...prev, [courseId]: modules }));
     setModulesLoading(prev => ({ ...prev, [courseId]: false }));
   };
 
@@ -212,19 +173,16 @@ export default function ProgramManager({
     if (isExpanded || lessonsCache[moduleId]) return; // already loaded or collapsing
 
     setLessonsLoading(prev => ({ ...prev, [moduleId]: true }));
-    const res = await listLessonsAction(moduleId);
-    if (res.lessons) {
-      setLessonsCache(prev => ({ ...prev, [moduleId]: res.lessons }));
-    }
+    const lessons = await fetchLessons(queryClient, moduleId);
+    setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
     setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
   };
 
   const refreshLessons = async (moduleId: string) => {
     setLessonsLoading(prev => ({ ...prev, [moduleId]: true }));
-    const res = await listLessonsAction(moduleId);
-    if (res.lessons) {
-      setLessonsCache(prev => ({ ...prev, [moduleId]: res.lessons }));
-    }
+    await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.lessons(moduleId) });
+    const lessons = await fetchLessons(queryClient, moduleId);
+    setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
     setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
   };
 
@@ -235,22 +193,19 @@ export default function ProgramManager({
 
     if (isExpanded || resourcesCache[lessonId]) return;
 
-    const res = await listLessonResourcesAction(lessonId);
-    if (res.resources) {
-      setResourcesCache(prev => ({ ...prev, [lessonId]: res.resources }));
-    }
+    const resources = await fetchResources(queryClient, lessonId);
+    setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
   };
 
   const refreshResources = async (lessonId: string) => {
-    const res = await listLessonResourcesAction(lessonId);
-    if (res.resources) {
-      setResourcesCache(prev => ({ ...prev, [lessonId]: res.resources }));
-    }
+    await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.resources(lessonId) });
+    const resources = await fetchResources(queryClient, lessonId);
+    setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
   };
 
   const handleProgramSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -266,16 +221,15 @@ export default function ProgramManager({
       setSuccess("Program registered successfully!");
       setProgramModalOpen(false);
       setProgramForm({ title: "", slug: "", description: "" });
-      const reloadRes = await listProgramsAction(selectedInstId);
-      if (reloadRes.programs) setPrograms(reloadRes.programs);
+      await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   const handleInstantiation = async () => {
     if (!selectedBlueprintId || !selectedProgram) return;
 
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -291,23 +245,21 @@ export default function ProgramManager({
     } else {
       setSuccess("Course template instantiated successfully!");
       setSelectedBlueprintId("");
-      
+
+      await queryClient.invalidateQueries({ queryKey: ["courses", selectedProgram.id] });
       const cRes = await listCoursesAction(selectedProgram.id);
-      if (cRes.courses) {
-        setCourses(cRes.courses);
-        if (cRes.courses.length > 0) {
-          handleSelectCourse(cRes.courses[cRes.courses.length - 1].id);
-        }
+      if (cRes.courses && cRes.courses.length > 0) {
+        handleSelectCourse(cRes.courses[cRes.courses.length - 1].id);
       }
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   // Course Edit handler
   const handleCourseEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCourse || !selectedProgram) return;
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -323,17 +275,16 @@ export default function ProgramManager({
       setSuccess("Course updated successfully!");
       setCourseModalOpen(false);
       setEditingCourse(null);
-      const cRes = await listCoursesAction(selectedProgram.id);
-      if (cRes.courses) setCourses(cRes.courses);
+      await queryClient.invalidateQueries({ queryKey: ["courses", selectedProgram.id] });
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   // Module Submit handler
   const handleModuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourseId) return;
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -361,14 +312,14 @@ export default function ProgramManager({
       setEditingModule(null);
       await refreshModules(selectedCourseId);
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   // Lesson Submit handler
   const handleLessonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetModuleId || !selectedCourseId) return;
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -380,8 +331,7 @@ export default function ProgramManager({
         duration: Number(lessonForm.duration),
         position: Number(lessonForm.position),
         video_url: lessonForm.video_url || undefined,
-        content_json: lessonForm.content_text ? { text: lessonForm.content_text, body: lessonForm.content_text } : {},
-        is_preview: lessonForm.is_preview
+        content_json: lessonForm.content_text ? { text: lessonForm.content_text, body: lessonForm.content_text } : {}
       });
     } else {
       res = await createLessonAction({
@@ -394,8 +344,7 @@ export default function ProgramManager({
         tenant_id: selectedInstId,
         institution_id: selectedInstId,
         video_url: lessonForm.video_url || undefined,
-        content_json: lessonForm.content_text ? { text: lessonForm.content_text, body: lessonForm.content_text } : {},
-        is_preview: lessonForm.is_preview
+        content_json: lessonForm.content_text ? { text: lessonForm.content_text, body: lessonForm.content_text } : {}
       });
     }
 
@@ -407,14 +356,14 @@ export default function ProgramManager({
       setEditingLesson(null);
       await refreshLessons(targetModuleId);
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   // Resource Submit handler
   const handleResourceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetLessonId) return;
-    setLoading(true);
+    setSaving(true);
     setError("");
     setSuccess("");
 
@@ -436,7 +385,7 @@ export default function ProgramManager({
       setResourceModalOpen(false);
       await refreshResources(targetLessonId);
     }
-    setLoading(false);
+    setSaving(false);
   };
 
   const renderExplorerMode = () => {
@@ -530,8 +479,7 @@ export default function ProgramManager({
                                             setError(res.error);
                                           } else {
                                             setSuccess("Program status updated successfully!");
-                                            const reloadRes = await listProgramsAction(selectedInstId);
-                                            if (reloadRes.programs) setPrograms(reloadRes.programs);
+                                            await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
                                           }
                                         }}
                                         className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-all flex items-center gap-2"
@@ -709,12 +657,10 @@ export default function ProgramManager({
                                     setError(res.error);
                                   } else {
                                     setSuccess("Program status updated successfully!");
-                                    const reloadRes = await listProgramsAction(selectedInstId);
-                                    if (reloadRes.programs) {
-                                      setPrograms(reloadRes.programs);
-                                      const updatedProg = reloadRes.programs.find((p: any) => p.id === selectedProgram.id);
-                                      if (updatedProg) setSelectedProgram(updatedProg);
-                                    }
+                                    await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
+                                    const refreshedPrograms = queryClient.getQueryData<any[]>(["programs", selectedInstId]) || [];
+                                    const updatedProg = refreshedPrograms.find((p: any) => p.id === selectedProgram.id);
+                                    if (updatedProg) setSelectedProgram(updatedProg);
                                   }
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-all flex items-center gap-2"
@@ -872,8 +818,7 @@ export default function ProgramManager({
                                           position: (lessonsCache[mod.id]?.length || 0) + 1,
                                           lesson_type_id: defaultLessonTypeId,
                                           video_url: "",
-                                          content_text: "",
-                                          is_preview: false
+                                          content_text: ""
                                         });
                                         setLessonModalOpen(true);
                                       }}
@@ -914,8 +859,7 @@ export default function ProgramManager({
                                                     position: les.position || 1,
                                                     lesson_type_id: les.lesson_type_id || defaultLessonTypeId,
                                                     video_url: les.video_url || "",
-                                                    content_text: les.content_json?.text || les.content_json?.body || "",
-                                                    is_preview: !!les.is_preview
+                                                    content_text: les.content_json?.text || les.content_json?.body || ""
                                                   });
                                                   setLessonModalOpen(true);
                                                 }}
@@ -1106,14 +1050,14 @@ export default function ProgramManager({
       {/* Program Create Modal */}
       {programModalOpen && (
         <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
+          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
             <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#1d1d1f]">Create New Program</h3>
               <button onClick={() => setProgramModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleProgramSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleProgramSubmit} className="p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Program Title *</label>
                 <input
@@ -1171,14 +1115,14 @@ export default function ProgramManager({
       {/* Course Edit Modal */}
       {courseModalOpen && (
         <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
+          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
             <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#1d1d1f]">Edit Course Pathway</h3>
               <button onClick={() => setCourseModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleCourseEditSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleCourseEditSubmit} className="p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Course Title *</label>
                 <input
@@ -1228,14 +1172,14 @@ export default function ProgramManager({
       {/* Module Create/Edit Modal */}
       {moduleModalOpen && (
         <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
+          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
             <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#1d1d1f]">{editingModule ? "Edit Module" : "Create New Module"}</h3>
               <button onClick={() => setModuleModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleModuleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleModuleSubmit} className="p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Module Title *</label>
                 <input
@@ -1275,14 +1219,14 @@ export default function ProgramManager({
       {/* Lesson Create/Edit Modal */}
       {lessonModalOpen && (
         <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
+          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
             <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#1d1d1f]">{editingLesson ? "Edit Lesson" : "Create New Lesson"}</h3>
               <button onClick={() => setLessonModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleLessonSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleLessonSubmit} className="p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Lesson Title *</label>
                 <input
@@ -1308,7 +1252,7 @@ export default function ProgramManager({
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-semibold mb-1 text-[#86868b]">Duration (Minutes) *</label>
                   <input
@@ -1353,19 +1297,6 @@ export default function ProgramManager({
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="lesson-is-preview"
-                  checked={lessonForm.is_preview}
-                  onChange={(e) => setLessonForm({ ...lessonForm, is_preview: e.target.checked })}
-                  className="rounded border-[#d2d2d7] text-[#0066cc] focus:ring-[#0066cc]"
-                />
-                <label htmlFor="lesson-is-preview" className="font-semibold text-[#86868b] select-none cursor-pointer">
-                  Available as free preview
-                </label>
-              </div>
-
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#d2d2d7]">
                 <button type="button" onClick={() => setLessonModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
                   Cancel
@@ -1382,14 +1313,14 @@ export default function ProgramManager({
       {/* Resource Attachment Modal */}
       {resourceModalOpen && (
         <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
+          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
             <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#1d1d1f]">Attach Lesson Resource</h3>
               <button onClick={() => setResourceModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleResourceSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleResourceSubmit} className="p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Resource Title *</label>
                 <input

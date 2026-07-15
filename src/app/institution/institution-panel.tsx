@@ -673,7 +673,7 @@ export default function InstitutionPanel({
         {activeTab === "overview" && (
           <div className="space-y-6 animate-fadeIn">
             {/* Metric Blocks */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
                 <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Total Cohorts</span>
                 <div className="text-2xl font-black text-[#0F172A] mt-1">{totalCohorts}</div>

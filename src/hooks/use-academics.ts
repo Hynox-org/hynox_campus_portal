@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { 
   listProgramsAction,
   listTenantInstructorsAction,
@@ -120,6 +120,54 @@ export function useCourseInstructors(courseId: string) {
       return res.instructors || [];
     },
     enabled: !!courseId,
+  });
+}
+
+/**
+ * Lazy per-node keys for the program manager's live curriculum tree (as opposed to
+ * useCourseModules, which eagerly fetches the whole modules/lessons/resources tree
+ * for a course in one shot). Kept as distinct query keys so the two consumers never
+ * read a differently-shaped cache entry under the same key.
+ */
+export const liveCurriculumKeys = {
+  modules: (courseId: string) => ["academic-modules", courseId] as const,
+  lessons: (moduleId: string) => ["academic-lessons", moduleId] as const,
+  resources: (lessonId: string) => ["academic-resources", lessonId] as const,
+};
+
+export function fetchModules(queryClient: QueryClient, courseId: string) {
+  return queryClient.fetchQuery({
+    queryKey: liveCurriculumKeys.modules(courseId),
+    queryFn: async () => {
+      const res = await listModulesAction(courseId);
+      if (res.error) throw new Error(res.error);
+      return res.modules || [];
+    },
+    staleTime: DASHBOARD_STALE_TIME,
+  });
+}
+
+export function fetchLessons(queryClient: QueryClient, moduleId: string) {
+  return queryClient.fetchQuery({
+    queryKey: liveCurriculumKeys.lessons(moduleId),
+    queryFn: async () => {
+      const res = await listLessonsAction(moduleId);
+      if (res.error) throw new Error(res.error);
+      return res.lessons || [];
+    },
+    staleTime: DASHBOARD_STALE_TIME,
+  });
+}
+
+export function fetchResources(queryClient: QueryClient, lessonId: string) {
+  return queryClient.fetchQuery({
+    queryKey: liveCurriculumKeys.resources(lessonId),
+    queryFn: async () => {
+      const res = await listLessonResourcesAction(lessonId);
+      if (res.error) throw new Error(res.error);
+      return res.resources || [];
+    },
+    staleTime: DASHBOARD_STALE_TIME,
   });
 }
 

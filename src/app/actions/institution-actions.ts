@@ -9,7 +9,10 @@ import {
   listAllTeachers,
   mapTeacherToTenant,
   unmapTeacherFromTenant,
-  updateInstitutionStatus
+  updateInstitutionStatus,
+  updateInstitution,
+  getInstitutionRelationsCount,
+  deleteInstitution
 } from "@/services/institution";
 import { 
   processCsvOnboarding,
@@ -23,7 +26,6 @@ import { createClient } from "@/utils/supabase/server";
 
 export async function createNewInstitutionAction(formData: FormData) {
   const name = formData.get("name") as string;
-  const slug = formData.get("slug") as string;
   const code = formData.get("code") as string;
   const type = formData.get("type") as string;
   const email = formData.get("email") as string;
@@ -31,8 +33,8 @@ export async function createNewInstitutionAction(formData: FormData) {
   const address = formData.get("address") as string;
   const website = formData.get("website") as string;
 
-  if (!name || !slug || !code || !type) {
-    return { error: "Name, slug, code, and type are required." };
+  if (!name || !code || !type) {
+    return { error: "Name, code, and type are required." };
   }
 
   try {
@@ -43,7 +45,6 @@ export async function createNewInstitutionAction(formData: FormData) {
 
     const institution = await createInstitution({
       name,
-      slug,
       institution_code: code,
       institution_type: type,
       email,
@@ -184,6 +185,34 @@ export async function listInstitutionUsersAction(institutionId: string) {
   }
 }
 
+async function checkEmailRoleConflict(email: string, targetRole: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data: existingUser } = await supabase
+    .schema("core")
+    .from("users")
+    .select(`
+      id,
+      user_roles (
+        role:role_id (
+          name
+        )
+      )
+    `)
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existingUser && existingUser.user_roles && existingUser.user_roles.length > 0) {
+    const existingRoles = existingUser.user_roles.map((ur: any) => ur.role?.name.toLowerCase());
+    const hasDifferentRole = existingRoles.some(r => r !== targetRole.toLowerCase());
+    
+    if (hasDifferentRole) {
+      const rolesStr = existingRoles.map(r => r.toUpperCase()).join(", ");
+      return `Conflict Warning: The email '${email}' is already registered with role(s): ${rolesStr}. It cannot be onboarded for a different role: ${targetRole.toUpperCase()}.`;
+    }
+  }
+  return null;
+}
+
 export async function onboardSingleUserAction(params: {
   email: string;
   name: string;
@@ -205,6 +234,11 @@ export async function onboardSingleUserAction(params: {
 
     if (!isSuperAdmin && !isInstAdmin) {
       return { error: "Access denied." };
+    }
+
+    const conflictMsg = await checkEmailRoleConflict(email, role);
+    if (conflictMsg) {
+      return { error: conflictMsg };
     }
 
     const result = await onboardSingleUser({
@@ -327,6 +361,11 @@ export async function onboardSuperAdminAction(params: {
       return { error: "Access denied." };
     }
 
+    const conflictMsg = await checkEmailRoleConflict(email, "super_admin");
+    if (conflictMsg) {
+      return { error: conflictMsg };
+    }
+
     const result = await onboardSuperAdmin({
       email,
       name,
@@ -339,4 +378,111 @@ export async function onboardSuperAdminAction(params: {
     return { error: error.message || "Failed to onboard super admin." };
   }
 }
+
+export async function updateInstitutionAction(institutionId: string, data: {
+  name: string;
+  institution_code: string;
+  institution_type: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  logo_url?: string;
+  status: string;
+}) {
+  try {
+    const userDetails = await getCurrentUser();
+    if (!userDetails || userDetails.primaryRole !== "super_admin") {
+      return { error: "Access denied." };
+    }
+
+    const institution = await updateInstitution(institutionId, data);
+    revalidatePath("/admin");
+    return { success: true, institution };
+  } catch (error: any) {
+    return { error: error.message || "Failed to update institution." };
+  }
+}
+
+export async function getInstitutionRelationsCountAction(institutionId: string) {
+  try {
+    const userDetails = await getCurrentUser();
+    if (!userDetails || userDetails.primaryRole !== "super_admin") {
+      return { error: "Access denied." };
+    }
+
+    const counts = await getInstitutionRelationsCount(institutionId);
+    return { success: true, counts };
+  } catch (error: any) {
+    return { error: error.message || "Failed to check institution relations." };
+  }
+}
+
+export async function deleteInstitutionAction(institutionId: string) {
+  try {
+    const userDetails = await getCurrentUser();
+    if (!userDetails || userDetails.primaryRole !== "super_admin") {
+      return { error: "Access denied." };
+    }
+
+    await deleteInstitution(institutionId);
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to delete institution." };
+  }
+}
+
+export async function deleteUserAction(userId: string) {
+  try {
+    const userDetails = await getCurrentUser();
+    if (!userDetails || userDetails.primaryRole !== "super_admin") {
+      return { error: "Access denied." };
+    }
+
+    const supabase = await createClient();
+
+    // 1. Fetch user to check if they exist
+    const { data: user } = await supabase
+      .schema("core")
+      .from("users")
+      .select("id, email")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!user) {
+      return { error: "User not found." };
+    }
+
+    // 2. Delete invitation records first
+    await supabase
+      .schema("core")
+      .from("user_invitations")
+      .delete()
+      .eq("user_id", userId);
+
+    // 3. Delete user roles
+    await supabase
+      .schema("core")
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId);
+
+    // 4. Delete user record from core.users
+    const { error: deleteUserErr } = await supabase
+      .schema("core")
+      .from("users")
+      .delete()
+      .eq("id", userId);
+
+    if (deleteUserErr) throw deleteUserErr;
+
+    revalidatePath("/admin");
+    revalidatePath("/institution");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to delete user completely." };
+  }
+}
+
 
