@@ -28,6 +28,7 @@ import {
   FileText, Calendar, Clock, Sparkles, Edit, Play, Video, ExternalLink
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { SecondaryLoader } from "@/components/secondary-loader";
 
 interface ProgramManagerProps {
   institutions: any[];
@@ -807,9 +808,7 @@ export default function ProgramManager({
                   </div>
 
                   {modulesLoading[selectedCourseId] ? (
-                    <div className="py-8 text-center text-xs text-[#86868b] font-medium">
-                      Loading syllabus modules...
-                    </div>
+                    <SecondaryLoader variant="skeleton" message="Loading syllabus modules..." className="!border-0 !p-0 shadow-none bg-transparent" />
                   ) : (
                     <div className="space-y-2.5">
                       {modulesCache[selectedCourseId] && modulesCache[selectedCourseId].length > 0 ? (
@@ -885,7 +884,7 @@ export default function ProgramManager({
                                   </div>
 
                                   {lessonsLoading[mod.id] ? (
-                                    <div className="text-[10px] text-[#86868b] py-2 italic">Loading lessons...</div>
+                                    <SecondaryLoader variant="skeleton" message="Loading lessons..." className="!border-0 !p-2 shadow-none bg-transparent" />
                                   ) : hasLessons ? (
                                     lessonsCache[mod.id].map((les) => {
                                       const isLesExpanded = !!expandedLessons[les.id];
@@ -1018,7 +1017,7 @@ export default function ProgramManager({
                                                   <p className="text-[9px] text-[#86868b] italic font-sans">No resources attached to this lesson.</p>
                                                 )
                                               ) : (
-                                                <p className="text-[9px] text-[#86868b] italic font-sans">Loading resource attachments...</p>
+                                                <SecondaryLoader variant="skeleton" message="Loading resource attachments..." className="!border-0 !p-1 shadow-none bg-transparent" />
                                               )}
                                             </div>
                                           )}

@@ -821,14 +821,22 @@ export async function syncCourseProgress(userId: string, courseId: string) {
     const { data: lessons, error: lesError } = await supabase
       .schema("academic")
       .from("lessons")
-      .select("id")
+      .select(`
+        id,
+        lesson_type:lesson_type_id (code)
+      `)
       .in("module_id", moduleIds)
       .is("deleted_at", null);
 
     if (lesError) throw lesError;
-    totalLessons = lessons ? lessons.length : 0;
 
-    const lessonIds = (lessons || []).map(l => l.id);
+    const filteredLessons = (lessons || []).filter((l: any) => {
+      const code = (l.lesson_type?.code || "").toLowerCase();
+      return code !== "assignment" && code !== "assessment";
+    });
+
+    totalLessons = filteredLessons.length;
+    const lessonIds = filteredLessons.map(l => l.id);
 
     if (lessonIds.length > 0) {
       // Get count of completed lessons
@@ -1296,6 +1304,34 @@ export async function syncCourseProgressByActivity(userId: string, activityId: s
     .maybeSingle();
 
   if (activity?.lesson_id) {
+    // 1. Fetch activity progress status
+    const { data: progress } = await supabase
+      .schema("learning")
+      .from("student_activity_progress")
+      .select("status_code")
+      .eq("student_id", userId)
+      .eq("activity_id", activityId)
+      .maybeSingle();
+
+    const isDone = progress && ["submitted", "completed", "reviewed"].includes(progress.status_code);
+
+    if (isDone) {
+      await supabase
+        .schema("delivery")
+        .from("lesson_progress")
+        .upsert({
+          user_id: userId,
+          lesson_id: activity.lesson_id,
+          status_code: "completed",
+          progress_percentage: 100,
+          completed_at: new Date().toISOString(),
+          last_accessed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: "user_id,lesson_id"
+        });
+    }
+
     const { data: lesson } = await supabase
       .schema("academic")
       .from("lessons")

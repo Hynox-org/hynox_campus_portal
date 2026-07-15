@@ -2,9 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { Terminal, ArrowRight } from "lucide-react";
+import { DashboardLoader } from "@/components/dashboard-loader";
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
+  const [showLoader, setShowLoader] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -134,7 +136,7 @@ export default function Home() {
           </div>
 
           {/* Action button inside viewport */}
-          <div className="mt-12 pointer-events-auto">
+          <div className="mt-12 pointer-events-auto flex flex-col sm:flex-row gap-4 items-center justify-center">
             <a 
               href="/login" 
               className="inline-flex items-center gap-2 bg-[#0F172A] text-white text-sm font-semibold px-8 py-3.5 rounded-xl shadow-lg hover:bg-[#0F172A]/90 transition-all hover:shadow-xl duration-200"
@@ -142,9 +144,37 @@ export default function Home() {
               Enter the Campus
               <ArrowRight size={16} />
             </a>
+            <button 
+              onClick={() => {
+                setShowLoader(true);
+                // Auto-close after 6 seconds
+                setTimeout(() => {
+                  setShowLoader(false);
+                }, 6000);
+              }}
+              className="inline-flex items-center gap-2 bg-white text-[#2563EB] border border-[#2563EB]/20 text-sm font-semibold px-8 py-3.5 rounded-xl shadow-sm hover:bg-[#2563EB]/5 hover:border-[#2563EB]/40 transition-all duration-200 cursor-pointer"
+            >
+              Preview Initial Loader
+              <span className="w-2 h-2 rounded-full bg-[#2563EB] animate-pulse" />
+            </button>
           </div>
         </div>
       </main>
+
+      {/* Conditionally render the Dashboard Loader for verification */}
+      {showLoader && (
+        <div className="relative">
+          <DashboardLoader loading={showLoader} message="Testing initial loader cache sequence..." />
+          {/* Floating close preview button */}
+          <button
+            onClick={() => setShowLoader(false)}
+            className="fixed top-6 right-6 z-[10000] bg-white/90 hover:bg-white text-[#0F172A] border border-[#E2E8F0] shadow-lg text-xs font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+            Close Preview
+          </button>
+        </div>
+      )}
 
       {/* Decorative Interactive Background Elements */}
       <div className="fixed inset-0 z-0 pointer-events-none opacity-40">

@@ -42,6 +42,7 @@ import {
   ChevronDown,
   X
 } from "lucide-react";
+import { SecondaryLoader } from "@/components/secondary-loader";
 
 interface DeliveryManagerProps {
   institutions: any[];
@@ -488,9 +489,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
 
       {/* Loading state */}
       {loading && (
-        <div className="text-center py-10 font-bold text-[#86868b] animate-pulse">
-          Syncing delivery records...
-        </div>
+        <SecondaryLoader variant="spinner" message="Syncing delivery records..." />
       )}
 
       {/* cohorts view */}

@@ -619,6 +619,20 @@ export async function createLesson(input: LessonInput) {
     throw new Error("Tenant ID and Institution ID are required.");
   }
 
+  if (input.lesson_type_id) {
+    const { data: typeObj } = await supabase
+      .schema("academic")
+      .from("lesson_types")
+      .select("code")
+      .eq("id", input.lesson_type_id)
+      .maybeSingle();
+
+    const code = (typeObj?.code || "").toLowerCase();
+    if (code === "assignment" || code === "assessment") {
+      throw new Error("Assessment and assignment type lessons cannot be added inside a course syllabus.");
+    }
+  }
+
   const { data, error } = await supabase
     .schema("academic")
     .from("lessons")
@@ -648,6 +662,20 @@ export async function updateLesson(id: string, input: Partial<LessonInput>) {
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
+
+  if (input.lesson_type_id) {
+    const { data: typeObj } = await supabase
+      .schema("academic")
+      .from("lesson_types")
+      .select("code")
+      .eq("id", input.lesson_type_id)
+      .maybeSingle();
+
+    const code = (typeObj?.code || "").toLowerCase();
+    if (code === "assignment" || code === "assessment") {
+      throw new Error("Assessment and assignment type lessons cannot be added inside a course syllabus.");
+    }
+  }
 
   const { data, error } = await supabase
     .schema("academic")

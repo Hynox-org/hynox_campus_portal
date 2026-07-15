@@ -24,6 +24,7 @@ import {
   ChevronDown, FileText, Link2, ExternalLink, Sparkles, Play
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { SecondaryLoader } from "@/components/secondary-loader";
 
 export default function LibraryBuilder() {
   const [courseTemplates, setCourseTemplates] = useState<any[]>([]);
@@ -501,9 +502,7 @@ export default function LibraryBuilder() {
                 </div>
 
                 {modulesLoading[selectedCourse.id] ? (
-                  <div className="py-8 text-center text-xs text-[#475569] font-medium">
-                    Loading blueprint modules...
-                  </div>
+                  <SecondaryLoader variant="skeleton" message="Loading blueprint modules..." className="!border-0 !p-0 shadow-none bg-transparent" />
                 ) : (
                   <div className="space-y-2.5">
                     {modulesCache[selectedCourse.id] && modulesCache[selectedCourse.id].length > 0 ? (
@@ -583,7 +582,7 @@ export default function LibraryBuilder() {
                                 </div>
 
                                 {lessonsLoading[mod.id] ? (
-                                  <div className="text-[10px] text-[#475569] py-2 italic">Loading lessons...</div>
+                                  <SecondaryLoader variant="skeleton" message="Loading lessons..." className="!border-0 !p-2 shadow-none bg-transparent" />
                                 ) : hasLessons ? (
                                   lessonsCache[mod.id].map((les) => {
                                     const isLesExpanded = !!expandedLessons[les.id];
@@ -718,7 +717,7 @@ export default function LibraryBuilder() {
                                                 <p className="text-[9px] text-[#475569] italic">No resources attached to this lesson.</p>
                                               )
                                             ) : (
-                                              <p className="text-[9px] text-[#475569] italic">Loading resource attachments...</p>
+                                              <SecondaryLoader variant="skeleton" message="Loading resource attachments..." className="!border-0 !p-1 shadow-none bg-transparent" />
                                             )}
                                           </div>
                                         )}
@@ -1016,7 +1015,6 @@ export default function LibraryBuilder() {
                       <option value="text">Text Document</option>
                       <option value="video">Video Lecture</option>
                       <option value="pdf">PDF Document</option>
-                      <option value="assignment">Assignment File</option>
                     </select>
                   </div>
                   <div className="space-y-1">

@@ -619,17 +619,15 @@ export default function InstitutionPanel({
     );
   };
 
-  if (loadingDelivery || loadingLearning || loadingAcademic) {
-    return <DashboardLoader message="Setting up your Campus environment..." />;
-  }
-
   const initialError = deliveryError || learningError || academicError;
   if (initialError) {
     return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load the campus dashboard. {initialError.message}</div>;
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+    <>
+      <DashboardLoader loading={loadingDelivery || loadingLearning || loadingAcademic} message="Setting up your Campus environment..." />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1) both" }}>
       
       {/* Sidebar Navigation */}
       <div className="md:col-span-1 bg-white border border-[#E2E8F0] p-4 rounded-xl shadow-sm flex flex-row md:flex-col overflow-x-auto whitespace-nowrap scrollbar-none gap-2 shrink-0">
@@ -940,5 +938,6 @@ export default function InstitutionPanel({
       {renderStudentDetailDrawer()}
 
     </div>
+    </>
   );
 }

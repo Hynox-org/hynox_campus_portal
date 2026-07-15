@@ -32,6 +32,7 @@ import {
   AlertCircle, ChevronRight, X, Sparkles, FileText, CheckCircle2, Clock,
   Edit, Save
 } from "lucide-react";
+import { SecondaryLoader } from "@/components/secondary-loader";
 
 function formatDatetimeLocal(isoString?: string) {
   if (!isoString) return "";
@@ -1542,10 +1543,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
             {/* Content body */}
             <div className="flex-1 overflow-y-auto p-6">
               {detailsLoading ? (
-                <div className="flex flex-col items-center justify-center h-48 space-y-2 text-[#475569]">
-                  <Clock className="animate-spin" size={24} />
-                  <span>Loading details & grades...</span>
-                </div>
+                <SecondaryLoader variant="spinner" message="Loading details & grades..." />
               ) : activeDrawerTab === "config" ? (
                 isEditing ? (
                   <>

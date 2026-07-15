@@ -97,7 +97,8 @@ import {
   Award,
   Menu,
   X,
-  Play
+  Play,
+  Layers
 } from "lucide-react";
 import LibraryBuilder from "./library-builder";
 import ProgramManager from "./program-manager";
@@ -107,6 +108,7 @@ import AdminStudentProgress from "./student-progress";
 
 import { useAdminData } from "@/hooks/use-admin";
 import { DashboardLoader } from "@/components/dashboard-loader";
+import { SecondaryLoader } from "@/components/secondary-loader";
 
 interface AdminPanelProps {
   adminEmail: string;
@@ -118,6 +120,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const { data: adminData, isLoading: loadingAdmin, error: adminError } = useAdminData();
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showPreviewLoader, setShowPreviewLoader] = useState(false);
+  const [showSecondaryPreview, setShowSecondaryPreview] = useState(false);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -125,29 +129,26 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     }
   }, []);
 
-  const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager">(() => {
+  const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager">("institutions");
+  const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
+
+  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "program_student_progress" | "super_admin_invite">("institutions");
+
+  // Sync state with URL params after hydration on client
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const parent = params.get("parentTab");
       if (parent && ["institutions", "onboarding", "library", "programs", "learning_manager"].includes(parent)) {
-        return parent as any;
+        setActiveParentTab(parent as any);
       }
-    }
-    return "institutions";
-  });
-  const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
-
-  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "program_student_progress" | "super_admin_invite">(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
       const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "program_student_progress", "super_admin_invite"];
       if (tab && validTabs.includes(tab)) {
-        return tab as any;
+        setActiveTab(tab as any);
       }
     }
-    return "institutions";
-  });
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1208,9 +1209,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               </h4>
 
               {teacherDetailsLoading ? (
-                <div className="text-center py-12 text-xs text-[#86868b] font-medium flex items-center justify-center gap-2">
-                  <RefreshCw size={14} className="animate-spin text-[#0066cc]" /> Loading cohort assignments...
-                </div>
+                <SecondaryLoader variant="skeleton" message="Loading cohort assignments..." className="!border-0 !p-0 shadow-none" />
               ) : teacherInstDetails.length === 0 ? (
                 <div className="text-center py-8 text-xs text-[#86868b] border border-dashed border-[#d2d2d7] rounded-xl">
                   No cohort assignments found.
@@ -1370,15 +1369,14 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     },
   ], []);
 
-  if (loadingAdmin) {
-    return <DashboardLoader message="Setting up your Super Admin environment..." />;
-  }
   if (adminError) {
     return <div role="alert" className="m-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load the admin dashboard. {adminError.message}</div>;
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] flex flex-col text-[#1d1d1f]">
+    <>
+      <DashboardLoader loading={loadingAdmin} message="Setting up your Super Admin environment..." />
+      <div className="min-h-screen bg-[#f5f5f7] flex flex-col text-[#1d1d1f]" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1) both" }}>
       
       {/* Top Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-[#d2d2d7]/50 shadow-sm sticky top-0 z-50">
@@ -1410,6 +1408,25 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               </span>
             </div>
             <button
+              onClick={() => {
+                setShowPreviewLoader(true);
+                setTimeout(() => setShowPreviewLoader(false), 6000);
+              }}
+              className="flex items-center gap-1.5 bg-[#0066cc]/10 hover:bg-[#0066cc]/20 text-[#0066cc] border border-[#0066cc]/20 px-2 sm:px-3 py-1 rounded-md transition-all font-semibold cursor-pointer shrink-0"
+              title="Test Caching Loader"
+            >
+              <Building size={11} />
+              <span>Test Loader</span>
+            </button>
+            <button
+              onClick={() => setShowSecondaryPreview(!showSecondaryPreview)}
+              className="flex items-center gap-1.5 bg-[#06B6D4]/10 hover:bg-[#06B6D4]/20 text-[#0891B2] border border-[#06B6D4]/20 px-2 sm:px-3 py-1 rounded-md transition-all font-semibold cursor-pointer shrink-0"
+              title="Test Secondary Loaders"
+            >
+              <Layers size={11} />
+              <span>Test Local Loader</span>
+            </button>
+            <button
               onClick={() => signOutAction()}
               className="flex items-center gap-1.5 bg-transparent hover:bg-black/5 text-[#1d1d1f] border border-black/15 hover:border-black/30 px-2 sm:px-3 py-1 rounded-md transition-all font-medium cursor-pointer shrink-0"
               title="Sign Out"
@@ -1420,6 +1437,50 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           </div>
         </div>
       </header>
+
+      {/* Conditionally render the Dashboard Loader for verification in Admin Panel */}
+      {showPreviewLoader && (
+        <DashboardLoader loading={showPreviewLoader} message="Testing initial loader cache sequence..." />
+      )}
+
+      {showSecondaryPreview && (
+        <div className="max-w-7xl mx-auto px-4 md:px-6 pt-6 w-full animate-fadeIn">
+          <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-sm text-[#0F172A]">Secondary Loader Preview</h3>
+                <p className="text-xs text-[#64748B]">Verify the card, skeleton list, and grid loader variants used for data fetching inside panels.</p>
+              </div>
+              <button 
+                onClick={() => setShowSecondaryPreview(false)}
+                className="text-xs font-semibold text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+              >
+                Dismiss Preview
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Spinner variant */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">1. Card Spinner</span>
+                <SecondaryLoader variant="spinner" message="Syncing data blocks..." />
+              </div>
+              
+              {/* Skeleton List Variant */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">2. Row List Skeleton</span>
+                <SecondaryLoader variant="skeleton" />
+              </div>
+              
+              {/* Skeleton Grid Variant */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">3. Grid Card Skeleton</span>
+                <SecondaryLoader variant="skeleton-grid" className="!grid-cols-1 md:!grid-cols-1" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {/* Main Grid Workspace */}
@@ -2902,9 +2963,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 </div>
 
                 {loadingTeachers && teachersList.length === 0 ? (
-                  <div className="text-center py-12 text-xs text-[#86868b] font-medium flex items-center justify-center gap-2">
-                    <RefreshCw size={14} className="animate-spin text-[#0066cc]" /> Retrieving registered teacher credentials...
-                  </div>
+                  <SecondaryLoader variant="skeleton" message="Retrieving registered teacher credentials..." className="!border-0 !p-0 shadow-none" />
                 ) : teachersList.length === 0 ? (
                   <div className="text-center py-12 text-xs text-[#86868b] border border-dashed border-[#d2d2d7] rounded-xl mt-4">
                     No registered teachers/trainers found on the platform.
@@ -2976,10 +3035,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               {explorerSelectedId && (
                 <>
                   {explorerLoading ? (
-                    <div className="bg-white border border-[#d2d2d7] rounded-xl p-12 text-center shadow-sm">
-                      <RefreshCw size={24} className="animate-spin text-[#0066cc] mx-auto mb-2" />
-                      <p className="text-xs text-[#86868b] font-medium">Loading campus directory...</p>
-                    </div>
+                    <SecondaryLoader variant="spinner" message="Loading campus directory..." />
                   ) : (
                     <>
                       {/* Stats Grid */}
@@ -4298,5 +4354,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       {renderTeacherDetailDrawer()}
 
     </div>
+    </>
   );
 }

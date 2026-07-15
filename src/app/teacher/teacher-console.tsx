@@ -108,6 +108,7 @@ function formatDatetimeLocal(isoString?: string) {
 }
 
 import { DashboardLoader } from "@/components/dashboard-loader";
+import { SecondaryLoader } from "@/components/secondary-loader";
 
 // A module-level fallback keeps effect dependencies stable before the first
 // query result arrives. Creating `[]` during render turns it into a new
@@ -139,29 +140,26 @@ export default function TeacherConsole({
   const acadCourses = academicPrefetch?.courses ?? EMPTY_LIST;
   const acadLessons = academicPrefetch?.lessons ?? EMPTY_LIST;
 
-  const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "syllabus" | "delivery" | "auditor" | "attendance">(() => {
+  const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "syllabus" | "delivery" | "auditor" | "attendance">("overview");
+  const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum">("overview");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Sync state with URL params after hydration on client
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
       const validTabs = ["overview", "roster", "projects", "challenges", "activities-manager", "syllabus", "delivery", "auditor", "attendance"];
       if (tab && validTabs.includes(tab)) {
-        return tab as any;
+        setActiveTab(tab as any);
       }
-    }
-    return "overview";
-  });
-  const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum">(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
       const parent = params.get("parentTab");
       const validParents = ["overview", "students", "assessments", "curriculum"];
       if (parent && validParents.includes(parent)) {
-        return parent as any;
+        setActiveParentTab(parent as any);
       }
     }
-    return "overview";
-  });
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  }, []);
   
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -1289,10 +1287,7 @@ export default function TeacherConsole({
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-6">
             {detailsLoading ? (
-              <div className="flex flex-col items-center justify-center h-48 space-y-2 text-[#475569]">
-                <Clock className="animate-spin" size={24} />
-                <span>Loading details...</span>
-              </div>
+              <SecondaryLoader variant="spinner" message="Loading details..." />
             ) : activeDrawerTab === "config" ? (
               isEditing ? (
                 // EDIT FORM
@@ -2320,9 +2315,7 @@ export default function TeacherConsole({
               <h4 className="text-xs font-bold text-[#0F172A] uppercase mb-3 tracking-wider">Submitted Answers Verification</h4>
               
               {loadingQuizSession ? (
-                <div className="text-center py-12 text-xs text-[#475569] font-medium flex items-center justify-center gap-2">
-                  <RefreshCw size={14} className="animate-spin" /> Retrieving session questions and selected answers...
-                </div>
+                <SecondaryLoader variant="skeleton" message="Retrieving session questions and selected answers..." className="!border-0 !p-0 shadow-none" />
               ) : !quizAttemptSession || !quizAttemptSession.questions ? (
                 <div className="text-center py-6 text-xs text-[#475569] border border-dashed border-[#E2E8F0] rounded-xl">
                   No responses logged for this quiz session.
@@ -2653,17 +2646,15 @@ export default function TeacherConsole({
     );
   };
 
-  if (loadingDelivery || loadingLearning || loadingPrograms) {
-    return <DashboardLoader message="Setting up your Instructor environment..." />;
-  }
-
   const initialError = deliveryError || learningError || academicError;
   if (initialError) {
-    return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load the instructor dashboard. {initialError.message}</div>;
+     return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load the instructor dashboard. {initialError.message}</div>;
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <DashboardLoader loading={loadingDelivery || loadingLearning || loadingPrograms} message="Setting up your Instructor environment..." />
+      <div className="space-y-6" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1) both" }}>
       
       {/* Top Banner & Multi-Tenant Campus Selector */}
       <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -4606,5 +4597,6 @@ export default function TeacherConsole({
       {/* ACTIVITY DETAIL SLIDE-OVER DRAWER */}
       {renderActivityConsoleDrawer()}
     </div>
+    </>
   );
 }

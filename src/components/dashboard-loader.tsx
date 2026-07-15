@@ -1,39 +1,159 @@
 "use client";
 
-import React from "react";
-import { Loader2 } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Terminal } from "lucide-react";
 
-export function DashboardLoader({ message = "Setting up your environment..." }: { message?: string }) {
+interface DashboardLoaderProps {
+  loading: boolean;
+  message?: string;
+}
+
+export function DashboardLoader({
+  loading,
+  message = "Setting up your campus environment…",
+}: DashboardLoaderProps) {
+  const [progress, setProgress] = useState(0);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [mounted, setMounted] = useState(true);
+  const [exiting, setExiting] = useState(false);
+
+  /* ── Minimum duration timer (3 seconds) ── */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  /* ── Monitor loading state & minimum duration to trigger fade out ── */
+  useEffect(() => {
+    if (!loading && minTimeElapsed) {
+      setExiting(true);
+      const timer = setTimeout(() => {
+        setMounted(false);
+      }, 400); // matches the transition opacity duration
+      return () => clearTimeout(timer);
+    }
+  }, [loading, minTimeElapsed]);
+
+  /* ── Progress bar increment ── */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((p) => {
+        if (p >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        // Speed up progress once actual data has loaded
+        const increment = !loading && minTimeElapsed ? 5 : 0.65;
+        return Math.min(p + increment, 100);
+      });
+    }, 30);
+    return () => clearInterval(interval);
+  }, [loading, minTimeElapsed]);
+
+  if (!mounted) return null;
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] h-full w-full bg-[#F8FAFC]">
-      <div className="relative flex flex-col items-center">
-        {/* Outer subtle pulse */}
-        <div className="absolute inset-0 bg-[#2563EB]/5 rounded-full blur-3xl w-48 h-48 animate-pulse -z-10" />
-        
-        {/* Spinner */}
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-[#E2E8F0] mb-6">
-          <Loader2 className="w-10 h-10 text-[#2563EB] animate-spin" strokeWidth={2.5} />
-        </div>
-        
-        {/* Text content */}
-        <h2 className="text-xl font-bold text-[#0F172A] mb-2">{message}</h2>
-        <p className="text-sm text-[#475569] max-w-sm text-center">
-          We are loading your campus data. This process happens only once per session so you can experience a lightning-fast dashboard.
-        </p>
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#F8FAFC]"
+      role="status"
+      aria-label="Loading campus portal"
+      aria-live="polite"
+      style={{
+        transition: "opacity 400ms cubic-bezier(0.25, 1, 0.5, 1)",
+        opacity: exiting ? 0 : 1,
+        pointerEvents: exiting ? "none" : "auto",
+      }}
+    >
+      <div
+        className="flex flex-col items-center gap-7"
+        style={{ animation: "hc-rise 0.4s cubic-bezier(0.16,1,0.3,1) both" }}
+      >
+        {/* Spinning arc + icon */}
+        <div className="relative w-[88px] h-[88px] flex items-center justify-center">
+          <svg
+            className="absolute inset-0 w-full h-full"
+            viewBox="0 0 88 88"
+            fill="none"
+          >
+            {/* Track circle */}
+            <circle
+              cx="44"
+              cy="44"
+              r="40"
+              stroke="#E2E8F0"
+              strokeWidth="2"
+            />
+            {/* Spinning arc */}
+            <circle
+              cx="44"
+              cy="44"
+              r="40"
+              stroke="#2563EB"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray="62 190"
+              style={{
+                transformOrigin: "center",
+                animation: "hc-arc 1.5s ease-in-out infinite",
+              }}
+            />
+          </svg>
 
-        {/* Loading bar animation */}
-        <div className="mt-8 w-64 h-1.5 bg-[#E2E8F0] rounded-full overflow-hidden relative">
-          <div className="absolute top-0 left-0 h-full bg-[#2563EB] rounded-full animate-[progress_2s_ease-in-out_infinite]" />
+          {/* Icon */}
+          <div
+            className="w-12 h-12 bg-white rounded-xl flex items-center justify-center"
+            style={{
+              border: "1px solid #E2E8F0",
+              boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+            }}
+          >
+            <Terminal size={20} className="text-[#2563EB]" strokeWidth={2.5} />
+          </div>
+        </div>
+
+        {/* Text */}
+        <div className="flex flex-col items-center gap-1.5 text-center">
+          <h2 className="text-base font-bold text-[#0F172A] tracking-tight leading-none">
+            Hynox Campus
+          </h2>
+          <span className="text-[10px] font-semibold tracking-[0.18em] uppercase text-[#94A3B8]">
+            Academic Engine v1.0
+          </span>
+          <p className="mt-1 text-sm text-[#475569] max-w-[240px] leading-snug">
+            {message}
+          </p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="flex flex-col items-end gap-1.5 w-52">
+          <span className="text-[10px] font-semibold text-[#2563EB] tabular-nums">
+            {Math.round(progress)}%
+          </span>
+          <div className="w-full h-[3px] bg-[#E2E8F0] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#2563EB] rounded-full"
+              style={{
+                width: `${progress}%`,
+                transition: "width 0.3s ease-out",
+              }}
+            />
+          </div>
         </div>
       </div>
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes progress {
-          0% { width: 0%; transform: translateX(-100%); }
-          50% { width: 40%; transform: translateX(50%); }
-          100% { width: 100%; transform: translateX(200%); }
+
+      <style>{`
+        @keyframes hc-rise {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-      `}} />
+        @keyframes hc-arc {
+          0%   { transform: rotate(-90deg); stroke-dashoffset: 0; }
+          50%  { transform: rotate(90deg);  stroke-dashoffset: -40; }
+          100% { transform: rotate(270deg); stroke-dashoffset: -62; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -244,6 +244,11 @@ export async function createLessonTemplate(input: LessonTemplateInput) {
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
 
+  const code = (input.lesson_type_code || "").toLowerCase();
+  if (code === "assignment" || code === "assessment") {
+    throw new Error("Assessment and assignment type lessons cannot be added inside a course library.");
+  }
+
   const { data, error } = await supabase
     .schema("library")
     .from("lesson_templates")
@@ -270,6 +275,13 @@ export async function updateLessonTemplate(id: string, input: Partial<LessonTemp
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
+
+  if (input.lesson_type_code) {
+    const code = input.lesson_type_code.toLowerCase();
+    if (code === "assignment" || code === "assessment") {
+      throw new Error("Assessment and assignment type lessons cannot be added inside a course library.");
+    }
+  }
 
   const { data, error } = await supabase
     .schema("library")

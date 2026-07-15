@@ -31,6 +31,7 @@ import {
   X, 
   ExternalLink 
 } from "lucide-react";
+import { SecondaryLoader } from "@/components/secondary-loader";
 
 interface AdminStudentProgressProps {
   institutions: any[];
@@ -203,7 +204,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
           </div>
 
           {loading ? (
-            <div className="text-center py-10 font-bold text-[#86868b] animate-pulse">Syncing student worksheets...</div>
+            <SecondaryLoader variant="spinner" message="Syncing student worksheets..." />
           ) : filteredEnrollments.length > 0 ? (
             <div className="border border-[#d2d2d7] rounded-xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
