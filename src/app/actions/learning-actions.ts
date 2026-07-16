@@ -24,7 +24,6 @@ export async function getQuizDetailsAction(activityId: string) {
 export async function startQuizAttemptAction(quizId: string, studentId: string, progressId: string, attemptNumber: number = 1) {
   try {
     const attempt = await service.startQuizAttempt(quizId, studentId, progressId, attemptNumber);
-    revalidatePath("/student");
     return { attempt };
   } catch (error: any) {
     return { error: error.message || "Failed to start quiz attempt." };
@@ -37,7 +36,6 @@ export async function submitQuizAnswersAction(
 ) {
   try {
     const attempt = await service.submitQuizAnswers(attemptId, answers);
-    revalidatePath("/student");
     return { attempt };
   } catch (error: any) {
     return { error: error.message || "Failed to submit quiz answers." };
@@ -62,7 +60,6 @@ export async function submitProjectAction(
 ) {
   try {
     const submission = await service.submitProject(projectId, studentId, progressId, githubUrl, notes);
-    revalidatePath("/student");
     return { submission };
   } catch (error: any) {
     return { error: error.message || "Failed to submit project." };
@@ -117,7 +114,6 @@ export async function submitChallengeCodeAction(
       runner.executeAllTestsAndGrade(submission.id).catch(console.error);
     }
 
-    revalidatePath("/student");
     return { submission };
   } catch (error: any) {
     return { error: error.message || "Failed to submit challenge code." };
@@ -471,7 +467,6 @@ export async function updateActivityAndSubclassAction(id: string, input: any) {
 export async function ensureLessonProjectActivityAction(lessonId: string, studentId: string, courseId: string) {
   try {
     const res = await service.ensureLessonProjectActivity(lessonId, studentId, courseId);
-    revalidatePath("/student");
     return res;
   } catch (error: any) {
     return { error: error.message || "Failed to ensure dynamic lesson activity." };
@@ -547,3 +542,46 @@ export async function listCohortQuizAttemptsAction(cohortId: string) {
     return { error: error.message || "Failed to load quiz attempts for cohort." };
   }
 }
+
+export async function deleteActivityAction(id: string) {
+  try {
+    await service.deleteActivity(id);
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to delete activity." };
+  }
+}
+
+export async function deleteQuizQuestionAction(id: string) {
+  try {
+    await service.deleteQuizQuestion(id);
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to delete question." };
+  }
+}
+
+export async function updateQuizQuestionAndOptionsAction(
+  questionId: string,
+  questionText: string,
+  questionType: string,
+  points: number,
+  options: Array<{ optionText: string; isCorrect: boolean; position: number }>
+) {
+  try {
+    const question = await service.updateQuizQuestionAndOptions(
+      questionId,
+      questionText,
+      questionType,
+      points,
+      options
+    );
+    revalidatePath("/admin");
+    return { success: true, question };
+  } catch (error: any) {
+    return { error: error.message || "Failed to update question." };
+  }
+}
+

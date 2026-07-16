@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   createCourseTemplateAction,
@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SecondaryLoader } from "@/components/secondary-loader";
+import { useToast } from "@/components/toast";
 
 export default function LibraryBuilder() {
   const queryClient = useQueryClient();
@@ -47,8 +48,7 @@ export default function LibraryBuilder() {
   
   const [saving, setSaving] = useState(false);
   const [courseDataLoading, setCourseDataLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { showSuccess, showError } = useToast();
 
   // Node toggle states
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
@@ -98,6 +98,19 @@ export default function LibraryBuilder() {
     external_url: "",
     position: 1
   });
+
+  // Scroll lock when any sidebar drawer is open to prevent background viewport scrolling
+  useEffect(() => {
+    const isOpen = courseDrawerOpen || moduleDrawerOpen || lessonDrawerOpen || resourceDrawerOpen;
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [courseDrawerOpen, moduleDrawerOpen, lessonDrawerOpen, resourceDrawerOpen]);
 
   // Lazy load modules for a specific course, backed by the React Query cache
   const handleSelectCourse = async (courseId: string) => {
@@ -207,8 +220,6 @@ export default function LibraryBuilder() {
   const handleCourseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     let res;
     if (editingCourse) {
@@ -218,9 +229,9 @@ export default function LibraryBuilder() {
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Course template saved successfully!");
+      showSuccess("Course template saved successfully!");
       setCourseDrawerOpen(false);
       const savedId = editingCourse?.id;
       setEditingCourse(null);
@@ -232,8 +243,6 @@ export default function LibraryBuilder() {
   const handleModuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     let res;
     if (editingModule) {
@@ -246,9 +255,9 @@ export default function LibraryBuilder() {
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Module template saved!");
+      showSuccess("Module template saved!");
       setModuleDrawerOpen(false);
       setEditingModule(null);
       await refreshModules(selectedCourse.id);
@@ -259,8 +268,6 @@ export default function LibraryBuilder() {
   const handleLessonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     const content_json = {
       body: lessonForm.content_text,
@@ -290,9 +297,9 @@ export default function LibraryBuilder() {
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Lesson template saved!");
+      showSuccess("Lesson template saved!");
       setLessonDrawerOpen(false);
       setEditingLesson(null);
       await refreshLessons(selectedModuleId);
@@ -303,8 +310,6 @@ export default function LibraryBuilder() {
   const handleResourceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     const res = await createResourceTemplateAction({
       lesson_template_id: selectedLessonId,
@@ -316,9 +321,9 @@ export default function LibraryBuilder() {
     });
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Resource template added!");
+      showSuccess("Resource template added!");
       setResourceDrawerOpen(false);
       await refreshResources(selectedLessonId);
     }
@@ -327,18 +332,6 @@ export default function LibraryBuilder() {
 
   return (
     <div className="space-y-6 col-span-full w-full">
-      {/* Alert Banners */}
-      {error && (
-        <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 text-xs">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 text-xs">
-          {success}
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left selector column */}
@@ -481,9 +474,9 @@ export default function LibraryBuilder() {
                       onClick={async () => {
                         if (confirm("Are you sure you want to delete this course template blueprint?")) {
                           const res = await deleteCourseTemplateAction(selectedCourse.id);
-                          if (res.error) setError(res.error);
+                          if (res.error) showError(res.error);
                           else {
-                            setSuccess("Course blueprint deleted!");
+                            showSuccess("Course blueprint deleted!");
                             setSelectedCourse(null);
                             await refreshCourseList();
                           }
@@ -556,7 +549,7 @@ export default function LibraryBuilder() {
                                   onClick={async () => {
                                     if (confirm("Delete this module and all its lessons?")) {
                                       const delRes = await deleteModuleTemplateAction(mod.id);
-                                      if (delRes.error) setError(delRes.error);
+                                      if (delRes.error) showError(delRes.error);
                                       else await refreshModules(selectedCourse.id);
                                     }
                                   }}
@@ -639,7 +632,7 @@ export default function LibraryBuilder() {
                                               onClick={async () => {
                                                 if (confirm("Delete this lesson template?")) {
                                                   const delRes = await deleteLessonTemplateAction(les.id);
-                                                  if (delRes.error) setError(delRes.error);
+                                                  if (delRes.error) showError(delRes.error);
                                                   else await refreshLessons(mod.id);
                                                 }
                                               }}
@@ -711,7 +704,7 @@ export default function LibraryBuilder() {
                                                       onClick={async () => {
                                                         if (confirm("Delete this resource template?")) {
                                                           const delRes = await deleteResourceTemplateAction(resrc.id);
-                                                          if (delRes.error) setError(delRes.error);
+                                                          if (delRes.error) showError(delRes.error);
                                                           else await refreshResources(les.id);
                                                         }
                                                       }}
@@ -772,11 +765,11 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setCourseDrawerOpen(false)}
-            className="fixed inset-0 z-40 bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
             {/* Header */}
             <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
               <div>
@@ -888,7 +881,7 @@ export default function LibraryBuilder() {
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex justify-end gap-3 shrink-0">
+              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setCourseDrawerOpen(false)}
@@ -915,11 +908,11 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setModuleDrawerOpen(false)}
-            className="fixed inset-0 z-40 bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
             {/* Header */}
             <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
               <div>
@@ -975,7 +968,7 @@ export default function LibraryBuilder() {
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex justify-end gap-3 shrink-0">
+              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setModuleDrawerOpen(false)}
@@ -1002,11 +995,11 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setLessonDrawerOpen(false)}
-            className="fixed inset-0 z-40 bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
             {/* Header */}
             <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
               <div>
@@ -1077,7 +1070,7 @@ export default function LibraryBuilder() {
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex justify-end gap-3 shrink-0">
+              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setLessonDrawerOpen(false)}
@@ -1104,11 +1097,11 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setResourceDrawerOpen(false)}
-            className="fixed inset-0 z-40 bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
             {/* Header */}
             <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
               <div>
@@ -1178,7 +1171,7 @@ export default function LibraryBuilder() {
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex justify-end gap-3 shrink-0">
+              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setResourceDrawerOpen(false)}

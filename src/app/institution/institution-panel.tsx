@@ -627,7 +627,7 @@ export default function InstitutionPanel({
   return (
     <>
       <DashboardLoader loading={loadingDelivery || loadingLearning || loadingAcademic} message="Setting up your Campus environment..." />
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1) both" }}>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
       
       {/* Sidebar Navigation */}
       <div className="md:col-span-1 bg-white border border-[#E2E8F0] p-4 rounded-xl shadow-sm flex flex-row md:flex-col overflow-x-auto whitespace-nowrap scrollbar-none gap-2 shrink-0">

@@ -6,6 +6,7 @@ import {
   createProgramAction,
   deleteProgramAction,
   listCoursesAction,
+  listProgramsAction,
   createModuleAction,
   updateModuleAction,
   deleteModuleAction,
@@ -15,19 +16,24 @@ import {
   createLessonResourceAction,
   deleteLessonResourceAction,
   updateCourseAction,
+  deleteCourseAction,
+  createCourseAction,
   getAcademicLookupsAction,
   updateProgramAction
 } from "@/app/actions/academic-actions";
 import { instantiateCourseTemplateAction } from "@/app/actions/library-actions";
 import { useCourseTemplates } from "@/hooks/use-library";
 import { usePrograms, useCourses, liveCurriculumKeys, fetchModules, fetchLessons, fetchResources } from "@/hooks/use-academics";
+import { DASHBOARD_STALE_TIME } from "@/lib/dashboard-query";
 import { 
   Folder, Plus, Trash2, X, ChevronRight, ChevronDown, 
-  BookOpen, PlusCircle, CheckCircle2, AlertCircle, 
+  BookOpen, PlusCircle,
   FileText, Calendar, Clock, Sparkles, Edit, Play, Video, ExternalLink
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SecondaryLoader } from "@/components/secondary-loader";
+import { CustomSelect } from "@/components/custom-select";
+import { useToast } from "@/components/toast";
 
 interface ProgramManagerProps {
   institutions: any[];
@@ -62,11 +68,11 @@ export default function ProgramManager({
 
   // Loading states
   const [saving, setSaving] = useState(false);
-  const loading = loadingPrograms || loadingCourses || saving;
+  const [preloadingAll, setPreloadingAll] = useState(false);
+  const loading = loadingPrograms || loadingCourses || saving || preloadingAll;
   const [modulesLoading, setModulesLoading] = useState<Record<string, boolean>>({});
   const [lessonsLoading, setLessonsLoading] = useState<Record<string, boolean>>({});
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { showSuccess, showError } = useToast();
 
   // Modals / forms for Programs
   const [programModalOpen, setProgramModalOpen] = useState(false);
@@ -128,10 +134,89 @@ export default function ProgramManager({
     loadLookups();
   }, []);
 
-  // Reset selection to prevent cross-institution leakage; usePrograms(selectedInstId) handles the fetch/cache.
+  // Reset selection and pre-load all programs, courses, modules, lessons, and resources for the selected institution
   useEffect(() => {
     setSelectedProgram(null);
-  }, [selectedInstId]);
+    if (!selectedInstId) {
+      return;
+    }
+
+    const preloadAllData = async () => {
+      // Already warm within this session (query cache survives remounts, unlike this component's local state)
+      // — skip the full-screen loader and let the nested fetchQuery calls below resolve straight from cache.
+      const alreadyWarm = !!queryClient.getQueryData(["programs", selectedInstId]);
+      if (!alreadyWarm) setPreloadingAll(true);
+      try {
+        // 1. Fetch programs list (served from cache instantly if still fresh)
+        const progsList = await queryClient.fetchQuery({
+          queryKey: ["programs", selectedInstId],
+          queryFn: async () => {
+            const res = await listProgramsAction(selectedInstId);
+            if (res.error) throw new Error(res.error);
+            return res.programs || [];
+          },
+          staleTime: DASHBOARD_STALE_TIME,
+        });
+
+        // 2. Fetch courses per program (served from cache instantly if still fresh)
+        await Promise.all(
+          progsList.map(async (prog: any) => {
+            const coursesList = await queryClient.fetchQuery({
+              queryKey: ["courses", prog.id],
+              queryFn: async () => {
+                const res = await listCoursesAction(prog.id);
+                if (res.error) throw new Error(res.error);
+                return res.courses || [];
+              },
+              staleTime: DASHBOARD_STALE_TIME,
+            });
+
+            // 3. Fetch modules, lessons, and resources recursively per course
+            await Promise.all(
+              coursesList.map(async (course: any) => {
+                const modules = await fetchModules(queryClient, course.id);
+                setModulesCache(prev => ({ ...prev, [course.id]: modules }));
+
+                await Promise.all(
+                  modules.map(async (mod: any) => {
+                    const lessons = await fetchLessons(queryClient, mod.id);
+                    setLessonsCache(prev => ({ ...prev, [mod.id]: lessons }));
+
+                    await Promise.all(
+                      lessons.map(async (les: any) => {
+                        const resources = await fetchResources(queryClient, les.id);
+                        setResourcesCache(prev => ({ ...prev, [les.id]: resources }));
+                      })
+                    );
+                  })
+                );
+              })
+            );
+          })
+        );
+      } catch (err: any) {
+        console.error("Error preloading institution data:", err);
+        showError(err.message || "Failed to preload institution details.");
+      } finally {
+        setPreloadingAll(false);
+      }
+    };
+
+    preloadAllData();
+  }, [selectedInstId, queryClient]);
+
+  // Scroll lock when any sidebar drawer is open to prevent background viewport scrolling
+  useEffect(() => {
+    const isOpen = programModalOpen || courseModalOpen || moduleModalOpen || lessonModalOpen || resourceModalOpen;
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [programModalOpen, courseModalOpen, moduleModalOpen, lessonModalOpen, resourceModalOpen]);
 
   // Auto-select the first course when the selected program's courses load (Examine mode); useCourses handles the fetch/cache.
   useEffect(() => {
@@ -149,11 +234,57 @@ export default function ProgramManager({
   // Lazy load modules for a specific course, backed by the React Query cache
   const handleSelectCourse = async (courseId: string) => {
     setSelectedCourseId(courseId);
-    if (modulesCache[courseId]) return; // use local cache
+    
+    if (modulesCache[courseId]) {
+      // If already cached, just auto-expand them in UI
+      const modules = modulesCache[courseId];
+      const newExpandedModules: Record<string, boolean> = {};
+      const newExpandedLessons: Record<string, boolean> = {};
+      modules.forEach((mod: any) => {
+        newExpandedModules[mod.id] = true;
+        const lessons = lessonsCache[mod.id] || [];
+        lessons.forEach((les: any) => {
+          newExpandedLessons[les.id] = true;
+        });
+      });
+      setExpandedModules(prev => ({ ...prev, ...newExpandedModules }));
+      setExpandedLessons(prev => ({ ...prev, ...newExpandedLessons }));
+      return;
+    }
 
     setModulesLoading(prev => ({ ...prev, [courseId]: true }));
     const modules = await fetchModules(queryClient, courseId);
     setModulesCache(prev => ({ ...prev, [courseId]: modules }));
+    
+    // Pre-expand modules and fetch lessons
+    const newExpandedModules: Record<string, boolean> = {};
+    const newExpandedLessons: Record<string, boolean> = {};
+    
+    await Promise.all(
+      modules.map(async (mod: any) => {
+        newExpandedModules[mod.id] = true; // Auto expand module
+        
+        // Fetch lessons for this module
+        setLessonsLoading(prev => ({ ...prev, [mod.id]: true }));
+        const lessons = await fetchLessons(queryClient, mod.id);
+        setLessonsCache(prev => ({ ...prev, [mod.id]: lessons }));
+        setLessonsLoading(prev => ({ ...prev, [mod.id]: false }));
+        
+        // Pre-expand lessons and fetch resources
+        await Promise.all(
+          lessons.map(async (les: any) => {
+            newExpandedLessons[les.id] = true; // Auto expand lesson
+            
+            // Fetch resources
+            const resources = await fetchResources(queryClient, les.id);
+            setResourcesCache(prev => ({ ...prev, [les.id]: resources }));
+          })
+        );
+      })
+    );
+    
+    setExpandedModules(prev => ({ ...prev, ...newExpandedModules }));
+    setExpandedLessons(prev => ({ ...prev, ...newExpandedLessons }));
     setModulesLoading(prev => ({ ...prev, [courseId]: false }));
   };
 
@@ -206,8 +337,6 @@ export default function ProgramManager({
   const handleProgramSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     const res = await createProgramAction({
       ...programForm,
@@ -216,9 +345,9 @@ export default function ProgramManager({
     });
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Program registered successfully!");
+      showSuccess("Program registered successfully!");
       setProgramModalOpen(false);
       setProgramForm({ title: "", slug: "", description: "" });
       await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
@@ -230,8 +359,6 @@ export default function ProgramManager({
     if (!selectedBlueprintId || !selectedProgram) return;
 
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     const res = await instantiateCourseTemplateAction(
       selectedBlueprintId,
@@ -241,9 +368,9 @@ export default function ProgramManager({
     );
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Course template instantiated successfully!");
+      showSuccess("Course template instantiated successfully!");
       setSelectedBlueprintId("");
 
       await queryClient.invalidateQueries({ queryKey: ["courses", selectedProgram.id] });
@@ -255,27 +382,45 @@ export default function ProgramManager({
     setSaving(false);
   };
 
-  // Course Edit handler
-  const handleCourseEditSubmit = async (e: React.FormEvent) => {
+  // Course Create/Edit handler
+  const handleCourseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingCourse || !selectedProgram) return;
+    if (!selectedProgram) return;
     setSaving(true);
-    setError("");
-    setSuccess("");
 
-    const res = await updateCourseAction(editingCourse.id, {
-      title: courseForm.title,
-      slug: courseForm.slug,
-      duration_minutes: Number(courseForm.duration_minutes)
-    });
-
-    if (res.error) {
-      setError(res.error);
+    if (editingCourse) {
+      // Edit mode
+      const res = await updateCourseAction(editingCourse.id, {
+        title: courseForm.title,
+        slug: courseForm.slug,
+        duration_minutes: Number(courseForm.duration_minutes)
+      });
+      if (res.error) {
+        showError(res.error);
+      } else {
+        showSuccess("Course updated successfully!");
+        setCourseModalOpen(false);
+        setEditingCourse(null);
+        await queryClient.invalidateQueries({ queryKey: ["courses", selectedProgram.id] });
+      }
     } else {
-      setSuccess("Course updated successfully!");
-      setCourseModalOpen(false);
-      setEditingCourse(null);
-      await queryClient.invalidateQueries({ queryKey: ["courses", selectedProgram.id] });
+      // Create mode
+      const res = await createCourseAction({
+        program_id: selectedProgram.id,
+        title: courseForm.title,
+        slug: courseForm.slug,
+        duration_minutes: Number(courseForm.duration_minutes)
+      });
+      if (res.error) {
+        showError(res.error);
+      } else {
+        showSuccess("Course created successfully!");
+        setCourseModalOpen(false);
+        await queryClient.invalidateQueries({ queryKey: ["courses", selectedProgram.id] });
+        if (res.course?.id) {
+          handleSelectCourse(res.course.id);
+        }
+      }
     }
     setSaving(false);
   };
@@ -285,8 +430,6 @@ export default function ProgramManager({
     e.preventDefault();
     if (!selectedCourseId) return;
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     let res;
     if (editingModule) {
@@ -305,9 +448,9 @@ export default function ProgramManager({
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Module saved successfully!");
+      showSuccess("Module saved successfully!");
       setModuleModalOpen(false);
       setEditingModule(null);
       await refreshModules(selectedCourseId);
@@ -320,8 +463,6 @@ export default function ProgramManager({
     e.preventDefault();
     if (!targetModuleId || !selectedCourseId) return;
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     let res;
     if (editingLesson) {
@@ -349,9 +490,9 @@ export default function ProgramManager({
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Lesson saved successfully!");
+      showSuccess("Lesson saved successfully!");
       setLessonModalOpen(false);
       setEditingLesson(null);
       await refreshLessons(targetModuleId);
@@ -364,8 +505,6 @@ export default function ProgramManager({
     e.preventDefault();
     if (!targetLessonId) return;
     setSaving(true);
-    setError("");
-    setSuccess("");
 
     const res = await createLessonResourceAction({
       lesson_id: targetLessonId,
@@ -379,9 +518,9 @@ export default function ProgramManager({
     });
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Resource attached successfully!");
+      showSuccess("Resource attached successfully!");
       setResourceModalOpen(false);
       await refreshResources(targetLessonId);
     }
@@ -476,9 +615,9 @@ export default function ProgramManager({
                                             visibility_type_id: prog.visibility_type_id
                                           });
                                           if (res.error) {
-                                            setError(res.error);
+                                            showError(res.error);
                                           } else {
-                                            setSuccess("Program status updated successfully!");
+                                            showSuccess("Program status updated successfully!");
                                             await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
                                           }
                                         }}
@@ -517,488 +656,556 @@ export default function ProgramManager({
   };
 
   const renderExamineMode = () => {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* Left selector column */}
-        <div className="lg:col-span-4 bg-white border border-[#d2d2d7] rounded-xl p-4 shadow-sm space-y-4">
-          <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Select Program pathway</h4>
-          
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+    if (!selectedProgram) {
+      return (
+        <div className="space-y-6 animate-fadeIn">
+          <div className="bg-white border border-[#d2d2d7] rounded-xl p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#d2d2d7]/50 pb-4 mb-6">
+              <div className="min-w-0">
+                <h4 className="text-xs font-bold text-[#1d1d1f] uppercase tracking-wider">Select Academic Pathway to Examine</h4>
+                <p className="text-[11px] text-[#86868b] mt-0.5">Explore instantiated courses, syllabus modules, lessons, and learning material.</p>
+              </div>
+              <button
+                onClick={() => {
+                  setProgramForm({ title: "", slug: "", description: "" });
+                  setProgramModalOpen(true);
+                }}
+                className="flex items-center justify-center gap-1.5 bg-[#0066cc] text-white px-3.5 py-1.5 rounded-lg hover:bg-[#0066cc]/95 transition-all text-xs font-semibold shadow-sm cursor-pointer shrink-0 w-full sm:w-auto"
+              >
+                <Plus size={14} /> Register Program
+              </button>
+            </div>
+
             {programs.length > 0 ? (
-              programs.map((prog) => {
-                const programStatus = statuses.find((s: any) => s.id === prog.status_id)?.code || "draft";
-                return (
-                  <div
-                    key={prog.id}
-                    onClick={() => setSelectedProgram(prog)}
-                    className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex items-center justify-between ${
-                      selectedProgram?.id === prog.id
-                        ? "bg-[#0066cc]/10 border-[#0066cc]/30 text-[#0066cc]"
-                        : "bg-slate-50/50 hover:bg-slate-50 border-[#d2d2d7] text-[#1d1d1f]"
-                    }`}
-                  >
-                    <div className="min-w-0 pr-2 flex-1">
-                      <div className="flex items-center justify-between gap-1.5">
-                        <p className="font-semibold truncate">{prog.title}</p>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold border capitalize shrink-0 ${
-                          programStatus === "active"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : programStatus === "draft"
-                            ? "bg-slate-100 text-slate-700 border-slate-200"
-                            : "bg-red-50 text-red-700 border-red-200"
-                        }`}>
-                          {programStatus}
-                        </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {programs.map((prog) => {
+                  const programStatus = statuses.find((s: any) => s.id === prog.status_id)?.code || "draft";
+                  return (
+                    <div 
+                      key={prog.id} 
+                      className="bg-white border border-[#d2d2d7] rounded-xl p-5 hover:shadow-md hover:border-[#86868b] transition-all duration-200 flex flex-col justify-between"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border capitalize ${
+                              programStatus === "active"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : programStatus === "draft"
+                                ? "bg-slate-100 text-slate-700 border-slate-200"
+                                : "bg-red-50 text-red-700 border-red-200"
+                            }`}>
+                              {programStatus}
+                            </span>
+                            <span className="text-[9px] font-mono text-[#86868b] truncate">/{prog.slug}</span>
+                          </div>
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (confirm("Delete this program pathway and all its instantiated courses?")) {
+                                setSaving(true);
+                                const res = await deleteProgramAction(prog.id);
+                                if (res.error) {
+                                  showError(res.error);
+                                } else {
+                                  showSuccess("Program deleted successfully!");
+                                  await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
+                                }
+                                setSaving(false);
+                              }
+                            }}
+                            className="p-1 hover:bg-red-50 rounded text-[#86868b] hover:text-red-600 transition-colors shrink-0"
+                            title="Delete Program"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                        <h4 className="font-bold text-sm text-[#1d1d1f]">{prog.title}</h4>
+                        <p className="text-xs text-[#86868b] line-clamp-3 min-h-[48px]">{prog.description || "No pathway description provided."}</p>
                       </div>
-                      <p className="text-[10px] text-[#86868b] font-mono truncate">/{prog.slug}</p>
+
+                      <button
+                        onClick={() => setSelectedProgram(prog)}
+                        className="mt-6 w-full flex items-center justify-center gap-1 bg-[#0066cc]/10 hover:bg-[#0066cc] text-[#0066cc] hover:text-white px-4 py-2 rounded-lg transition-all text-xs font-semibold cursor-pointer border border-transparent"
+                      >
+                        Examine Pathway & Syllabus <ChevronRight size={14} />
+                      </button>
                     </div>
-                    <ChevronRight size={13} className={selectedProgram?.id === prog.id ? "text-[#0066cc]" : "text-[#86868b]"} />
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             ) : (
-              <p className="text-[11px] text-[#86868b] text-center py-4 bg-slate-50/50 rounded-lg">No active programs found.</p>
+              <div className="py-12 text-center text-[#86868b] font-medium border border-dashed border-[#d2d2d7] rounded-xl bg-slate-50/50">
+                No active academic programs found in this campus scope.
+              </div>
             )}
           </div>
+        </div>
+      );
+    }
 
-          {selectedProgram && (
-            <div className="border-t border-[#d2d2d7] pt-4 mt-2 space-y-3">
+    return (
+      <div className="space-y-4 animate-fadeIn">
+        {/* Back navigation header */}
+        <div className="flex items-center gap-3 bg-white border border-[#d2d2d7] px-6 py-4 rounded-xl shadow-sm">
+          <button
+            onClick={() => setSelectedProgram(null)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 text-[#1d1d1f] font-semibold text-xs transition-colors cursor-pointer"
+          >
+            ← Back to Pathways List
+          </button>
+          <div className="h-6 w-px bg-[#d2d2d7]" />
+          <div>
+            <span className="text-[9px] uppercase tracking-wider font-bold text-[#86868b]">Examining Pathway</span>
+            <h3 className="font-bold text-[#1d1d1f] text-sm mt-0.5">{selectedProgram.title}</h3>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left panel: Courses and Actions */}
+          <div className="lg:col-span-4 bg-white border border-[#d2d2d7] rounded-xl p-5 shadow-sm space-y-5">
+            <div className="space-y-1">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Pathway Details</h4>
+              <p className="text-xs text-[#1d1d1f] leading-relaxed font-medium">{selectedProgram.description || "No pathway description provided."}</p>
+              <div className="pt-2 flex items-center justify-between text-[10px] text-[#86868b]">
+                <span>Status:</span>
+                <span className="capitalize font-bold">{statuses.find((s: any) => s.id === selectedProgram.status_id)?.code || "Draft"}</span>
+              </div>
+            </div>
+
+            {/* Status Dropdown inside Examine Mode */}
+            <div className="relative inline-block text-left w-full border-t border-slate-100 pt-4">
+              <label className="block text-[10px] font-bold text-[#86868b] uppercase tracking-wider mb-2">Change Pathway Status</label>
+              <button
+                onClick={() => setOpenDropdownId(openDropdownId === `examine-${selectedProgram.id}` ? null : `examine-${selectedProgram.id}`)}
+                className={`w-full px-3 py-2 rounded-lg text-xs font-bold border flex items-center justify-between cursor-pointer shadow-xs transition-all ${
+                  statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "active"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/80"
+                    : statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "draft"
+                    ? "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200/80"
+                    : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${
+                    statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "active"
+                      ? "bg-emerald-500"
+                      : statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "draft"
+                      ? "bg-slate-400"
+                      : "bg-red-500"
+                  }`}></span>
+                  {statuses.find((s: any) => s.id === selectedProgram.status_id)?.code.toUpperCase() || "DRAFT"}
+                </span>
+                <ChevronDown size={14} className="opacity-70" />
+              </button>
+
+              {openDropdownId === `examine-${selectedProgram.id}` && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)}></div>
+                  <div className="absolute left-0 right-0 mt-1.5 bg-white border border-[#d2d2d7] rounded-xl shadow-lg z-20 py-1 font-semibold text-xs overflow-hidden text-slate-700 animate-fadeIn">
+                    {statuses
+                      .filter((s: any) => ["active", "draft", "disabled"].includes(s.code))
+                      .map((s: any) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={async () => {
+                            setOpenDropdownId(null);
+                            const res = await updateProgramAction(selectedProgram.id, {
+                              title: selectedProgram.title,
+                              slug: selectedProgram.slug,
+                              description: selectedProgram.description || "",
+                              status_id: s.id,
+                              visibility_type_id: selectedProgram.visibility_type_id
+                            });
+                            if (res.error) {
+                              showError(res.error);
+                            } else {
+                              showSuccess("Program status updated successfully!");
+                              await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
+                              const refreshedPrograms = queryClient.getQueryData<any[]>(["programs", selectedInstId]) || [];
+                              const updatedProg = refreshedPrograms.find((p: any) => p.id === selectedProgram.id);
+                              if (updatedProg) setSelectedProgram(updatedProg);
+                            }
+                          }}
+                          className="w-full text-left px-3 py-2.5 hover:bg-slate-50 transition-all flex items-center gap-2"
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            s.code === "active" ? "bg-emerald-500" : s.code === "draft" ? "bg-slate-400" : "bg-red-500"
+                          }`}></span>
+                          {s.code.toUpperCase()}
+                        </button>
+                      ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="border-t border-[#d2d2d7] pt-4 space-y-3">
               <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-1">
                 <Sparkles size={11} className="text-[#0066cc]" /> Clone Course Blueprint
               </h4>
-              <select
-                value={selectedBlueprintId}
-                onChange={(e) => setSelectedBlueprintId(e.target.value)}
-                className="w-full bg-white border border-[#d2d2d7] rounded-lg px-2.5 py-1.5 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#0066cc] shadow-sm"
-              >
-                <option value="">-- Choose Library Template --</option>
-                {blueprints.map((bp) => {
+              <CustomSelect
+                options={blueprints.map(bp => {
                   const isAlreadyCloned = courses.some(c => c.source_template_id === bp.id);
-                  return (
-                    <option key={bp.id} value={bp.id} disabled={isAlreadyCloned}>
-                      {bp.title} {isAlreadyCloned ? "(Already Cloned)" : ""}
-                    </option>
-                  );
+                  return { ...bp, name: `${bp.title} ${isAlreadyCloned ? "(Already Cloned)" : ""}`, disabled: isAlreadyCloned };
                 })}
-              </select>
+                value={selectedBlueprintId}
+                onChange={(val) => setSelectedBlueprintId(val)}
+                placeholder="-- Choose Library Template --"
+              />
               <button
                 onClick={handleInstantiation}
                 disabled={loading || !selectedBlueprintId}
-                className="w-full bg-[#0066cc] text-white py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#0066cc]/95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full bg-[#0066cc] text-white py-2 rounded-lg text-xs font-bold hover:bg-[#0066cc]/95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {loading ? "Cloning..." : "Instantiate to Program"}
               </button>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Right workspace details column */}
-        <div className="lg:col-span-8 space-y-6">
-          {selectedProgram ? (
-            <div className="space-y-6">
-              
-              {/* Program details premium header */}
-              <div className="bg-white border border-[#d2d2d7] rounded-xl p-5 shadow-sm space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-base font-bold text-[#1d1d1f] font-sans">{selectedProgram.title}</h3>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-slate-100 text-[#475569] border-[#E2E8F0] capitalize">
-                        {statuses.find((s: any) => s.id === selectedProgram.status_id)?.code.toUpperCase() || "DRAFT"}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[#86868b] font-mono mt-0.5">Slug: /{selectedProgram.slug}</p>
+          {/* Right panel: Course details, curriculum modules & syllabus */}
+          <div className="lg:col-span-8 space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Instantiated Courses</h4>
+                <button
+                  onClick={() => {
+                    setEditingCourse(null);
+                    setCourseForm({ title: "", slug: "", duration_minutes: 60 });
+                    setCourseModalOpen(true);
+                  }}
+                  className="flex items-center gap-1 text-[#0066cc] hover:underline text-[11px] font-bold cursor-pointer"
+                >
+                  <Plus size={12} /> New Course
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {loadingCourses ? (
+                  <div className="sm:col-span-2 py-8 bg-white border border-dashed border-[#d2d2d7] rounded-xl flex flex-col items-center justify-center">
+                    <SecondaryLoader variant="skeleton" message="Loading instantiated courses..." className="!border-0 !p-0 shadow-none bg-transparent" />
                   </div>
-
-                  {/* Status Dropdown inside Examine Mode */}
-                  <div className="relative inline-block text-left self-start sm:self-center">
-                    <button
-                      onClick={() => setOpenDropdownId(openDropdownId === `examine-${selectedProgram.id}` ? null : `examine-${selectedProgram.id}`)}
-                      className={`px-3 py-1.5 rounded-full text-[10px] font-bold border flex items-center gap-1.5 cursor-pointer shadow-xs transition-all ${
-                        statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "active"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/80"
-                          : statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "draft"
-                          ? "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200/80"
-                          : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
+                ) : courses.length > 0 ? (
+                  courses.map((course) => (
+                    <div
+                      key={course.id}
+                      onClick={() => handleSelectCourse(course.id)}
+                      className={`p-4 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between h-28 shadow-sm relative group ${
+                        selectedCourseId === course.id
+                          ? "bg-[#0066cc]/5 border-[#0066cc] text-[#0066cc] ring-1 ring-[#0066cc]"
+                          : "bg-white border-[#d2d2d7] hover:border-[#86868b] text-[#1d1d1f]"
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "active"
-                          ? "bg-emerald-500"
-                          : statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "draft"
-                          ? "bg-slate-400"
-                          : "bg-red-500"
-                      }`}></span>
-                      Status: {statuses.find((s: any) => s.id === selectedProgram.status_id)?.code.toUpperCase() || "DRAFT"}
-                      <ChevronDown size={11} className="opacity-70" />
-                    </button>
-
-                    {openDropdownId === `examine-${selectedProgram.id}` && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)}></div>
-                        <div className="absolute right-0 mt-1.5 w-32 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 font-semibold text-[10px] overflow-hidden text-slate-700">
-                          {statuses
-                            .filter((s: any) => ["active", "draft", "disabled"].includes(s.code))
-                            .map((s: any) => (
-                              <button
-                                key={s.id}
-                                type="button"
-                                onClick={async () => {
-                                  setOpenDropdownId(null);
-                                  const res = await updateProgramAction(selectedProgram.id, {
-                                    title: selectedProgram.title,
-                                    slug: selectedProgram.slug,
-                                    description: selectedProgram.description || "",
-                                    status_id: s.id,
-                                    visibility_type_id: selectedProgram.visibility_type_id
-                                  });
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs truncate max-w-[70%]">{course.title}</span>
+                          <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => {
+                                setEditingCourse(course);
+                                setCourseForm({ title: course.title, slug: course.slug, duration_minutes: course.duration_minutes || 60 });
+                                setCourseModalOpen(true);
+                              }}
+                              className="p-0.5 hover:bg-slate-100 rounded text-slate-500 hover:text-[#0066cc]"
+                              title="Edit Course"
+                            >
+                              <Edit size={12} />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (confirm("Delete this course and all its modules/lessons?")) {
+                                  setSaving(true);
+                                  const res = await deleteCourseAction(course.id);
                                   if (res.error) {
-                                    setError(res.error);
+                                    showError(res.error);
                                   } else {
-                                    setSuccess("Program status updated successfully!");
-                                    await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
-                                    const refreshedPrograms = queryClient.getQueryData<any[]>(["programs", selectedInstId]) || [];
-                                    const updatedProg = refreshedPrograms.find((p: any) => p.id === selectedProgram.id);
-                                    if (updatedProg) setSelectedProgram(updatedProg);
+                                    showSuccess("Course deleted successfully!");
+                                    await queryClient.invalidateQueries({ queryKey: ["courses", selectedProgram.id] });
+                                    if (selectedCourseId === course.id) {
+                                      setSelectedCourseId(null);
+                                    }
                                   }
-                                }}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-all flex items-center gap-2"
-                              >
-                                <span className={`w-1.5 h-1.5 rounded-full ${
-                                  s.code === "active" ? "bg-emerald-500" : s.code === "draft" ? "bg-slate-400" : "bg-red-500"
-                                }`}></span>
-                                {s.code.toUpperCase()}
-                              </button>
-                            ))}
+                                  setSaving(false);
+                                }
+                              }}
+                              className="p-0.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
+                              title="Delete Course"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         </div>
-                      </>
-                    )}
+                        <span className="inline-block mt-1 text-[9px] px-1.5 py-0.5 bg-slate-100 rounded text-[#86868b] font-mono">
+                          /{course.slug}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-end text-[10px] text-[#86868b] pt-2 border-t border-slate-100 mt-2">
+                        <span className="text-[8px] bg-slate-100 px-1 rounded uppercase font-bold text-[#86868b] font-mono">
+                          {course.course_type_id ? "Syllabus Course" : "Live Blueprint"}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="sm:col-span-2 bg-slate-50 border border-dashed border-[#d2d2d7] rounded-xl py-8 text-center text-xs text-[#86868b]">
+                    No active courses instantiated. Select a blueprint template from the left panel to clone.
                   </div>
-                </div>
-                {selectedProgram.description && (
-                  <p className="text-xs text-[#475569] leading-relaxed">
-                    {selectedProgram.description}
-                  </p>
                 )}
               </div>
+            </div>
 
-              {/* Courses list */}
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Instantiated Courses</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {courses.length > 0 ? (
-                    courses.map((course) => (
-                      <div
-                        key={course.id}
-                        onClick={() => handleSelectCourse(course.id)}
-                        className={`p-4 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between h-28 shadow-sm relative group ${
-                          selectedCourseId === course.id
-                            ? "bg-[#0066cc]/5 border-[#0066cc] text-[#0066cc] ring-1 ring-[#0066cc]"
-                            : "bg-white border-[#d2d2d7] hover:border-[#86868b] text-[#1d1d1f]"
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs truncate max-w-[80%]">{course.title}</span>
-                            <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingCourse(course);
-                                  setCourseForm({ title: course.title, slug: course.slug, duration_minutes: course.duration_minutes || 60 });
-                                  setCourseModalOpen(true);
-                                }}
-                                className="p-0.5 hover:bg-slate-100 rounded text-slate-500 hover:text-[#0066cc]"
-                                title="Edit Course"
-                              >
-                                <Edit size={12} />
-                              </button>
-                            </div>
-                          </div>
-                          <span className="inline-block mt-1 text-[9px] px-1.5 py-0.5 bg-slate-100 rounded text-[#86868b] font-mono">
-                            /{course.slug}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-[10px] text-[#86868b] pt-2 border-t border-slate-100 mt-2">
-                          <span className="font-semibold">{course.duration_minutes || 0} Minutes</span>
-                          <span className="text-[8px] bg-slate-100 px-1 rounded uppercase font-bold text-[#86868b] font-mono">
-                            {course.course_type_id ? "Syllabus Course" : "Live Blueprint"}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="sm:col-span-2 bg-slate-50 border border-dashed border-[#d2d2d7] rounded-xl py-8 text-center text-xs text-[#86868b]">
-                      No active courses instantiated. Select a blueprint template from the left pane to clone.
-                    </div>
-                  )}
+            {/* Modules list of selected course */}
+            {selectedCourseId && (
+              <div className="bg-white border border-[#d2d2d7] rounded-xl p-5 shadow-sm space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Syllabus Curriculum Modules</h4>
+                  <button
+                    onClick={() => {
+                      setEditingModule(null);
+                      setModuleForm({ title: "", position: (modulesCache[selectedCourseId]?.length || 0) + 1 });
+                      setModuleModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 text-[#0066cc] hover:underline text-[11px] font-bold cursor-pointer shrink-0"
+                  >
+                    <Plus size={12} /> New Module
+                  </button>
                 </div>
-              </div>
 
-              {/* Modules list of selected course */}
-              {selectedCourseId && (
-                <div className="bg-white border border-[#d2d2d7] rounded-xl p-5 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Syllabus Curriculum Modules</h4>
-                    <button
-                      onClick={() => {
-                        setEditingModule(null);
-                        setModuleForm({ title: "", position: (modulesCache[selectedCourseId]?.length || 0) + 1 });
-                        setModuleModalOpen(true);
-                      }}
-                      className="flex items-center gap-1 text-[#0066cc] hover:underline text-[11px] font-bold cursor-pointer"
-                    >
-                      <Plus size={12} /> Add Module
-                    </button>
+                {modulesLoading[selectedCourseId] ? (
+                  <div className="py-8 flex flex-col items-center justify-center">
+                    <SecondaryLoader variant="skeleton" message="Loading syllabus modules and topics..." className="!border-0 !p-0 shadow-none bg-transparent" />
                   </div>
+                ) : (() => {
+                  const courseModules = modulesCache[selectedCourseId] || [];
+                  return courseModules.length > 0 ? (
+                    <div className="space-y-4">
+                      {courseModules.map((mod) => {
+                        const isExpanded = !!expandedModules[mod.id];
+                        const moduleLessons = lessonsCache[mod.id] || [];
+                        const isLessonsLoading = !!lessonsLoading[mod.id];
 
-                  {modulesLoading[selectedCourseId] ? (
-                    <SecondaryLoader variant="skeleton" message="Loading syllabus modules..." className="!border-0 !p-0 shadow-none bg-transparent" />
-                  ) : (
-                    <div className="space-y-2.5">
-                      {modulesCache[selectedCourseId] && modulesCache[selectedCourseId].length > 0 ? (
-                        modulesCache[selectedCourseId].map((mod) => {
-                          const isModExpanded = !!expandedModules[mod.id];
-                          const hasLessons = lessonsCache[mod.id] && lessonsCache[mod.id].length > 0;
-
-                          return (
-                            <div key={mod.id} className="border border-[#d2d2d7] rounded-lg overflow-hidden text-xs bg-slate-50/10">
-                              
-                              {/* Module Expand Toggle Header */}
-                              <div
-                                className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 cursor-pointer select-none bg-white font-semibold text-[#1d1d1f] border-b border-slate-100"
-                              >
-                                <div className="flex items-center gap-2 min-w-0 flex-1" onClick={() => toggleModuleExpand(mod.id)}>
-                                  {isModExpanded ? <ChevronDown size={13} className="text-[#86868b]" /> : <ChevronRight size={13} className="text-[#86868b]" />}
-                                  <span>Module {mod.position}: {mod.title}</span>
-                                </div>
-                                <div className="flex items-center gap-3 shrink-0">
-                                  <button
-                                    onClick={() => {
-                                      setEditingModule(mod);
-                                      setModuleForm({ title: mod.title, position: mod.position || 1 });
-                                      setModuleModalOpen(true);
-                                    }}
-                                    className="text-[#86868b] hover:text-[#1d1d1f] p-0.5 hover:bg-slate-100 rounded"
-                                    title="Edit Module"
-                                  >
-                                    <Edit size={12} />
-                                  </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (confirm("Delete this module and all its lessons?")) {
-                                        const delRes = await deleteModuleAction(mod.id);
-                                        if (delRes.error) setError(delRes.error);
-                                        else await refreshModules(selectedCourseId);
-                                      }
-                                    }}
-                                    className="text-red-500 hover:text-red-700 p-0.5 hover:bg-slate-100 rounded"
-                                    title="Delete Module"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                  <span className="text-[9px] text-[#86868b] font-mono bg-slate-100 px-1 rounded shrink-0">
-                                    {lessonsCache[mod.id]?.length !== undefined ? `${lessonsCache[mod.id].length} Lessons` : "View Lessons"}
-                                  </span>
-                                </div>
+                        return (
+                          <div key={mod.id} className="border border-[#d2d2d7] rounded-lg overflow-hidden">
+                            {/* Module Header Row */}
+                            <div
+                              onClick={() => toggleModuleExpand(mod.id)}
+                              className="bg-slate-50/50 hover:bg-slate-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer border-b border-[#d2d2d7]/40 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                {isExpanded ? <ChevronDown size={14} className="text-[#86868b] shrink-0" /> : <ChevronRight size={14} className="text-[#86868b] shrink-0" />}
+                                <Folder size={14} className="text-[#0066cc] shrink-0" />
+                                <span className="font-bold text-[#1d1d1f] text-xs">
+                                  Module {mod.position}: {mod.title}
+                                </span>
                               </div>
+                              <div className="flex items-center gap-2 shrink-0 pl-6 sm:pl-0" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  onClick={() => {
+                                    setEditingModule(mod);
+                                    setModuleForm({ title: mod.title, position: mod.position });
+                                    setModuleModalOpen(true);
+                                  }}
+                                  className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-[#1d1d1f]"
+                                  title="Edit Module"
+                                >
+                                  <Edit size={11} />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (confirm("Delete this module and all its lessons?")) {
+                                      setSaving(true);
+                                      const res = await deleteModuleAction(mod.id);
+                                      if (res.error) showError(res.error);
+                                      else await refreshModules(selectedCourseId);
+                                      setSaving(false);
+                                    }
+                                  }}
+                                  className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
+                                  title="Delete Module"
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingLesson(null);
+                                    setTargetModuleId(mod.id);
+                                    setLessonForm({
+                                      title: "",
+                                      duration: 30,
+                                      position: (lessonsCache[mod.id]?.length || 0) + 1,
+                                      lesson_type_id: defaultLessonTypeId,
+                                      video_url: "",
+                                      content_text: ""
+                                    });
+                                    setLessonModalOpen(true);
+                                  }}
+                                  className="flex items-center gap-0.5 text-[#0066cc] hover:underline text-[10px] font-bold px-1.5 py-0.5 hover:bg-[#0066cc]/5 rounded"
+                                >
+                                  <Plus size={10} /> Add Lesson
+                                </button>
+                              </div>
+                            </div>
 
-                              {/* Lessons container */}
-                              {isModExpanded && (
-                                <div className="p-3 pl-6 space-y-2 bg-slate-50/30 border-t border-slate-50">
-                                  <div className="flex justify-end mb-1">
-                                    <button
-                                      onClick={() => {
-                                        setTargetModuleId(mod.id);
-                                        setEditingLesson(null);
-                                        setLessonForm({ 
-                                          title: "", 
-                                          duration: 30, 
-                                          position: (lessonsCache[mod.id]?.length || 0) + 1,
-                                          lesson_type_id: defaultLessonTypeId,
-                                          video_url: "",
-                                          content_text: ""
-                                        });
-                                        setLessonModalOpen(true);
-                                      }}
-                                      className="flex items-center gap-1 text-[#0066cc] hover:underline text-[10px] font-bold cursor-pointer"
-                                    >
-                                      <Plus size={11} /> Add Lesson
-                                    </button>
-                                  </div>
-
-                                  {lessonsLoading[mod.id] ? (
+                            {/* Module Lessons Container with Animation */}
+                            <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                              <div className="overflow-hidden">
+                                <div className="p-4 bg-white space-y-3 divide-y divide-slate-100">
+                                  {isLessonsLoading ? (
                                     <SecondaryLoader variant="skeleton" message="Loading lessons..." className="!border-0 !p-2 shadow-none bg-transparent" />
-                                  ) : hasLessons ? (
-                                    lessonsCache[mod.id].map((les) => {
-                                      const isLesExpanded = !!expandedLessons[les.id];
-                                      const hasResources = resourcesCache[les.id] && resourcesCache[les.id].length > 0;
+                                  ) : moduleLessons.length > 0 ? (
+                                    moduleLessons.map((les) => {
+                                      const isLessonExpanded = !!expandedLessons[les.id];
+                                      const lessonResources = resourcesCache[les.id] || [];
+                                      const lessonTypeObj = lessonTypes.find(t => t.id === les.lesson_type_id);
+                                      const lessonTypeName = lessonTypeObj?.name || "Topic";
 
                                       return (
-                                        <div key={les.id} className="border border-slate-200 rounded-lg p-2.5 bg-white space-y-2">
-                                          
-                                          {/* Lesson node header */}
-                                          <div
-                                            className="flex items-center justify-between cursor-pointer select-none"
-                                          >
-                                            <div className="flex items-center gap-1.5 min-w-0 flex-1" onClick={() => toggleLessonExpand(les.id)}>
-                                              {isLesExpanded ? <ChevronDown size={12} className="text-[#86868b]" /> : <ChevronRight size={12} className="text-[#86868b]" />}
-                                              <span className="font-medium text-[#1d1d1f] truncate">{les.title}</span>
-                                              <span className="text-[8px] bg-slate-100 text-[#86868b] px-1 rounded uppercase font-mono font-bold shrink-0">{les.lesson_type?.code || "lesson"}</span>
+                                        <div key={les.id} className="pt-3 first:pt-0 space-y-2">
+                                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                                            <div
+                                              onClick={() => toggleLessonExpand(les.id)}
+                                              className="flex items-center gap-1.5 cursor-pointer text-[#1d1d1f] hover:text-[#0066cc] transition-colors min-w-0"
+                                            >
+                                              {isLessonExpanded ? <ChevronDown size={12} className="text-[#86868b] shrink-0" /> : <ChevronRight size={12} className="text-[#86868b] shrink-0" />}
+                                              <span className="font-semibold">{les.position}. {les.title}</span>
+                                              <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-[#86868b] border border-slate-200 capitalize font-medium shrink-0">{lessonTypeName}</span>
                                             </div>
-                                            <div className="flex items-center gap-2.5 shrink-0">
-                                              <span className="text-[10px] text-[#86868b] font-mono shrink-0">{les.duration || 0} mins</span>
+
+                                            <div className="flex items-center gap-1.5 pl-5 sm:pl-0 shrink-0">
                                               <button
                                                 onClick={() => {
-                                                  setTargetModuleId(mod.id);
                                                   setEditingLesson(les);
-                                                  setLessonForm({ 
-                                                    title: les.title, 
-                                                    duration: les.duration || 30, 
+                                                  setTargetModuleId(mod.id);
+                                                  setLessonForm({
+                                                    title: les.title,
+                                                    duration: les.duration || 30,
                                                     position: les.position || 1,
-                                                    lesson_type_id: les.lesson_type_id || defaultLessonTypeId,
+                                                    lesson_type_id: les.lesson_type_id || "",
                                                     video_url: les.video_url || "",
                                                     content_text: les.content_json?.text || les.content_json?.body || ""
                                                   });
                                                   setLessonModalOpen(true);
                                                 }}
-                                                className="text-[#86868b] hover:text-[#1d1d1f] p-0.5 hover:bg-slate-100 rounded"
+                                                className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-[#1d1d1f]"
                                                 title="Edit Lesson"
                                               >
-                                                <Edit size={11} />
+                                                <Edit size={10} />
                                               </button>
                                               <button
                                                 onClick={async () => {
-                                                  if (confirm("Delete this lesson?")) {
-                                                    const delRes = await deleteLessonAction(les.id);
-                                                    if (delRes.error) setError(delRes.error);
+                                                  if (confirm("Delete this lesson topic?")) {
+                                                    setSaving(true);
+                                                    const res = await deleteLessonAction(les.id);
+                                                    if (res.error) showError(res.error);
                                                     else await refreshLessons(mod.id);
+                                                    setSaving(false);
                                                   }
                                                 }}
-                                                className="text-red-500 hover:text-red-700 p-0.5 hover:bg-slate-100 rounded"
+                                                className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
                                                 title="Delete Lesson"
                                               >
-                                                <Trash2 size={11} />
+                                                <Trash2 size={10} />
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  setTargetLessonId(les.id);
+                                                  setResourceForm({ title: "", resource_type: "link", external_url: "", file_url: "" });
+                                                  setResourceModalOpen(true);
+                                                }}
+                                                className="text-[#0066cc] hover:underline text-[9px] font-bold"
+                                              >
+                                                + Resource
                                               </button>
                                             </div>
                                           </div>
 
-                                          {/* Lesson resources list (lazy loaded) */}
-                                          {isLesExpanded && (
-                                            <div className="border-t border-slate-100 pt-2 mt-2 space-y-2 pl-4">
-                                              {les.video_url && (
-                                                <div className="flex items-center gap-1.5 text-[10px] bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200">
-                                                  <Play size={10} className="fill-[#0066cc] text-[#0066cc] shrink-0" />
-                                                  <span className="font-semibold text-slate-700 font-sans">Video Link:</span>
-                                                  <a href={les.video_url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-[#0066cc] font-bold flex-1 font-mono">
-                                                    {les.video_url}
-                                                  </a>
-                                                </div>
-                                              )}
-
-                                              {(les.content_json?.text || les.content_json?.body) && (
-                                                <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2 shadow-inner">
-                                                  <div className="flex justify-between items-center border-b border-slate-200/50 pb-1">
-                                                    <span className="font-bold text-[#86868b] text-[8px] uppercase tracking-wider font-sans">Content Description (Markdown)</span>
-                                                    <span className="text-[8px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-mono font-bold">Rendered</span>
+                                          {/* Expandable Lesson detail block with animation */}
+                                          <div className={`grid transition-all duration-300 ease-in-out ${isLessonExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                                            <div className="overflow-hidden pl-6">
+                                              <div className="bg-slate-50/40 border border-[#d2d2d7]/50 p-3 rounded-lg space-y-3 mt-2">
+                                                {les.video_url && (
+                                                  <div className="flex items-center gap-1.5 text-[10px] text-[#0066cc]">
+                                                    <Video size={12} />
+                                                    <a href={les.video_url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-0.5">
+                                                      Video pathway link <ExternalLink size={10} />
+                                                    </a>
                                                   </div>
-                                                  <div className="max-h-80 overflow-y-auto pr-1">
+                                                )}
+
+                                                {(les.content_json?.text || les.content_json?.body) && (
+                                                  <div className="bg-white p-3 rounded border border-[#d2d2d7]/40 text-xs text-[#1d1d1f] max-w-none">
                                                     <MarkdownRenderer content={les.content_json.text || les.content_json.body} />
                                                   </div>
-                                                </div>
-                                              )}
+                                                )}
 
-                                              <div className="flex items-center justify-between border-b border-slate-100 pb-1 mb-1">
-                                                <span className="text-[9px] uppercase font-bold text-[#86868b] font-sans">Attached Resources</span>
-                                                <button
-                                                  onClick={() => {
-                                                    setTargetLessonId(les.id);
-                                                    setResourceForm({ title: "", resource_type: "link", external_url: "", file_url: "" });
-                                                    setResourceModalOpen(true);
-                                                  }}
-                                                  className="flex items-center gap-1 text-[#0066cc] hover:underline text-[9px] font-bold cursor-pointer font-sans"
-                                                >
-                                                  <Plus size={10} /> Add Resource
-                                                </button>
-                                              </div>
-                                              {resourcesCache[les.id] ? (
-                                                hasResources ? (
-                                                  resourcesCache[les.id].map((res: any) => (
-                                                    <div key={res.id} className="flex items-center justify-between text-[10px] text-[#86868b] py-1 bg-slate-50 px-2 rounded">
-                                                      <div className="flex items-center gap-1.5 min-w-0">
-                                                        <FileText size={10} className="shrink-0" />
-                                                        {res.external_url || res.file_url ? (
-                                                          <a
-                                                            href={res.external_url || res.file_url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="truncate hover:underline text-[#0066cc] font-semibold font-sans"
-                                                          >
-                                                            {res.title}
-                                                          </a>
-                                                        ) : (
-                                                          <span className="truncate font-medium font-sans">{res.title}</span>
-                                                        )}
-                                                        <span className="text-[8px] bg-slate-200 text-[#86868b] px-1 rounded uppercase font-bold shrink-0 font-mono">{res.resource_type}</span>
+                                                {/* Lesson Resources List */}
+                                                <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                                                  <p className="text-[10px] font-bold text-[#86868b] uppercase tracking-wider">Lesson Attachments</p>
+                                                  {resourcesCache[les.id] ? (
+                                                    lessonResources.length > 0 ? (
+                                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {lessonResources.map((res: any) => (
+                                                          <div key={res.id} className="bg-white border border-[#d2d2d7]/60 rounded p-2 flex items-center justify-between text-[11px]">
+                                                            <span className="font-medium text-[#1d1d1f] truncate max-w-[80%] flex items-center gap-1">
+                                                              <FileText size={10} className="text-[#86868b]" />
+                                                              {res.title}
+                                                            </span>
+                                                            <div className="flex items-center gap-1">
+                                                              <a href={res.external_url || res.file_url} target="_blank" rel="noopener noreferrer" className="p-0.5 hover:bg-slate-100 rounded text-[#0066cc]">
+                                                                <ExternalLink size={10} />
+                                                              </a>
+                                                              <button
+                                                                onClick={async () => {
+                                                                  if (confirm("Detach this asset resource?")) {
+                                                                    await deleteLessonResourceAction(res.id);
+                                                                    await refreshResources(les.id);
+                                                                  }
+                                                                }}
+                                                                className="p-0.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
+                                                              >
+                                                                <Trash2 size={10} />
+                                                              </button>
+                                                            </div>
+                                                          </div>
+                                                        ))}
                                                       </div>
-                                                      <button
-                                                        onClick={async () => {
-                                                          if (confirm("Delete this resource?")) {
-                                                            const delRes = await deleteLessonResourceAction(res.id);
-                                                            if (delRes.error) setError(delRes.error);
-                                                            else await refreshResources(les.id);
-                                                          }
-                                                        }}
-                                                        className="text-red-500 hover:text-red-700 p-0.5 hover:bg-slate-100 rounded"
-                                                        title="Delete Resource"
-                                                      >
-                                                        <Trash2 size={11} />
-                                                      </button>
-                                                    </div>
-                                                  ))
-                                                ) : (
-                                                  <p className="text-[9px] text-[#86868b] italic font-sans">No resources attached to this lesson.</p>
-                                                )
-                                              ) : (
-                                                <SecondaryLoader variant="skeleton" message="Loading resource attachments..." className="!border-0 !p-1 shadow-none bg-transparent" />
-                                              )}
+                                                    ) : (
+                                                      <p className="text-[9px] text-[#86868b] italic font-sans">No resources attached to this lesson.</p>
+                                                    )
+                                                  ) : (
+                                                    <SecondaryLoader variant="skeleton" message="Loading resource attachments..." className="!border-0 !p-1 shadow-none bg-transparent" />
+                                                  )}
+                                                </div>
+                                              </div>
                                             </div>
-                                          )}
+                                          </div>
 
                                         </div>
                                       );
                                     })
                                   ) : (
-                                    <p className="text-[10px] text-[#86868b] italic">No lessons in this module.</p>
+                                    <p className="text-[10px] text-[#86868b] italic py-2">No lessons in this module.</p>
                                   )}
                                 </div>
-                              )}
-
+                              </div>
                             </div>
-                          );
-                        })
-                      ) : (
-                        <div className="text-center py-6 text-[#86868b] italic">
-                          No curriculum modules defined.
-                        </div>
-                      )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
+                  ) : (
+                    <div className="text-center py-6 text-[#86868b] italic border border-dashed border-[#d2d2d7] rounded-xl bg-slate-50/50">
+                      No curriculum modules defined.
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
 
-                </div>
-              )}
-
-            </div>
-          ) : (
-            <div className="bg-white border border-[#d2d2d7] rounded-xl p-12 text-center text-xs text-[#86868b] shadow-sm">
-              <Folder className="mx-auto mb-2 text-[#86868b]/40" size={32} />
-              <p className="font-semibold text-[#1d1d1f]">Select a program from the left pane</p>
-              <p className="mt-1">Inspect course listings and navigate modular curriculum topics.</p>
-            </div>
-          )}
         </div>
-
       </div>
     );
   };
@@ -1028,36 +1235,30 @@ export default function ProgramManager({
         </select>
       </div>
 
-      {/* Global alert messages */}
-      {error && (
-        <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 text-xs flex items-start gap-2">
-          <AlertCircle size={16} className="mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 text-xs flex items-start gap-2">
-          <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-          <span>{success}</span>
-        </div>
-      )}
-
       {selectedInstId && (
-        mode === "explorer" ? renderExplorerMode() : renderExamineMode()
+        preloadingAll ? (
+          <div className="py-16 bg-white border border-[#d2d2d7] rounded-xl flex flex-col items-center justify-center shadow-sm animate-fadeIn">
+            <SecondaryLoader variant="spinner" message="Syncing campus programs & course content..." />
+          </div>
+        ) : (
+          mode === "explorer" ? renderExplorerMode() : renderExamineMode()
+        )
       )}
-
-      {/* Program Create Modal */}
+      {/* Program Create Drawer */}
       {programModalOpen && (
-        <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
-            <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
-              <h3 className="font-bold text-sm text-[#1d1d1f]">Create New Program</h3>
-              <button onClick={() => setProgramModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
+        <>
+          <div
+            onClick={() => setProgramModalOpen(false)}
+            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+          />
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
+            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#1d1d1f]">Register Program</h3>
+              <button onClick={() => setProgramModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleProgramSubmit} className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={handleProgramSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Program Title *</label>
                 <input
@@ -1094,12 +1295,12 @@ export default function ProgramManager({
                   placeholder="Program objectives, pathway roadmap..."
                   value={programForm.description}
                   onChange={(e) => setProgramForm({ ...programForm, description: e.target.value })}
-                  rows={3}
+                  rows={4}
                   className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm resize-none text-[#1d1d1f]"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#d2d2d7]">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
                 <button type="button" onClick={() => setProgramModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
                   Cancel
                 </button>
@@ -1109,26 +1310,34 @@ export default function ProgramManager({
               </div>
             </form>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Course Edit Modal */}
+      {/* Course Edit/Create Drawer */}
       {courseModalOpen && (
-        <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
-            <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
-              <h3 className="font-bold text-sm text-[#1d1d1f]">Edit Course Pathway</h3>
-              <button onClick={() => setCourseModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
+        <>
+          <div
+            onClick={() => setCourseModalOpen(false)}
+            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+          />
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
+            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#1d1d1f]">{editingCourse ? "Edit Course Pathway" : "Create Course Pathway"}</h3>
+              <button onClick={() => setCourseModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleCourseEditSubmit} className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={handleCourseSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Course Title *</label>
                 <input
                   type="text"
                   value={courseForm.title}
-                  onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
+                  onChange={(e) => setCourseForm({ 
+                    ...courseForm, 
+                    title: e.target.value,
+                    slug: editingCourse ? courseForm.slug : e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")
+                  })}
                   className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
                   required
                 />
@@ -1145,18 +1354,20 @@ export default function ProgramManager({
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Duration (Minutes) *</label>
-                <input
-                  type="number"
-                  value={courseForm.duration_minutes}
-                  onChange={(e) => setCourseForm({ ...courseForm, duration_minutes: Number(e.target.value) })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold mb-1 text-[#86868b]">Duration (minutes)</label>
+                  <input
+                    type="number"
+                    value={courseForm.duration_minutes}
+                    onChange={(e) => setCourseForm({ ...courseForm, duration_minutes: Number(e.target.value) })}
+                    className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                    min={0}
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#d2d2d7]">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
                 <button type="button" onClick={() => setCourseModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
                   Cancel
                 </button>
@@ -1166,20 +1377,24 @@ export default function ProgramManager({
               </div>
             </form>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Module Create/Edit Modal */}
+      {/* Module Create/Edit Drawer */}
       {moduleModalOpen && (
-        <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
-            <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
+        <>
+          <div
+            onClick={() => setModuleModalOpen(false)}
+            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+          />
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
+            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#1d1d1f]">{editingModule ? "Edit Module" : "Create New Module"}</h3>
-              <button onClick={() => setModuleModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
+              <button onClick={() => setModuleModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleModuleSubmit} className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={handleModuleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Module Title *</label>
                 <input
@@ -1203,7 +1418,7 @@ export default function ProgramManager({
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#d2d2d7]">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
                 <button type="button" onClick={() => setModuleModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
                   Cancel
                 </button>
@@ -1213,20 +1428,24 @@ export default function ProgramManager({
               </div>
             </form>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Lesson Create/Edit Modal */}
+      {/* Lesson Create/Edit Drawer */}
       {lessonModalOpen && (
-        <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
-            <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
+        <>
+          <div
+            onClick={() => setLessonModalOpen(false)}
+            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+          />
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
+            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#1d1d1f]">{editingLesson ? "Edit Lesson" : "Create New Lesson"}</h3>
-              <button onClick={() => setLessonModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
+              <button onClick={() => setLessonModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleLessonSubmit} className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={handleLessonSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Lesson Title *</label>
                 <input
@@ -1252,27 +1471,15 @@ export default function ProgramManager({
                 </select>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold mb-1 text-[#86868b]">Duration (Minutes) *</label>
-                  <input
-                    type="number"
-                    value={lessonForm.duration}
-                    onChange={(e) => setLessonForm({ ...lessonForm, duration: Number(e.target.value) })}
-                    className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1 text-[#86868b]">Position Order *</label>
-                  <input
-                    type="number"
-                    value={lessonForm.position}
-                    onChange={(e) => setLessonForm({ ...lessonForm, position: Number(e.target.value) })}
-                    className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block font-semibold mb-1 text-[#86868b]">Position Order *</label>
+                <input
+                  type="number"
+                  value={lessonForm.position}
+                  onChange={(e) => setLessonForm({ ...lessonForm, position: Number(e.target.value) })}
+                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  required
+                />
               </div>
 
               <div>
@@ -1297,7 +1504,7 @@ export default function ProgramManager({
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#d2d2d7]">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
                 <button type="button" onClick={() => setLessonModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
                   Cancel
                 </button>
@@ -1307,20 +1514,24 @@ export default function ProgramManager({
               </div>
             </form>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Resource Attachment Modal */}
+      {/* Resource Attachment Drawer */}
       {resourceModalOpen && (
-        <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col text-xs text-[#1d1d1f] animate-fadeIn">
-            <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
+        <>
+          <div
+            onClick={() => setResourceModalOpen(false)}
+            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+          />
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
+            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
               <h3 className="font-bold text-sm text-[#1d1d1f]">Attach Lesson Resource</h3>
-              <button onClick={() => setResourceModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer">
+              <button onClick={() => setResourceModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleResourceSubmit} className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={handleResourceSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block font-semibold mb-1 text-[#86868b]">Resource Title *</label>
                 <input
@@ -1371,7 +1582,7 @@ export default function ProgramManager({
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#d2d2d7]">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
                 <button type="button" onClick={() => setResourceModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
                   Cancel
                 </button>
@@ -1381,7 +1592,7 @@ export default function ProgramManager({
               </div>
             </form>
           </div>
-        </div>
+        </>
       )}
 
     </div>

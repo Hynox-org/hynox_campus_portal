@@ -6,6 +6,7 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
 import { useAcademicPrefetchData } from "@/hooks/use-academics";
+import { useToast } from "@/components/toast";
 import { 
   Users, 
   BookOpen, 
@@ -131,7 +132,8 @@ export default function TeacherConsole({
   assignedInstitutions,
 }: TeacherConsoleProps) {
   const queryClient = useQueryClient();
-  
+  const { showSuccess, showError } = useToast();
+
   // React Query Prefetching - one shot for all academic data
   const { data: deliveryData, isLoading: loadingDelivery, error: deliveryError } = useDeliveryData(tenantId);
   const { data: learningData, isLoading: loadingLearning, error: learningError } = useLearningData(tenantId);
@@ -346,7 +348,6 @@ export default function TeacherConsole({
 
   // Transition & status
   const [isPending, startTransition] = useTransition();
-  const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // 1. PROJECT GRADING STATE
   const [score, setScore] = useState<number>(100);
@@ -726,9 +727,9 @@ export default function TeacherConsole({
         queryClient.invalidateQueries({ queryKey: ["learning-prefetch", tenantId] });
         setSelectedProjectSub(null);
         setFeedback("");
-        setStatusMessage({ type: "success", text: "Project submission graded successfully!" });
+        showSuccess("Project submission graded successfully!");
       } else {
-        setStatusMessage({ type: "error", text: result.error || "Failed to submit review." });
+        showError(result.error || "Failed to submit review.");
       }
     });
   };
@@ -737,7 +738,7 @@ export default function TeacherConsole({
   const handleCreateActivityBase = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLessonId) {
-      setStatusMessage({ type: "error", text: "Please select a Course and target Lesson." });
+      showError("Please select a Course and target Lesson.");
       return;
     }
 
@@ -775,9 +776,9 @@ export default function TeacherConsole({
       });
 
       if (res.error) {
-        setStatusMessage({ type: "error", text: res.error });
+        showError(res.error);
       } else if (res.activity) {
-        setStatusMessage({ type: "success", text: `Base activity "${title}" created successfully!` });
+        showSuccess(`Base activity "${title}" created successfully!`);
         setCreatedActivityId(res.activity.id);
 
         if (activityType === "quiz") {
@@ -823,12 +824,12 @@ export default function TeacherConsole({
 
       if (res.question) {
         setQuizQuestionsList(prev => [...prev, res.question]);
-        setStatusMessage({ type: "success", text: "Quiz question appended successfully!" });
+        showSuccess("Quiz question appended successfully!");
         setNewQuestionText("");
         setNewQuestionOptions(["", "", "", ""]);
         setNewQuestionCorrectIndices([0]);
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to append question." });
+        showError(res.error || "Failed to append question.");
       }
     });
   };
@@ -848,7 +849,7 @@ export default function TeacherConsole({
 
       if (res.example) {
         setExamplesList(prev => [...prev, res.example]);
-        setStatusMessage({ type: "success", text: "Coding example added!" });
+        showSuccess("Coding example added!");
         setNewExInput("");
         setNewExOutput("");
         setNewExExpl("");
@@ -871,7 +872,7 @@ export default function TeacherConsole({
 
       if (res.testCase) {
         setTestCasesList(prev => [...prev, res.testCase]);
-        setStatusMessage({ type: "success", text: "Internal validation test case added!" });
+        showSuccess("Internal validation test case added!");
         setNewTcInput("");
         setNewTcOutput("");
       }
@@ -996,9 +997,9 @@ export default function TeacherConsole({
       });
 
       if (res.error) {
-        setStatusMessage({ type: "error", text: res.error });
+        showError(res.error);
       } else if (res.activity) {
-        setStatusMessage({ type: "success", text: "Learning activity updated successfully!" });
+        showSuccess("Learning activity updated successfully!");
         // Refresh local activity list
         queryClient.invalidateQueries({ queryKey: ["learning-prefetch", tenantId] });
         const updatedActivity = {
@@ -1025,9 +1026,9 @@ export default function TeacherConsole({
       const res = await deleteChallengeExampleAction(id);
       if (res.success) {
         setExamplesList(prev => prev.filter(ex => ex.id !== id));
-        setStatusMessage({ type: "success", text: "Visible Example deleted!" });
+        showSuccess("Visible Example deleted!");
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to delete example" });
+        showError(res.error || "Failed to delete example");
       }
     });
   };
@@ -1037,9 +1038,9 @@ export default function TeacherConsole({
       const res = await deleteChallengeTestCaseAction(id);
       if (res.success) {
         setTestCasesList(prev => prev.filter(tc => tc.id !== id));
-        setStatusMessage({ type: "success", text: "Test Case deleted!" });
+        showSuccess("Test Case deleted!");
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to delete test case" });
+        showError(res.error || "Failed to delete test case");
       }
     });
   };
@@ -1049,7 +1050,7 @@ export default function TeacherConsole({
     const actId = createdActivityId;
     const targetCohortId = selectedCohortId;
     if (!actId || !targetCohortId) {
-      setStatusMessage({ type: "error", text: "Please select activity base details to schedule assignment." });
+      showError("Please select activity base details to schedule assignment.");
       return;
     }
 
@@ -1064,7 +1065,7 @@ export default function TeacherConsole({
       });
 
       if (result.assignment) {
-        setStatusMessage({ type: "success", text: "Activity successfully scheduled and assigned to class cohort!" });
+        showSuccess("Activity successfully scheduled and assigned to class cohort!");
         setCreatedActivityId("");
         setCreatedQuizId("");
         setCreatedChallengeId("");
@@ -1072,7 +1073,7 @@ export default function TeacherConsole({
         setExamplesList([]);
         setTestCasesList([]);
       } else {
-        setStatusMessage({ type: "error", text: result.error || "Failed to schedule activity assignment." });
+        showError(result.error || "Failed to schedule activity assignment.");
       }
     });
   };
@@ -1091,13 +1092,13 @@ export default function TeacherConsole({
       });
 
       if (res.success && res.module) {
-        setStatusMessage({ type: "success", text: "New module created successfully!" });
+        showSuccess("New module created successfully!");
         setSyllabusModules(prev => [...prev, res.module].sort((a, b) => a.position - b.position));
         setNewModuleTitle("");
         setNewModulePosition(prev => prev + 1);
         setModuleFormOpen(false);
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to create module." });
+        showError(res.error || "Failed to create module.");
       }
     });
   };
@@ -1108,13 +1109,13 @@ export default function TeacherConsole({
     startTransition(async () => {
       const res = await deleteModuleAction(modId);
       if (res.success) {
-        setStatusMessage({ type: "success", text: "Module deleted successfully." });
+        showSuccess("Module deleted successfully.");
         setSyllabusModules(prev => prev.filter(m => m.id !== modId));
         setSyllabusLessons(prev => prev.filter(l => l.module_id !== modId));
         setSyllabusModuleId("");
         setSyllabusLessonId("");
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to delete module." });
+        showError(res.error || "Failed to delete module.");
       }
     });
   };
@@ -1134,14 +1135,14 @@ export default function TeacherConsole({
       });
 
       if (res.success && res.lesson) {
-        setStatusMessage({ type: "success", text: "New lesson created successfully!" });
+        showSuccess("New lesson created successfully!");
         setSyllabusLessons(prev => [...prev, res.lesson].sort((a, b) => a.position - b.position));
         setNewLessonTitle("");
         setNewLessonDuration(30);
         setNewLessonPosition(prev => prev + 1);
         setLessonFormOpen(false);
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to create lesson." });
+        showError(res.error || "Failed to create lesson.");
       }
     });
   };
@@ -1152,11 +1153,11 @@ export default function TeacherConsole({
     startTransition(async () => {
       const res = await deleteLessonAction(lesId);
       if (res.success) {
-        setStatusMessage({ type: "success", text: "Lesson deleted successfully." });
+        showSuccess("Lesson deleted successfully.");
         setSyllabusLessons(prev => prev.filter(l => l.id !== lesId));
         setSyllabusLessonId("");
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to delete lesson." });
+        showError(res.error || "Failed to delete lesson.");
       }
     });
   };
@@ -1178,7 +1179,7 @@ export default function TeacherConsole({
       });
 
       if (res.success) {
-        setStatusMessage({ type: "success", text: "Lesson video and content details updated!" });
+        showSuccess("Lesson video and content details updated!");
         // Refresh local syllabus lessons
         setSyllabusLessons(prev => 
           prev.map(l => l.id === syllabusLessonId ? { 
@@ -1194,7 +1195,7 @@ export default function TeacherConsole({
           } : l)
         );
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to update lesson content." });
+        showError(res.error || "Failed to update lesson content.");
       }
     });
   };
@@ -1218,9 +1219,9 @@ export default function TeacherConsole({
         setSyllabusResources(prev => [...prev, res.resource]);
         setResTitle("");
         setResExternalUrl("");
-        setStatusMessage({ type: "success", text: "Study material resource appended to lesson successfully!" });
+        showSuccess("Study material resource appended to lesson successfully!");
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to add resource study material." });
+        showError(res.error || "Failed to add resource study material.");
       }
     });
   };
@@ -1233,9 +1234,9 @@ export default function TeacherConsole({
       const res = await deleteLessonResourceAction(id);
       if (res.success) {
         setSyllabusResources(prev => prev.filter(r => r.id !== id));
-        setStatusMessage({ type: "success", text: "Resource removed." });
+        showSuccess("Resource removed.");
       } else {
-        setStatusMessage({ type: "error", text: res.error || "Failed to delete resource." });
+        showError(res.error || "Failed to delete resource.");
       }
     });
   };
@@ -1323,7 +1324,7 @@ export default function TeacherConsole({
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="block font-bold text-[#475569] uppercase text-[9px]">Max Score *</label>
                       <input
@@ -1371,7 +1372,7 @@ export default function TeacherConsole({
                           className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <label className="block font-bold text-[#475569] uppercase text-[9px]">Input Format</label>
                           <textarea
@@ -1409,7 +1410,7 @@ export default function TeacherConsole({
                           className="w-full bg-slate-900 text-slate-100 border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
                         />
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-1">
                           <label className="block font-bold text-[#475569] uppercase text-[9px]">Difficulty</label>
                           <select
@@ -1451,7 +1452,7 @@ export default function TeacherConsole({
                 <div className="space-y-5">
                   <div className="bg-slate-50 border border-[#E2E8F0] p-4 rounded-xl space-y-3.5">
                     <h4 className="font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-1.5 text-xs">General Metrics</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <span className="text-[10px] text-[#475569] block">Max Score</span>
                         <strong className="text-xs font-mono text-[#0F172A]">{selectedActivity.max_score} Points</strong>
@@ -1555,7 +1556,7 @@ export default function TeacherConsole({
                   )}
                   <div className="bg-slate-50/50 p-4 border border-[#E2E8F0] rounded-xl space-y-3">
                     <span className="font-bold text-[9px] uppercase text-[#475569] tracking-wider block">Add New Example</span>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input
                         type="text"
                         placeholder="Input Example"
@@ -1615,7 +1616,7 @@ export default function TeacherConsole({
                   )}
                   <div className="bg-slate-50/50 p-4 border border-[#E2E8F0] rounded-xl space-y-3">
                     <span className="font-bold text-[9px] uppercase text-[#475569] tracking-wider block">Add New Test Case</span>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <textarea
                         placeholder="Input Data"
                         value={newTcInput}
@@ -2223,7 +2224,7 @@ export default function TeacherConsole({
                             {sub.result && (
                               <div className="bg-white border border-[#E2E8F0] rounded-xl p-3 space-y-1.5 text-[10px] shadow-sm">
                                 <span className="font-bold text-[#0F172A] block uppercase tracking-wider text-[8px]">Compiler / Tester Execution Logs:</span>
-                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                                   <div className="flex justify-between border-r pr-2 border-[#E2E8F0]">
                                     <span className="text-[#475569]">Validation Cases:</span>
                                     <strong className="text-[#16A34A]">{sub.result.passed_test_cases} / {sub.result.total_test_cases}</strong>
@@ -2286,7 +2287,7 @@ export default function TeacherConsole({
 
           {/* Drawer Content */}
           <div className="p-6 overflow-y-auto flex-1 space-y-6">
-            <div className="grid grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
               <div>
                 <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Quiz Activity</span>
                 <span className="font-bold text-[#0F172A]">{selectedQuizAttempt.quiz_title}</span>
@@ -2419,7 +2420,7 @@ export default function TeacherConsole({
                 </h3>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
                 <div>
                   <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Status</span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block ${
@@ -2579,7 +2580,7 @@ export default function TeacherConsole({
               <span className="text-xs font-bold">{selectedChallengeSub.challenge_title}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
               <div>
                 <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Language Runtime</span>
                 <span className="text-xs font-semibold uppercase">{selectedChallengeSub.language}</span>
@@ -2654,7 +2655,7 @@ export default function TeacherConsole({
   return (
     <>
       <DashboardLoader loading={loadingDelivery || loadingLearning || loadingPrograms} message="Setting up your Instructor environment..." />
-      <div className="space-y-6" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1) both" }}>
+      <div className="space-y-6" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
       
       {/* Top Banner & Multi-Tenant Campus Selector */}
       <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
@@ -2982,17 +2983,6 @@ export default function TeacherConsole({
             </div>
           ) : (
             <>
-              {/* Status Alerts */}
-          {statusMessage && (
-            <div className={`p-4 rounded-xl text-xs font-bold border transition-all ${
-              statusMessage.type === "success" 
-                ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20" 
-                : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
-            }`}>
-              {statusMessage.text}
-            </div>
-          )}
-
           {currentSelectedProg?.status?.code === "draft" && (
             <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-800 flex items-start gap-2.5 shadow-sm">
               <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
@@ -3591,7 +3581,7 @@ export default function TeacherConsole({
                       <Plus size={16} className="text-[#2563EB]" /> Create Learning Activity
                     </h3>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                           Select Course *
@@ -3623,7 +3613,7 @@ export default function TeacherConsole({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                           Activity Type
@@ -3654,7 +3644,7 @@ export default function TeacherConsole({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                           Max Score
@@ -3722,7 +3712,7 @@ export default function TeacherConsole({
                     {activityType === "quiz" && (
                       <div className="p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl space-y-3">
                         <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-wide">Quiz Details</h4>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] font-semibold text-[#475569] block mb-1">Time Limit (Minutes)</label>
                             <input 
@@ -3836,7 +3826,7 @@ export default function TeacherConsole({
                             required
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] block font-bold text-[#475569]">Question Type</label>
                             <select 
@@ -3893,7 +3883,7 @@ export default function TeacherConsole({
                       <div className="space-y-4">
                         <form onSubmit={handleAddExample} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
                           <h4 className="text-xs font-bold flex items-center gap-1"><FileCode size={14} /> Add Code Example</h4>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <textarea placeholder="Input example" value={newExInput} onChange={e=>setNewExInput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
                             <textarea placeholder="Output example" value={newExOutput} onChange={e=>setNewExOutput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
                           </div>
@@ -3902,7 +3892,7 @@ export default function TeacherConsole({
 
                         <form onSubmit={handleAddTestCase} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
                           <h4 className="text-xs font-bold flex items-center gap-1"><CheckSquare size={14} /> Add Judge Test Case</h4>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <textarea placeholder="Input data" value={newTcInput} onChange={e=>setNewTcInput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
                             <textarea placeholder="Expected Output" value={newTcOutput} onChange={e=>setNewTcOutput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
                           </div>
@@ -3917,7 +3907,7 @@ export default function TeacherConsole({
                         <span className="text-[10px] font-bold text-[#2563EB] uppercase block">DEPLOYING TO COHORT</span>
                         <span className="font-bold text-[#0F172A]">{cohorts.find(c => c.id === selectedCohortId)?.name || "Active Cohort"}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-[10px] block font-bold text-[#475569]">Available From</label>
                           <input type="datetime-local" value={availableFrom} onChange={e=>setAvailableFrom(e.target.value)} className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full" />
@@ -4365,7 +4355,7 @@ export default function TeacherConsole({
                                       <p className="text-[#475569] mt-0.5 whitespace-pre-line leading-relaxed">{assocAct.instructions}</p>
                                     </div>
                                   )}
-                                  <div className="grid grid-cols-3 gap-4 pt-2 border-t border-[#E2E8F0] text-[10px] text-[#475569]">
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E2E8F0] text-[10px] text-[#475569]">
                                     <div>Status: <span className="font-bold text-[#0F172A] uppercase">{assocAct.status_code}</span></div>
                                     <div>Max Score: <span className="font-bold text-[#0F172A]">{assocAct.max_score || 100} pts</span></div>
                                     <div>Mandatory: <span className="font-bold text-[#0F172A]">{assocAct.is_mandatory ? "Yes" : "No"}</span></div>
@@ -4516,7 +4506,7 @@ export default function TeacherConsole({
 
                           <form onSubmit={handleAddResource} className="pt-4 border-t border-[#E2E8F0] space-y-3">
                             <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-wide">Add Extra Resource Study Material</h4>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="text-[9px] font-bold text-[#475569] block mb-1">Resource Type</label>
                                 <select 

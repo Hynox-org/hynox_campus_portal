@@ -32,6 +32,7 @@ import {
   ExternalLink 
 } from "lucide-react";
 import { SecondaryLoader } from "@/components/secondary-loader";
+import { CustomSelect } from "@/components/custom-select";
 
 interface AdminStudentProgressProps {
   institutions: any[];
@@ -47,10 +48,12 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
   const queryClient = useQueryClient();
 
   // React Query prefetching hooks
-  const { data: deliveryData } = useDeliveryData(selectedInstId);
-  const { data: learningData } = useLearningData(selectedInstId);
-  const { data: acadPrograms } = usePrograms(selectedInstId);
-  const { data: acadCourses } = useCourses(selectedProgramId);
+  const { data: deliveryData, isLoading: loadingDelivery } = useDeliveryData(selectedInstId);
+  const { data: learningData, isLoading: loadingLearning } = useLearningData(selectedInstId);
+  const { data: acadPrograms, isLoading: loadingPrograms } = usePrograms(selectedInstId);
+  const { data: acadCourses, isLoading: loadingCourses } = useCourses(selectedProgramId);
+
+  const isDataLoading = loadingDelivery || loadingLearning || loadingPrograms || loadingCourses;
 
   // Derive list views instantly from cache
   const allCohorts = deliveryData?.cohorts || [];
@@ -91,22 +94,47 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
     setSelectedCohortId("");
   }, [selectedProgramId]);
 
-  // Load selection drawer details
-  useEffect(() => {
-    if (selectedStudent) {
-      const studentId = selectedStudent.user_id;
+  const [loadingStudentId, setLoadingStudentId] = useState<string | null>(null);
 
-      getStudentDeliveryDataAction(studentId).then(res => {
-        if (res.success && res.programs) setActiveStudentProgress(res.programs);
-      });
-
-      listStudentLessonProgressAction(studentId).then(res => {
-        if (res.success && res.progressList) setActiveStudentLessonsProgress(res.progressList);
-      });
-    } else {
-      setActiveStudentProgress([]);
-      setActiveStudentLessonsProgress([]);
+  const handleStudentClick = async (enr: any) => {
+    if (loadingStudentId) return;
+    setLoadingStudentId(enr.id);
+    try {
+      const studentId = enr.user_id;
+      const [delRes, progressRes] = await Promise.all([
+        getStudentDeliveryDataAction(studentId),
+        listStudentLessonProgressAction(studentId)
+      ]);
+      if (delRes.success && delRes.programs) {
+        setActiveStudentProgress(delRes.programs);
+      } else {
+        setActiveStudentProgress([]);
+      }
+      if (progressRes.success && progressRes.progressList) {
+        setActiveStudentLessonsProgress(progressRes.progressList);
+      } else {
+        setActiveStudentLessonsProgress([]);
+      }
+      setSelectedStudent(enr);
+      setStudentDetailTab("overview");
+    } catch (err) {
+      console.error("Error preloading student data:", err);
+    } finally {
+      setLoadingStudentId(null);
     }
+  };
+
+  // Scroll lock when any sidebar drawer is open to prevent background viewport scrolling
+  useEffect(() => {
+    const isOpen = !!selectedStudent;
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [selectedStudent]);
 
   // Lazy load lessons in drawer
@@ -140,44 +168,43 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block font-bold text-[#86868b] mb-1">1. Campus Institution</label>
-            <select
+            <CustomSelect
+              options={institutions}
               value={selectedInstId}
-              onChange={(e) => setSelectedInstId(e.target.value)}
-              className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm font-semibold text-[#1d1d1f]"
-            >
-              {institutions.map((inst) => (
-                <option key={inst.id} value={inst.id}>{inst.name} ({inst.institution_code})</option>
-              ))}
-            </select>
+              onChange={(val) => {
+                setSelectedInstId(val);
+                setSelectedProgramId("");
+                setSelectedCohortId("");
+              }}
+              placeholder="-- Select Campus --"
+              className="font-semibold"
+            />
           </div>
 
           <div>
             <label className="block font-bold text-[#86868b] mb-1">2. Academic Program</label>
-            <select
+            <CustomSelect
+              options={programs.map(p => ({ ...p, name: p.title }))}
               value={selectedProgramId}
-              onChange={(e) => setSelectedProgramId(e.target.value)}
-              className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm font-semibold text-[#1d1d1f]"
-            >
-              <option value="">-- Choose Program --</option>
-              {programs.map((prog) => (
-                <option key={prog.id} value={prog.id}>{prog.title}</option>
-              ))}
-            </select>
+              onChange={(val) => {
+                setSelectedProgramId(val);
+                setSelectedCohortId("");
+              }}
+              placeholder="-- Choose Program --"
+              className="font-semibold"
+            />
           </div>
 
           <div>
             <label className="block font-bold text-[#86868b] mb-1">3. Cohort Batch</label>
-            <select
-              value={selectedCohortId}
+            <CustomSelect
               disabled={!selectedProgramId}
-              onChange={(e) => setSelectedCohortId(e.target.value)}
-              className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm font-semibold text-[#1d1d1f]"
-            >
-              <option value="">-- Choose Cohort --</option>
-              {cohorts.map((coh) => (
-                <option key={coh.id} value={coh.id}>{coh.name} ({coh.code})</option>
-              ))}
-            </select>
+              options={cohorts.map(c => ({ ...c, name: c.name }))}
+              value={selectedCohortId}
+              onChange={(val) => setSelectedCohortId(val)}
+              placeholder="-- Choose Cohort --"
+              className="font-semibold"
+            />
           </div>
         </div>
       </div>
@@ -203,8 +230,8 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
             </div>
           </div>
 
-          {loading ? (
-            <SecondaryLoader variant="spinner" message="Syncing student worksheets..." />
+          {isDataLoading ? (
+            <SecondaryLoader variant="skeleton" message="Syncing student worksheets..." className="!border-0 !p-0 shadow-none bg-transparent" />
           ) : filteredEnrollments.length > 0 ? (
             <div className="border border-[#d2d2d7] rounded-xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
@@ -224,13 +251,17 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                       return (
                         <tr 
                           key={enr.id} 
-                          onClick={() => {
-                            setSelectedStudent(enr);
-                            setStudentDetailTab("overview");
-                          }}
-                          className="hover:bg-slate-50/50 cursor-pointer transition-colors"
+                          onClick={() => handleStudentClick(enr)}
+                          className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${loadingStudentId === enr.id ? "bg-slate-50/70 opacity-80" : ""}`}
                         >
-                          <td className="px-6 py-3.5 font-semibold text-[#1d1d1f] hover:text-[#0066cc] transition-colors">{enr.student?.full_name || "N/A"}</td>
+                          <td className="px-6 py-3.5 font-semibold text-[#1d1d1f] hover:text-[#0066cc] transition-colors">
+                            <div className="flex items-center gap-2">
+                              {enr.student?.full_name || "N/A"}
+                              {loadingStudentId === enr.id && (
+                                <span className="inline-block w-2.5 h-2.5 border-2 border-[#0066cc] border-t-transparent rounded-full animate-spin"></span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-6 py-3.5 text-[#86868b]">{enr.student?.email || "N/A"}</td>
                           <td className="px-6 py-3.5">
                             <div className="flex items-center gap-2 w-32">
@@ -311,19 +342,19 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
         });
 
         return (
-          <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn" onClick={() => setSelectedStudent(null)}>
-            <div className="relative w-full max-w-3xl bg-white h-full shadow-2xl flex flex-col z-50 animate-slideOver overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-[9998] flex justify-end animate-fadeIn" onClick={() => setSelectedStudent(null)}>
+            <div className="relative w-full max-w-3xl bg-white h-full shadow-2xl flex flex-col z-[9999] animate-slideOver overflow-hidden" onClick={(e) => e.stopPropagation()}>
               
               {/* Drawer Header */}
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-start gap-4 bg-slate-50 shrink-0">
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-2xl bg-[#0066cc] text-white flex items-center justify-center font-bold text-lg uppercase shadow-md border border-[#0066cc]/10">
+              <div className="p-4 sm:p-6 border-b border-[#E2E8F0] flex justify-between items-start gap-3 bg-slate-50 shrink-0">
+                <div className="flex gap-3 items-center min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#0066cc] text-white flex items-center justify-center font-bold text-base sm:text-lg uppercase shadow-md border border-[#0066cc]/10 shrink-0">
                     {(selectedStudent.student?.full_name || selectedStudent.student?.email || "S").substring(0, 2)}
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-[#0F172A]">{selectedStudent.student?.full_name || "Enrolled Student"}</h3>
-                    <p className="text-xs text-[#475569]">{selectedStudent.student?.email}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-[#0F172A] truncate">{selectedStudent.student?.full_name || "Enrolled Student"}</h3>
+                    <p className="text-xs text-[#475569] truncate">{selectedStudent.student?.email}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#0066cc]/10 text-[#0066cc] border border-[#0066cc]/20">
                         {selectedStudent.cohort?.name || "No cohort"}
                       </span>
@@ -331,24 +362,24 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                     </div>
                   </div>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => setSelectedStudent(null)}
-                  className="p-1.5 hover:bg-slate-200 rounded-xl transition-all border border-transparent hover:border-[#E2E8F0] cursor-pointer"
+                  className="p-1.5 hover:bg-slate-200 rounded-xl transition-all border border-transparent hover:border-[#E2E8F0] cursor-pointer shrink-0"
                 >
                   <X size={18} className="text-[#475569]" />
                 </button>
               </div>
 
               {/* Drawer Tab Navigation */}
-              <div className="flex border-b border-[#E2E8F0] px-6 bg-white shrink-0">
+              <div className="flex border-b border-[#E2E8F0] px-4 sm:px-6 bg-white shrink-0 overflow-x-auto no-scrollbar">
                 {(["overview", "syllabus", "quizzes", "projects", "challenges"] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setStudentDetailTab(tab)}
-                    className={`py-3 px-4 text-xs font-bold border-b-2 transition-all capitalize cursor-pointer ${
-                      studentDetailTab === tab 
-                        ? "border-[#0066cc] text-[#0066cc] font-bold" 
+                    className={`py-3 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all capitalize cursor-pointer whitespace-nowrap shrink-0 ${
+                      studentDetailTab === tab
+                        ? "border-[#0066cc] text-[#0066cc] font-bold"
                         : "border-transparent text-[#475569] hover:text-[#0F172A]"
                     }`}
                   >
@@ -358,12 +389,12 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
               </div>
 
               {/* Drawer Body Scroll */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+
                 {/* 1. OVERVIEW TAB */}
                 {studentDetailTab === "overview" && (
                   <div className="space-y-6 animate-fadeIn">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                       <div className="bg-[#0066cc]/5 border border-[#0066cc]/10 rounded-2xl p-4 text-center">
                         <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Course Progress</span>
                         <div className="text-xl font-black text-[#0066cc] mt-1">{progressPercentage}%</div>
@@ -545,7 +576,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                                           </span>
                                         </div>
                                         
-                                        <div className="grid grid-cols-1 gap-1.5 pt-1.5">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1.5">
                                           {q.options.map((opt: any, oIdx: number) => {
                                             const isSelected = q.selectedIndex === oIdx;
                                             const isAnsCorrect = q.correctIndex === oIdx;
@@ -568,7 +599,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                                                     ? "bg-[#DC2626] border-transparent text-white" 
                                                     : "border-slate-300"
                                                 }`}>
-                                                  {oIdx === 0 ? "A" : oIdx === 1 ? "B" : oIdx === 2 ? "C" : "D"}
+                                                  {String.fromCharCode(65 + oIdx)}
                                                 </div>
                                                 <span>{opt.option_text || opt}</span>
                                                 {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#16A34A]/20 px-1.5 py-0.5 rounded text-[#16A34A]">Correct Option</span>}
@@ -662,7 +693,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                             </span>
                           </div>
                           {sub.result && (
-                            <div className="bg-slate-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-[10px] border border-[#E2E8F0] mt-1">
+                            <div className="bg-slate-50 rounded-lg p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] border border-[#E2E8F0] mt-1">
                               <div>
                                 <span className="text-[#475569] block">Score Awarded:</span>
                                 <strong className="text-[#0066cc] text-xs font-black">{sub.result.score} pts</strong>

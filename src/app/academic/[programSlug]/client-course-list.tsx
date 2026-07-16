@@ -5,6 +5,7 @@ import { BookOpen, ArrowRight, Edit, Trash2, Plus, X, GraduationCap, Clock } fro
 import Link from "next/link";
 import { createCourseAction, updateCourseAction, deleteCourseAction } from "@/app/actions/academic-actions";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/toast";
 
 interface ClientCourseListProps {
   program: any;
@@ -22,8 +23,7 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
   const router = useRouter();
   const [courses, setCourses] = useState(initialCourses);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { showSuccess, showError } = useToast();
 
   const isStaff = ["super_admin", "institution_admin", "teacher", "trainer"].includes(primaryRole);
 
@@ -53,7 +53,6 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
     setCourseTypeId(lookups.courseTypes[0]?.id || "");
     setStatusId(lookups.statuses.find(s => s.code === "draft")?.id || "");
     setVisibilityId(lookups.visibilityTypes.find(v => v.code === "private")?.id || "");
-    setError("");
     setIsOpen(true);
   };
 
@@ -68,7 +67,6 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
     setCourseTypeId(course.course_type_id || "");
     setStatusId(course.status_id);
     setVisibilityId(course.visibility_type_id);
-    setError("");
     setIsOpen(true);
   };
 
@@ -87,8 +85,6 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     const payload = {
       program_id: program.id,
@@ -106,9 +102,9 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
     if (editingCourse) {
       const res = await updateCourseAction(editingCourse.id, payload);
       if (res.error) {
-        setError(res.error);
+        showError(res.error);
       } else if (res.course) {
-        setSuccess("Course updated successfully!");
+        showSuccess("Course updated successfully!");
         setIsOpen(false);
         router.refresh();
         setCourses(prev => prev.map(c => c.id === editingCourse.id ? { ...c, ...res.course } : c));
@@ -116,9 +112,9 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
     } else {
       const res = await createCourseAction(payload);
       if (res.error) {
-        setError(res.error);
+        showError(res.error);
       } else if (res.course) {
-        setSuccess("Course created successfully!");
+        showSuccess("Course created successfully!");
         setIsOpen(false);
         router.refresh();
         setCourses(prev => [res.course, ...prev]);
@@ -133,12 +129,11 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
     }
 
     setLoading(true);
-    setError("");
     const res = await deleteCourseAction(id);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Course successfully deleted.");
+      showSuccess("Course successfully deleted.");
       setCourses(prev => prev.filter(c => c.id !== id));
       router.refresh();
     }
@@ -147,17 +142,6 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
 
   return (
     <div className="space-y-6">
-      
-      {error && (
-        <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 text-xs">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 text-xs">
-          {success}
-        </div>
-      )}
 
       {isStaff && (
         <div className="flex justify-end mb-4">
@@ -200,10 +184,6 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
 
                 <h3 className="font-bold text-sm text-[#0F172A] mb-1">{course.title}</h3>
                 <div className="flex items-center gap-3 text-[10px] text-[#475569] mb-4">
-                  <span className="flex items-center gap-1">
-                    <Clock size={11} /> {course.duration_minutes || 0} mins
-                  </span>
-                  <span className="h-1 w-1 rounded-full bg-slate-300"></span>
                   <span>Enrollment: <strong className="font-semibold capitalize text-[#0F172A]">{course.enrollment_mode}</strong></span>
                 </div>
 
@@ -270,7 +250,7 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block font-semibold mb-1 text-[#475569]">Course Title *</label>
                   <input
@@ -306,16 +286,7 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
                   />
                 </div>
 
-                <div>
-                  <label className="block font-semibold mb-1 text-[#475569]">Estimated Duration (Minutes)</label>
-                  <input
-                    type="number"
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 0)}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm"
-                    min={0}
-                  />
-                </div>
+
 
                 <div>
                   <label className="block font-semibold mb-1 text-[#475569]">Enrollment Mode *</label>
@@ -382,7 +353,7 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#E2E8F0] mt-6">
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-[#E2E8F0] mt-6">
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}

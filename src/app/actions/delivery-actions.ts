@@ -175,7 +175,6 @@ export async function getLessonProgressAction(userId: string, lessonId: string) 
 export async function startOrUpdateLessonProgressAction(userId: string, lessonId: string, courseId: string) {
   try {
     const data = await deliveryService.startOrUpdateLessonProgress(userId, lessonId, courseId);
-    revalidatePath("/student");
     return { success: true, progress: data };
   } catch (error: any) {
     return { error: error.message || "Failed to start/update lesson progress." };
@@ -185,7 +184,6 @@ export async function startOrUpdateLessonProgressAction(userId: string, lessonId
 export async function completeLessonProgressAction(userId: string, lessonId: string, courseId: string) {
   try {
     const data = await deliveryService.completeLessonProgress(userId, lessonId, courseId);
-    revalidatePath("/student");
     return { success: true, progress: data };
   } catch (error: any) {
     return { error: error.message || "Failed to complete lesson progress." };

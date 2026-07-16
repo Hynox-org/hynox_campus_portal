@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { useAcademicPrefetchData } from "@/hooks/use-academics";
 import { seedAcademicListCaches } from "@/lib/dashboard-query";
+import { useToast } from "@/components/toast";
 import { 
   createNewInstitutionAction, 
   assignAdminAction, 
@@ -65,9 +66,8 @@ import {
   UserPlus, 
   FileSpreadsheet, 
   LogOut, 
-  Plus, 
-  CheckCircle2, 
-  AlertCircle, 
+  Plus,
+  AlertCircle,
   Link as LinkIcon, 
   Globe, 
   Code,
@@ -113,6 +113,7 @@ import AdminStudentProgress from "./student-progress";
 import { useAdminData } from "@/hooks/use-admin";
 import { DashboardLoader } from "@/components/dashboard-loader";
 import { SecondaryLoader } from "@/components/secondary-loader";
+import { CustomSelect } from "@/components/custom-select";
 
 interface AdminPanelProps {
   adminEmail: string;
@@ -228,14 +229,12 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     e.preventDefault();
     if (!selectedInstForSidebar) return;
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     const res = await updateInstitutionAction(selectedInstForSidebar.id, editInstForm);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else if (res.institution) {
-      setSuccess(`Institution updated successfully!`);
+      showSuccess(`Institution updated successfully!`);
       setInstitutions(prev => prev.map(i => i.id === selectedInstForSidebar.id ? res.institution : i));
       setSelectedInstForSidebar(res.institution);
       setIsEditingInst(false);
@@ -264,17 +263,15 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleConfirmDelete = async () => {
     if (!instToDelete) return;
     if (deleteConfirmName !== instToDelete.name) {
-      alert("Name does not match.");
+      showError("Name does not match.");
       return;
     }
     setLoading(true);
-    setError("");
-    setSuccess("");
     const res = await deleteInstitutionAction(instToDelete.id);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`Institution '${instToDelete.name}' successfully deleted.`);
+      showSuccess(`Institution '${instToDelete.name}' successfully deleted.`);
       setInstitutions(prev => prev.filter(i => i.id !== instToDelete.id));
       setIsDeleteModalOpen(false);
       setInstToDelete(null);
@@ -286,18 +283,15 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleConfirmUserDelete = async () => {
     if (!userToDelete) return;
     if (userDeleteConfirmEmail.trim() !== userToDelete.email) {
-      alert("Email does not match.");
+      showError("Email does not match.");
       return;
     }
     setUserDeleteLoading(true);
-    setError("");
-    setSuccess("");
     const res = await deleteUserAction(userToDelete.id);
     if (res.error) {
-      setError(res.error);
-      alert(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`User successfully deleted.`);
+      showSuccess(`User successfully deleted.`);
       userToDelete.callback();
       setIsUserDeleteModalOpen(false);
       setUserToDelete(null);
@@ -345,10 +339,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       return;
     }
     setExplorerLoading(true);
-    setError("");
     const res = await listInstitutionUsersAction(instId);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
       setExplorerUsers([]);
     } else if (res.users) {
       setExplorerUsers(res.users);
@@ -358,14 +351,12 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
   const handleRegenerateInvite = async (invitationId: string) => {
     setRegeneratingId(invitationId);
-    setError("");
-    setSuccess("");
     
     const res = await regenerateInvitationAction(invitationId);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else if (res.invitation) {
-      setSuccess(`Successfully regenerated invitation token!`);
+      showSuccess(`Successfully regenerated invitation token!`);
       // Update local state list
       setInvitations((prev) =>
         prev.map((inv) => {
@@ -524,8 +515,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   
   // Status states
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
+  const { showSuccess, showError } = useToast();
   const [links, setLinks] = useState<any[]>([]);
 
   // Form states
@@ -631,7 +621,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     if (tRes.teachers) {
       setTeachersList(tRes.teachers);
     } else if (tRes.error) {
-      alert(tRes.error);
+      showError(tRes.error);
     }
     if (cRes.cohorts) {
       setSystemCohorts(cRes.cohorts);
@@ -641,19 +631,19 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
   const handleMapTeacher = async (userId: string, cohortId: string) => {
     if (!cohortId) {
-      alert("Please select a target cohort.");
+      showError("Please select a target cohort.");
       return;
     }
     setLoadingTeachers(true);
     const res = await assignTeacherToCohortAction(cohortId, userId);
     if (res.success) {
-      alert("Teacher assigned to cohort successfully!");
+      showSuccess("Teacher assigned to cohort successfully!");
       const freshCohorts = await listTeacherCohortsAction(userId, false);
       if (freshCohorts.cohorts) {
         setTeacherInstDetails(freshCohorts.cohorts);
       }
     } else {
-      alert(res.error || "Failed to assign teacher to cohort.");
+      showError(res.error || "Failed to assign teacher to cohort.");
     }
     setLoadingTeachers(false);
   };
@@ -665,13 +655,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     setLoadingTeachers(true);
     const res = await removeTeacherFromCohortAction(cohortId, userId);
     if (res.success) {
-      alert("Teacher removed from cohort successfully!");
+      showSuccess("Teacher removed from cohort successfully!");
       const freshCohorts = await listTeacherCohortsAction(userId, false);
       if (freshCohorts.cohorts) {
         setTeacherInstDetails(freshCohorts.cohorts);
       }
     } else {
-      alert(res.error || "Failed to remove teacher from cohort.");
+      showError(res.error || "Failed to remove teacher from cohort.");
     }
     setLoadingTeachers(false);
   };
@@ -685,7 +675,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     if (res.cohorts) {
       setTeacherInstDetails(res.cohorts);
     } else if (res.error) {
-      alert(res.error);
+      showError(res.error);
     }
     setTeacherDetailsLoading(false);
   };
@@ -731,8 +721,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleProgramSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     let res;
     if (editingProgram) {
@@ -746,9 +734,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`Program saved successfully!`);
+      showSuccess(`Program saved successfully!`);
       setProgramModalOpen(false);
       setEditingProgram(null);
       await refreshPrograms();
@@ -759,8 +747,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleCourseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     let res;
     if (editingCourse) {
@@ -775,9 +761,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`Course saved successfully!`);
+      showSuccess(`Course saved successfully!`);
       setCourseModalOpen(false);
       setEditingCourse(null);
       await refreshCourses();
@@ -788,8 +774,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleModuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     let res;
     if (editingModule) {
@@ -804,9 +788,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`Module saved successfully!`);
+      showSuccess(`Module saved successfully!`);
       setModuleModalOpen(false);
       setEditingModule(null);
       await refreshCourseDetails(acadSelectedCourse.id);
@@ -817,8 +801,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleLessonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     const content_json = {
       body: lessonForm.content_text,
@@ -852,9 +834,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     }
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`Lesson saved successfully!`);
+      showSuccess(`Lesson saved successfully!`);
       setLessonModalOpen(false);
       setEditingLesson(null);
       await refreshCourseDetails(acadSelectedCourse.id);
@@ -865,8 +847,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleResourceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     const res = await createLessonResourceAction({
       lesson_id: resourceSelectedLessonId,
@@ -880,9 +860,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     });
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`Resource added successfully!`);
+      showSuccess(`Resource added successfully!`);
       setResourceModalOpen(false);
       await refreshCourseDetails(acadSelectedCourse.id);
     }
@@ -892,23 +872,19 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleSaveInstructors = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     const instructorIds = acadInstructors.map(i => i.user_id);
     const res = await assignCourseInstructorsAction(acadSelectedCourse.id, instructorIds);
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`Instructors assigned successfully!`);
+      showSuccess(`Instructors assigned successfully!`);
     }
     setLoading(false);
   };
 
   const clearStatuses = () => {
-    setError("");
-    setSuccess("");
     setLinks([]);
     setUploadedFileName("");
   };
@@ -956,9 +932,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
     const res = await createNewInstitutionAction(formData);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`Institution '${instName}' successfully registered!`);
+      showSuccess(`Institution '${instName}' successfully registered!`);
       // Update local state list
       setInstitutions([res.institution, ...institutions]);
       if (!selectedInstId) {
@@ -982,16 +958,16 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     clearStatuses();
 
     if (!selectedInstId) {
-      setError("Please select or create an institution first.");
+      showError("Please select or create an institution first.");
       setLoading(false);
       return;
     }
 
     const res = await assignAdminAction(selectedInstId, adminEmailInput);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess(`User '${adminEmailInput}' successfully assigned as administrator.`);
+      showSuccess(`User '${adminEmailInput}' successfully assigned as administrator.`);
       setAdminEmailInput("");
     }
     setLoading(false);
@@ -1003,26 +979,26 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     clearStatuses();
 
     if (!selectedInstId) {
-      setError("Please select or create an institution first.");
+      showError("Please select or create an institution first.");
       setLoading(false);
       return;
     }
 
     if (!csvContent.trim()) {
-      setError("Please paste CSV contents.");
+      showError("Please paste CSV contents.");
       setLoading(false);
       return;
     }
 
     const res = await uploadCsvOnboardingAction(selectedInstId, csvContent);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else if (res.results) {
       setLinks(res.results);
       const errors = res.results.filter((r: any) => r.status === "error");
       const successes = res.results.filter((r: any) => r.status === "success");
       
-      setSuccess(`Processed CSV: ${successes.length} provisioned successfully, ${errors.length} errors.`);
+      showSuccess(`Processed CSV: ${successes.length} provisioned successfully, ${errors.length} errors.`);
       
       const freshInvites = await listInvitationsAction();
       if (freshInvites.invitations) {
@@ -1039,13 +1015,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
     const isTeacher = singleRole === "teacher";
     if (!isTeacher && !selectedInstId) {
-      setError("Please select or create an institution first.");
+      showError("Please select or create an institution first.");
       setLoading(false);
       return;
     }
 
     if (!singleName.trim() || !singleEmail.trim()) {
-      setError("Full Name and Email are required.");
+      showError("Full Name and Email are required.");
       setLoading(false);
       return;
     }
@@ -1058,11 +1034,11 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     });
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else if (res.result) {
       setLinks([res.result]);
       if (res.result.status === "success") {
-        setSuccess(`Successfully invited '${singleEmail}'!`);
+        showSuccess(`Successfully invited '${singleEmail}'!`);
         setSingleName("");
         setSingleEmail("");
         
@@ -1071,7 +1047,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           setInvitations(freshInvites.invitations);
         }
       } else {
-        setError(res.result.error || "Failed to onboard user.");
+        showError(res.result.error || "Failed to onboard user.");
       }
     }
     setLoading(false);
@@ -1080,7 +1056,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const handleTeacherOnboardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!teacherOnboardName.trim() || !teacherOnboardEmail.trim()) {
-      alert("Name and Email are required.");
+      showError("Name and Email are required.");
       return;
     }
     setTeacherOnboardLoading(true);
@@ -1092,10 +1068,10 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     });
     setTeacherOnboardLoading(false);
     if (res.error) {
-      alert(res.error);
+      showError(res.error);
     } else if (res.result) {
       if (res.result.status === "success") {
-        alert(`Successfully onboarded and invited teacher '${teacherOnboardEmail}'!`);
+        showSuccess(`Successfully onboarded and invited teacher '${teacherOnboardEmail}'!`);
         setTeacherOnboardName("");
         setTeacherOnboardEmail("");
         loadAllTeachersData();
@@ -1104,7 +1080,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           setInvitations(freshInvites.invitations);
         }
       } else {
-        alert(res.result.error || "Failed to onboard teacher.");
+        showError(res.result.error || "Failed to onboard teacher.");
       }
     }
   };
@@ -1115,7 +1091,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     clearStatuses();
 
     if (!superAdminName.trim() || !superAdminEmail.trim()) {
-      setError("Full Name and Email are required.");
+      showError("Full Name and Email are required.");
       setLoading(false);
       return;
     }
@@ -1126,11 +1102,11 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     });
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else if (res.result) {
       setLinks([res.result]);
       if (res.result.status === "success") {
-        setSuccess(`Successfully invited Super Admin '${superAdminEmail}'!`);
+        showSuccess(`Successfully invited Super Admin '${superAdminEmail}'!`);
         setSuperAdminName("");
         setSuperAdminEmail("");
         
@@ -1139,7 +1115,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           setInvitations(freshInvites.invitations);
         }
       } else {
-        setError(res.result.error || "Failed to generate invitation.");
+        showError(res.result.error || "Failed to generate invitation.");
       }
     }
     setLoading(false);
@@ -1147,7 +1123,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
   const downloadTemplateExcel = () => {
     if (!selectedInstId) {
-      setError("Please select a default institution first.");
+      showError("Please select a default institution first.");
       return;
     }
     const inst = institutions.find((i) => i.id === selectedInstId);
@@ -1181,9 +1157,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Student Onboarding Template");
       XLSX.writeFile(workbook, `hynox_student_onboarding_${code}.xlsx`);
-      setSuccess("Excel template generated successfully!");
+      showSuccess("Excel template generated successfully!");
     } catch (err: any) {
-      setError(`Failed to generate Excel template: ${err.message}`);
+      showError(`Failed to generate Excel template: ${err.message}`);
     }
   };
 
@@ -1192,8 +1168,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     if (!file) return;
 
     setUploadedFileName(file.name);
-    setError("");
-    setSuccess("");
 
     const reader = new FileReader();
 
@@ -1201,7 +1175,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       reader.onload = (event) => {
         const text = event.target?.result as string;
         setCsvContent(text);
-        setSuccess(`Loaded CSV file: ${file.name}`);
+        showSuccess(`Loaded CSV file: ${file.name}`);
       };
       reader.readAsText(file);
     } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
@@ -1240,20 +1214,20 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           }
           
           setCsvContent(csvRows.join("\n"));
-          setSuccess(`Successfully parsed and loaded Excel file: ${file.name}`);
+          showSuccess(`Successfully parsed and loaded Excel file: ${file.name}`);
         } catch (err: any) {
-          setError(`Failed to parse Excel file: ${err.message}`);
+          showError(`Failed to parse Excel file: ${err.message}`);
         }
       };
       reader.readAsArrayBuffer(file);
     } else {
-      setError("Unsupported file format. Please upload a .csv, .xlsx, or .xls file.");
+      showError("Unsupported file format. Please upload a .csv, .xlsx, or .xls file.");
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert("Onboarding link copied to clipboard!");
+    showSuccess("Onboarding link copied to clipboard!");
   };
 
   const renderUserDetailDrawer = () => {
@@ -1516,7 +1490,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   return (
     <>
       <DashboardLoader loading={loadingAdmin} message="Setting up your Super Admin environment..." />
-      <div className="min-h-screen bg-[#f5f5f7] flex flex-col text-[#1d1d1f]" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1) both" }}>
+      <div className="min-h-screen bg-[#f5f5f7] flex flex-col text-[#1d1d1f]" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
       
       {/* Top Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-[#d2d2d7]/50 shadow-sm sticky top-0 z-50">
@@ -1860,21 +1834,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               <>
                 <button
                   onClick={() => {
-                    setActiveTab("programs");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "programs"
-                      ? "bg-[#0066cc]/10 text-[#0066cc]"
-                      : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-slate-50"
-                  }`}
-                >
-                  Batches Explorer
-                </button>
-                <button
-                  onClick={() => {
                     setActiveTab("examine_programs");
                     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
                       setIsSidebarOpen(false);
@@ -1886,7 +1845,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       : "text-[#86868b] hover:text-[#1d1d1f] hover:bg-slate-50"
                   }`}
                 >
-                  Examine Batches
+                  Batches Explorer
                 </button>
                 <button
                   onClick={() => {
@@ -2120,21 +2079,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         {/* Content Area */}
         <div className="flex-1 flex flex-col gap-6">
           
-          {/* Global Alert Statuses */}
-          {error && (
-            <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 text-xs flex items-start gap-2">
-              <AlertCircle size={16} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 text-xs flex items-start gap-2">
-              <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
-              <span>{success}</span>
-            </div>
-          )}
-
           {/* TAB 1: INSTITUTIONS */}
           {activeTab === "institutions" && (
             <div className="space-y-6">
@@ -2322,19 +2266,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-1 text-[#86868b]">Campus / Institution *</label>
-                        <select
+                        <CustomSelect
+                          options={institutions}
                           value={selectedInstId}
-                          onChange={(e) => setSelectedInstId(e.target.value)}
-                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm"
+                          onChange={(val) => setSelectedInstId(val)}
+                          placeholder="-- Choose Institution or School --"
                           required
-                        >
-                          <option value="">-- Choose Institution or School --</option>
-                          {institutions.map((inst) => (
-                            <option key={inst.id} value={inst.id}>
-                              {inst.name} ({inst.institution_code})
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
 
                       <div>
@@ -2395,19 +2333,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold mb-1 text-[#86868b]">Default Institution *</label>
-                        <select
+                        <CustomSelect
+                          options={institutions}
                           value={selectedInstId}
-                          onChange={(e) => setSelectedInstId(e.target.value)}
-                          className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm"
+                          onChange={(val) => setSelectedInstId(val)}
+                          placeholder="-- Choose Institution or School --"
                           required
-                        >
-                          <option value="">-- Choose Institution or School --</option>
-                          {institutions.map((inst) => (
-                            <option key={inst.id} value={inst.id}>
-                              {inst.name} ({inst.institution_code})
-                            </option>
-                          ))}
-                        </select>
+                        />
                       </div>
 
                       <div className="flex items-end">
@@ -2713,7 +2645,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                     <button
                                       onClick={() => {
                                         navigator.clipboard.writeText(fullInviteLink);
-                                        alert("Super Admin onboarding link copied!");
+                                        showSuccess("Super Admin onboarding link copied!");
                                       }}
                                       className="p-1 hover:bg-slate-100 rounded text-[#0066cc] cursor-pointer"
                                       title="Copy Invite Link"
@@ -2850,18 +2782,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                   <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[#d2d2d7]/50 text-xs">
                     <div className="flex flex-col gap-1 min-w-[140px]">
                       <span className="text-[9px] font-bold text-[#86868b] uppercase tracking-wider">Institution Scope</span>
-                      <select
+                      <CustomSelect
+                        options={[{ id: "all", name: "All Institutions" }, ...institutions]}
                         value={inviteInstitutionFilter}
-                        onChange={(e) => setInviteInstitutionFilter(e.target.value)}
-                        className="bg-white border border-[#d2d2d7] rounded-lg px-2.5 py-1.5 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#0066cc] shadow-sm"
-                      >
-                        <option value="all">All Institutions</option>
-                        {institutions.map((inst) => (
-                          <option key={inst.id} value={inst.id}>
-                            {inst.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => setInviteInstitutionFilter(val)}
+                        placeholder="All Institutions"
+                        className="min-w-[140px]"
+                      />
                     </div>
 
                     <div className="flex flex-col gap-1 min-w-[120px]">
@@ -3013,7 +2940,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                     <button
                                       onClick={() => {
                                         navigator.clipboard.writeText(fullInviteLink);
-                                        alert("Onboarding link copied!");
+                                        showSuccess("Onboarding link copied!");
                                       }}
                                       className="p-1 hover:bg-slate-100 rounded text-[#0066cc] cursor-pointer"
                                       title="Copy Invite Link"
@@ -3198,7 +3125,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                       <button
                                         onClick={() => {
                                           navigator.clipboard.writeText(fullInviteLink);
-                                          alert("Teacher onboarding link copied!");
+                                          showSuccess("Teacher onboarding link copied!");
                                         }}
                                         className="p-1 hover:bg-slate-100 rounded text-[#0066cc] cursor-pointer"
                                         title="Copy Invite Link"
@@ -3358,18 +3285,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 <p className="text-xs text-[#86868b] mb-4">
                   Select a campus institution tenant to explore its registered administrators, teachers, and students.
                 </p>
-                <select
+                <CustomSelect
+                  options={institutions}
                   value={explorerSelectedId}
-                  onChange={(e) => handleSelectInstitutionForExplorer(e.target.value)}
-                  className="w-full max-w-md bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
-                >
-                  <option value="">-- Choose Institution --</option>
-                  {institutions.map((inst) => (
-                    <option key={inst.id} value={inst.id}>
-                      {inst.name} ({inst.institution_code})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleSelectInstitutionForExplorer(val)}
+                  placeholder="-- Choose Institution --"
+                  className="max-w-md"
+                />
               </div>
 
               {explorerSelectedId && (
@@ -3565,19 +3487,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
             </div>
           )}
 
-          {/* TAB 7: PROGRAMS EXPLORER */}
-          {activeTab === "programs" && (
-            <div className="space-y-6 animate-fade-in">
-              <ProgramManager 
-                institutions={institutions} 
-                mode="explorer" 
-                selectedInstId={progSelectedInstId}
-                setSelectedInstId={setProgSelectedInstId}
-                selectedProgram={progSelectedProgram}
-                setSelectedProgram={setProgSelectedProgram}
-              />
-            </div>
-          )}
+
 
           {/* TAB 7.5: EXAMINE PROGRAMS */}
           {activeTab === "examine_programs" && (
@@ -3645,20 +3555,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 <p className="text-xs text-[#86868b] mb-4">
                   Select a campus institution to manage its academic catalog, course curriculum, and teacher mapping.
                 </p>
-                <select
+                <CustomSelect
+                  options={institutions}
                   value={acadSelectedInstId}
-                  onChange={(e) => {
-                    setAcadSelectedInstId(e.target.value);
-                  }}
-                  className="w-full max-w-md bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
-                >
-                  <option value="">-- Select Institution Campus --</option>
-                  {institutions.map((inst) => (
-                    <option key={inst.id} value={inst.id}>
-                      {inst.name} ({inst.institution_code})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setAcadSelectedInstId(val)}
+                  placeholder="-- Select Institution Campus --"
+                  className="max-w-md"
+                />
               </div>
 
               {acadSelectedInstId && (
@@ -3763,9 +3666,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                                   visibility_type_id: prog.visibility_type_id
                                                 });
                                                 if (res.error) {
-                                                  setError(res.error);
+                                                  showError(res.error);
                                                 } else {
-                                                  setSuccess("Program status updated successfully!");
+                                                  showSuccess("Program status updated successfully!");
                                                   await refreshPrograms();
                                                 }
                                               }}
@@ -3868,9 +3771,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                       e.stopPropagation();
                                       if (confirm("Are you sure you want to delete this course?")) {
                                         const res = await deleteCourseAction(crs.id);
-                                        if (res.error) setError(res.error);
+                                        if (res.error) showError(res.error);
                                         else {
-                                          setSuccess("Course deleted successfully!");
+                                          showSuccess("Course deleted successfully!");
                                           if (acadSelectedCourse?.id === crs.id) setAcadSelectedCourse(null);
                                           await refreshCourses();
                                         }
@@ -3902,9 +3805,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                               <h3 className="text-sm font-bold text-[#1d1d1f]">{acadSelectedCourse.title}</h3>
                               <p className="text-xs text-[#86868b] mt-0.5">{acadSelectedCourse.description || "No description set for this course."}</p>
                             </div>
-                            <div className="mt-2 sm:mt-0 bg-slate-100 px-3 py-1.5 rounded-lg text-[11px] text-[#1d1d1f] border border-[#d2d2d7] font-mono shrink-0 font-semibold">
-                              Duration: {acadSelectedCourse.duration_minutes || 0} mins
-                            </div>
+                            
                           </div>
 
                           {/* Instructors Panel */}
@@ -3988,7 +3889,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                       </p>
                                       {mod.description && <p className="text-[10px] text-[#86868b] truncate mt-0.5">{mod.description}</p>}
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                                       <button
                                         onClick={() => {
                                           setLessonSelectedModuleId(mod.id);
@@ -4029,9 +3930,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                         onClick={async () => {
                                           if (confirm("Are you sure you want to delete this module?")) {
                                             const res = await deleteModuleAction(mod.id);
-                                            if (res.error) setError(res.error);
+                                            if (res.error) showError(res.error);
                                             else {
-                                              setSuccess("Module deleted successfully!");
+                                              showSuccess("Module deleted successfully!");
                                               await refreshCourseDetails(acadSelectedCourse.id);
                                             }
                                           }
@@ -4057,7 +3958,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                                 </span>
                                               </div>
                                               <p className="text-[10px] text-[#86868b] mt-0.5 font-mono font-medium">
-                                                Position: {les.position} • {les.duration || 0} mins
+                                                Position: {les.position}
                                               </p>
                                             </div>
                                             <div className="flex items-center gap-1 shrink-0">
@@ -4100,9 +4001,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                                 onClick={async () => {
                                                   if (confirm("Are you sure you want to delete this lesson?")) {
                                                     const res = await deleteLessonAction(les.id);
-                                                    if (res.error) setError(res.error);
+                                                    if (res.error) showError(res.error);
                                                     else {
-                                                      setSuccess("Lesson deleted successfully!");
+                                                      showSuccess("Lesson deleted successfully!");
                                                       await refreshCourseDetails(acadSelectedCourse.id);
                                                     }
                                                   }
@@ -4146,9 +4047,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                                         onClick={async () => {
                                                           if (confirm("Remove this resource attachment?")) {
                                                             const delRes = await deleteLessonResourceAction(res.id);
-                                                            if (delRes.error) setError(delRes.error);
+                                                            if (delRes.error) showError(delRes.error);
                                                             else {
-                                                              setSuccess("Resource removed successfully!");
+                                                              showSuccess("Resource removed successfully!");
                                                               await refreshCourseDetails(acadSelectedCourse.id);
                                                             }
                                                           }
@@ -4254,7 +4155,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           </select>
                         </div>
                       </div>
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
                         <button
                           type="button"
                           onClick={() => setProgramModalOpen(false)}
@@ -4375,7 +4276,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           </select>
                         </div>
                       </div>
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
                         <button
                           type="button"
                           onClick={() => setCourseModalOpen(false)}
@@ -4447,7 +4348,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           </select>
                         </div>
                       </div>
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
                         <button
                           type="button"
                           onClick={() => setModuleModalOpen(false)}
@@ -4554,7 +4455,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           required
                         />
                       </div>
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
                         <button
                           type="button"
                           onClick={() => setLessonModalOpen(false)}
@@ -4643,7 +4544,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           />
                         </div>
                       )}
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
+                      <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[#d2d2d7]">
                         <button
                           type="button"
                           onClick={() => setResourceModalOpen(false)}
@@ -4969,7 +4870,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 </div>
               </div>
 
-              <div className="p-4 border-t border-[#d2d2d7] bg-slate-50 flex items-center justify-end gap-2">
+              <div className="p-4 border-t border-[#d2d2d7] bg-slate-50 flex flex-wrap items-center justify-end gap-2">
                 <button
                   onClick={() => setIsDeleteModalOpen(false)}
                   className="bg-white border border-[#d2d2d7] text-[#1d1d1f] hover:bg-slate-100 font-bold py-2 px-4 rounded-xl transition-all cursor-pointer"
@@ -5024,7 +4925,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 </div>
               </div>
 
-              <div className="p-4 border-t border-[#d2d2d7] bg-slate-50 flex items-center justify-end gap-2">
+              <div className="p-4 border-t border-[#d2d2d7] bg-slate-50 flex flex-wrap items-center justify-end gap-2">
                 <button
                   onClick={() => setIsUserDeleteModalOpen(false)}
                   className="bg-white border border-[#d2d2d7] text-[#1d1d1f] hover:bg-slate-100 font-bold py-2 px-4 rounded-xl transition-all cursor-pointer"

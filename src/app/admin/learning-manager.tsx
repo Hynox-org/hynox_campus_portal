@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -10,7 +10,9 @@ import {
   listModulesAction,
   listLessonsAction,
   listTenantCoursesAction,
-  listLessonsForCourseAction
+  listLessonsForCourseAction,
+  createModuleAction,
+  createLessonAction
 } from "@/app/actions/academic-actions";
 import { listCohortsAction } from "@/app/actions/delivery-actions";
 import {
@@ -24,7 +26,10 @@ import {
   listActivityProgressAction,
   updateActivityAndSubclassAction,
   deleteChallengeExampleAction,
-  deleteChallengeTestCaseAction
+  deleteChallengeTestCaseAction,
+  deleteActivityAction,
+  deleteQuizQuestionAction,
+  updateQuizQuestionAndOptionsAction
 } from "@/app/actions/learning-actions";
 import { 
   BookOpen, Plus, Folder, Calendar, Award, CheckCircle, 
@@ -33,6 +38,8 @@ import {
   Edit, Save
 } from "lucide-react";
 import { SecondaryLoader } from "@/components/secondary-loader";
+import { CustomSelect } from "@/components/custom-select";
+import { useToast } from "@/components/toast";
 
 function formatDatetimeLocal(isoString?: string) {
   if (!isoString) return "";
@@ -71,8 +78,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   const [activities, setActivities] = useState<any[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { showSuccess, showError } = useToast();
 
   // Sidebar details drawer state for viewed activity
   const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
@@ -80,6 +86,19 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   const [studentProgressList, setStudentProgressList] = useState<any[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<"config" | "performance">("config");
+
+  // Scroll lock when any sidebar drawer is open to prevent background viewport scrolling
+  useEffect(() => {
+    const isOpen = !!selectedActivity;
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [selectedActivity]);
 
   // Editing states
   const [isEditing, setIsEditing] = useState(false);
@@ -190,9 +209,12 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   const [createdActivityId, setCreatedActivityId] = useState("");
   const [createdQuizId, setCreatedQuizId] = useState("");
   const [createdChallengeId, setCreatedChallengeId] = useState("");
+  const [baseDetailsSaved, setBaseDetailsSaved] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
 
   // Child additions helper: Quiz Questions
   const [quizQuestionsList, setQuizQuestionsList] = useState<any[]>([]);
+  const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
   const [newQuestionText, setNewQuestionText] = useState("");
   const [newQuestionType, setNewQuestionType] = useState("single_choice");
   const [newQuestionPoints, setNewQuestionPoints] = useState(10);
@@ -218,7 +240,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   const [assignUntil, setAssignUntil] = useState("");
 
   // React Query prefetch for academic & delivery data per institution
-  const { data: instAcademicData } = useQuery({
+  const { data: instAcademicData, isLoading: loadingAcademic } = useQuery({
     queryKey: ["academic-prefetch", selectedInstId],
     queryFn: async () => unwrapActionResult(await getInstitutionPrefetchDataAction(selectedInstId)),
     enabled: !!selectedInstId,
@@ -227,7 +249,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     refetchInterval: DASHBOARD_REFETCH_INTERVAL,
     refetchIntervalInBackground: true,
   });
-  const { data: instDeliveryData } = useQuery({
+  const { data: instDeliveryData, isLoading: loadingDelivery } = useQuery({
     queryKey: ["delivery-prefetch", selectedInstId],
     queryFn: async () => unwrapActionResult(await getDeliveryPrefetchDataAction(selectedInstId)),
     enabled: !!selectedInstId,
@@ -236,7 +258,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     refetchInterval: DASHBOARD_REFETCH_INTERVAL,
     refetchIntervalInBackground: true,
   });
-  const { data: instActivitiesData } = useQuery({
+  const { data: instActivitiesData, isLoading: loadingActivities } = useQuery({
     queryKey: ["all-activities", selectedInstId],
     queryFn: async () => {
       const res = await listAllActivitiesAction(selectedInstId);
@@ -245,6 +267,8 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     enabled: !!selectedInstId,
     staleTime: 5 * 60 * 1000,
   });
+
+  const isDataLoading = loadingAcademic || loadingDelivery || loadingActivities;
 
   // Sync state from React Query data
   useEffect(() => {
@@ -281,138 +305,170 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     listCoursesAction(selectedProgId).then(res => setCourses(res.courses || []));
   }, [selectedProgId, allTenantCourses]);
 
-  useEffect(() => {
-    if (!selectedCourseId) {
-      setModules([]);
-      setLessons([]);
-      setAllCourseLessons([]);
-      return;
-    }
-    // Try cache first (seeded from prefetch)
-    const cachedMods: any[] | undefined = queryClient.getQueryData(["course-modules", selectedCourseId]);
-    if (cachedMods && cachedMods.length > 0) {
-      setModules(cachedMods);
-      // Get lessons from prefetch data
-      const prefetchLessons = instAcademicData?.lessons || [];
-      const moduleIds = cachedMods.map((m: any) => m.id);
-      const cachedLessons = prefetchLessons.filter((l: any) => moduleIds.includes(l.module_id));
-      if (cachedLessons.length > 0) {
-        setLessons(cachedLessons);
-        setAllCourseLessons(cachedLessons);
-        return;
-      }
-    }
-    // Fallback: fetch from API
-    listModulesAction(selectedCourseId).then(res => setModules(res.modules || []));
-    listLessonsForCourseAction(selectedCourseId).then(res => {
-      setLessons(res.lessons || []);
-      setAllCourseLessons(res.lessons || []);
-    });
-  }, [selectedCourseId, instAcademicData, queryClient]);
+  const handleCourseSelection = async (courseId: string) => {
+    setSelectedCourseId(courseId);
+    setSelectedModuleId("");
+    setSelectedLessonId("");
+    if (!courseId) return;
 
-  useEffect(() => {
-    if (!selectedModuleId) {
-      setLessons(allCourseLessons);
-      return;
+    setLoading(true);
+    try {
+      const res = await listLessonsForCourseAction(courseId);
+      const courseLessons = res.lessons || [];
+      if (courseLessons.length > 0) {
+        setSelectedLessonId(courseLessons[0].id);
+      } else {
+        // Look up modules
+        const modRes = await listModulesAction(courseId);
+        let moduleId = "";
+        if (modRes.modules && modRes.modules.length > 0) {
+          moduleId = modRes.modules[0].id;
+        } else {
+          // Create default module
+          const newMod = await createModuleAction({
+            course_id: courseId,
+            title: "Default Module",
+            description: "Auto-generated module for activity placement",
+            position: 1,
+            tenant_id: selectedInstId,
+            institution_id: selectedInstId
+          });
+          if (newMod.module) {
+            moduleId = newMod.module.id;
+          } else if (newMod.error) {
+            throw new Error(newMod.error);
+          }
+        }
+
+        if (moduleId) {
+          // Create default lesson
+          const newLes = await createLessonAction({
+            module_id: moduleId,
+            title: "Default Lesson",
+            position: 1,
+            tenant_id: selectedInstId,
+            institution_id: selectedInstId
+          });
+          if (newLes.lesson) {
+            setSelectedLessonId(newLes.lesson.id);
+          } else if (newLes.error) {
+            throw new Error(newLes.error);
+          }
+        } else {
+          throw new Error("Could not find or create a module for this course.");
+        }
+      }
+    } catch (err: any) {
+      console.error("Error setting up default lesson:", err);
+      showError("Failed to initialize course module/lesson: " + err.message);
+    } finally {
+      setLoading(false);
     }
-    listLessonsAction(selectedModuleId).then(res => setLessons(res.lessons || []));
-  }, [selectedModuleId, allCourseLessons]);
+  };
 
   const handleCreateActivityBase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLessonId) {
-      setError("Please navigate to a specific lesson to append this activity.");
+      showError("Please navigate to a specific lesson or select a valid Course to append this activity.");
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    const res = await createActivityAndSubclassAction({
-      tenant_id: selectedInstId,
-      institution_id: selectedInstId,
-      lesson_id: selectedLessonId,
-      activity_type_code: activityType,
-      status_code: "published",
-      title,
-      description,
-      instructions,
-      max_score: maxScore,
-      passing_score: passingScore,
-      is_mandatory: isMandatory,
-
-      // Quiz
-      quiz_time_limit: quizTimeLimit,
-      quiz_max_attempts: quizMaxAttempts,
-      quiz_shuffle_questions: quizShuffleQ,
-      quiz_shuffle_options: quizShuffleO,
-      quiz_show_results_immediately: quizShowResults,
-
-      // Project
-      project_overview: projOverview,
-      project_requirements: projRequirements,
-      project_deliverables: projDeliverables,
-      project_difficulty: projDifficulty,
-      project_estimated_hours: projHours,
-
-      // Challenge
-      chal_difficulty: chalDifficulty,
-      chal_problem_statement: chalStatement,
-      chal_input_format: chalInput,
-      chal_output_format: chalOutput,
-      chal_constraints: chalConstraints,
-      chal_starter_code: chalStarter,
-      chal_time_limit: chalTime,
-      chal_memory_limit: chalMemory
-    });
-
-    if (res.error) {
-      setError(res.error);
-    } else if (res.activity) {
-      setSuccess(`Base learning activity "${title}" created successfully!`);
-      setCreatedActivityId(res.activity.id);
-      
-      // Fetch details without student scope if needed
-      const details = await getActivityDetailsNoStudentAction(res.activity.id, activityType);
-      if (activityType === "quiz" && details.quiz) {
-        setCreatedQuizId(details.quiz.id);
-      } else if (activityType === "programming" && details.challenge) {
-        setCreatedChallengeId(details.challenge.id);
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["all-activities", selectedInstId] });
-      setTitle("");
-      setDescription("");
-      setInstructions("");
+    if (!title.trim()) {
+      showError("Activity title is required.");
+      return;
     }
-    setLoading(false);
+
+    if (passingScore < 0 || maxScore <= 0) {
+      showError("Scores must be positive numbers.");
+      return;
+    }
+
+    if (passingScore > maxScore) {
+      showError("Passing score cannot be greater than the maximum score.");
+      return;
+    }
+
+    if (!assignCohortId) {
+      showError("Please select a Target Cohort in the Academic Navigator.");
+      return;
+    }
+
+    setBaseDetailsSaved(true);
+
+    if (activityType === "quiz") {
+      setCreatedQuizId("temp-quiz");
+    } else {
+      setReviewMode(true);
+    }
   };
 
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createdQuizId) return;
 
-    setLoading(true);
+    if (!newQuestionText.trim()) {
+      showError("Question text cannot be empty.");
+      return;
+    }
+
     const optionsPayload = newQuestionOptions.filter(o => o.trim()).map((o, idx) => ({
       optionText: o,
       isCorrect: newQuestionCorrectIndices.includes(idx),
       position: idx + 1
     }));
 
-    const res = await createQuizQuestionAndOptionsAction(
-      createdQuizId,
-      newQuestionText,
-      newQuestionType,
-      newQuestionPoints,
-      quizQuestionsList.length + 1,
-      optionsPayload
-    );
+    if (newQuestionType !== "short_answer" && optionsPayload.length < 2) {
+      showError("Please provide at least 2 non-empty options.");
+      return;
+    }
 
-    if (res.question) {
-      setQuizQuestionsList(prev => [...prev, res.question]);
-      setSuccess("Question and options appended successfully!");
-      setTimeout(() => setSuccess(""), 3000);
+    const hasCorrectOption = optionsPayload.some(o => o.isCorrect);
+    if (newQuestionType !== "short_answer" && !hasCorrectOption) {
+      showError("Please select at least one correct option.");
+      return;
+    }
+
+    if (newQuestionType === "single_choice" && optionsPayload.filter(o => o.isCorrect).length > 1) {
+      showError("Single choice questions can only have one correct option.");
+      return;
+    }
+
+
+    if (createdQuizId === "temp-quiz") {
+      if (editingQuestion) {
+        // Edit question in local array
+        const updatedQ = {
+          id: editingQuestion.id,
+          question_text: newQuestionText,
+          question_type: newQuestionType,
+          points: newQuestionPoints,
+          options: optionsPayload.map((opt, i) => ({
+            id: opt.optionText + i,
+            option_text: opt.optionText,
+            is_correct: opt.isCorrect,
+            position: opt.position
+          }))
+        };
+        setQuizQuestionsList((prev: any[]) => prev.map(q => q.id === editingQuestion.id ? updatedQ : q));
+        showSuccess("Question updated locally!");
+        setEditingQuestion(null);
+      } else {
+        // Add new question locally
+        const newQ = {
+          id: "local-" + Date.now(),
+          question_text: newQuestionText,
+          question_type: newQuestionType,
+          points: newQuestionPoints,
+          options: optionsPayload.map((opt, i) => ({
+            id: opt.optionText + i,
+            option_text: opt.optionText,
+            is_correct: opt.isCorrect,
+            position: opt.position
+          }))
+        };
+        setQuizQuestionsList((prev: any[]) => [...prev, newQ]);
+        showSuccess("Question added locally!");
+      }
       setNewQuestionText("");
       if (newQuestionType === "true_false") {
         setNewQuestionOptions(["True", "False"]);
@@ -421,8 +477,253 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
         setNewQuestionOptions(["", "", "", ""]);
         setNewQuestionCorrectIndices([0]);
       }
-    } else if (res.error) {
-      setError(res.error);
+    } else {
+      setLoading(true);
+      if (editingQuestion) {
+        const res = await updateQuizQuestionAndOptionsAction(
+          editingQuestion.id,
+          newQuestionText,
+          newQuestionType,
+          newQuestionPoints,
+          optionsPayload
+        );
+
+        if (res.question) {
+          setQuizQuestionsList((prev: any[]) => prev.map(q => q.id === editingQuestion.id ? res.question : q));
+          
+          if (activityDetails && activityDetails.questions) {
+            setActivityDetails((prev: any) => ({
+              ...prev,
+              questions: prev.questions.map((q: any) => q.id === editingQuestion.id ? res.question : q)
+            }));
+          }
+
+          showSuccess("Question updated successfully!");
+          setEditingQuestion(null);
+          setNewQuestionText("");
+          if (newQuestionType === "true_false") {
+            setNewQuestionOptions(["True", "False"]);
+            setNewQuestionCorrectIndices([0]);
+          } else {
+            setNewQuestionOptions(["", "", "", ""]);
+            setNewQuestionCorrectIndices([0]);
+          }
+        } else if (res.error) {
+          showError(res.error);
+        }
+      } else {
+        const res = await createQuizQuestionAndOptionsAction(
+          createdQuizId,
+          newQuestionText,
+          newQuestionType,
+          newQuestionPoints,
+          quizQuestionsList.length + 1,
+          optionsPayload
+        );
+
+        if (res.question) {
+          setQuizQuestionsList((prev: any[]) => [...prev, res.question]);
+          
+          if (activityDetails && activityDetails.questions) {
+            setActivityDetails((prev: any) => ({
+              ...prev,
+              questions: [...(prev.questions || []), res.question]
+            }));
+          }
+
+          showSuccess("Question and options appended successfully!");
+          setNewQuestionText("");
+          if (newQuestionType === "true_false") {
+            setNewQuestionOptions(["True", "False"]);
+            setNewQuestionCorrectIndices([0]);
+          } else {
+            setNewQuestionOptions(["", "", "", ""]);
+            setNewQuestionCorrectIndices([0]);
+          }
+        } else if (res.error) {
+          showError(res.error);
+        }
+      }
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (!confirm("Are you sure you want to delete this question?")) return;
+
+    if (createdQuizId === "temp-quiz") {
+      setQuizQuestionsList((prev: any[]) => prev.filter(q => q.id !== questionId));
+      showSuccess("Question deleted locally!");
+      return;
+    }
+
+    setLoading(true);
+    const res = await deleteQuizQuestionAction(questionId);
+    if (res.success) {
+      setQuizQuestionsList((prev: any[]) => prev.filter(q => q.id !== questionId));
+      if (activityDetails && activityDetails.questions) {
+        setActivityDetails((prev: any) => ({
+          ...prev,
+          questions: prev.questions.filter((q: any) => q.id !== questionId)
+        }));
+      }
+      showSuccess("Question deleted successfully!");
+    } else {
+      showError(res.error || "Failed to delete question.");
+    }
+    setLoading(false);
+  };
+
+  const handleStartEditQuestion = (q: any) => {
+    setEditingQuestion(q);
+    setNewQuestionText(q.question_text);
+    setNewQuestionType(q.question_type);
+    setNewQuestionPoints(Number(q.points));
+    if (q.options) {
+      setNewQuestionOptions(q.options.map((o: any) => o.option_text));
+      const indices: number[] = [];
+      q.options.forEach((o: any, idx: number) => {
+        if (o.is_correct) indices.push(idx);
+      });
+      setNewQuestionCorrectIndices(indices);
+    } else {
+      setNewQuestionOptions(["", "", "", ""]);
+      setNewQuestionCorrectIndices([0]);
+    }
+  };
+
+  const handleConfirmPublish = async () => {
+    setLoading(true);
+
+    try {
+      const res = await createActivityAndSubclassAction({
+        tenant_id: selectedInstId,
+        institution_id: selectedInstId,
+        lesson_id: selectedLessonId,
+        activity_type_code: activityType,
+        status_code: "published",
+        title,
+        description,
+        instructions,
+        max_score: maxScore,
+        passing_score: passingScore,
+        is_mandatory: isMandatory,
+
+        quiz_time_limit: quizTimeLimit,
+        quiz_max_attempts: quizMaxAttempts,
+        quiz_shuffle_questions: quizShuffleQ,
+        quiz_shuffle_options: quizShuffleO,
+        quiz_show_results_immediately: true,
+
+        project_overview: projOverview,
+        project_requirements: projRequirements,
+        project_deliverables: projDeliverables,
+        project_difficulty: projDifficulty,
+        project_estimated_hours: projHours,
+
+        chal_difficulty: chalDifficulty,
+        chal_problem_statement: chalStatement,
+        chal_input_format: chalInput,
+        chal_output_format: chalOutput,
+        chal_constraints: chalConstraints,
+        chal_starter_code: chalStarter,
+        chal_time_limit: chalTime,
+        chal_memory_limit: chalMemory
+      });
+
+      if (res.error) {
+        throw new Error(res.error);
+      }
+
+      const createdActivity = res.activity;
+      if (!createdActivity) {
+        throw new Error("Failed to instantiate learning activity.");
+      }
+
+      if (activityType === "quiz") {
+        const details = await getActivityDetailsNoStudentAction(createdActivity.id, "quiz");
+        if (details.error || !details.quiz) {
+          throw new Error(details.error || "Quiz details record not found.");
+        }
+        
+        const dbQuizId = details.quiz.id;
+        for (let i = 0; i < quizQuestionsList.length; i++) {
+          const q = quizQuestionsList[i];
+          const optionsPayload = q.options.map((opt: any, idx: number) => ({
+            optionText: opt.option_text,
+            isCorrect: opt.is_correct,
+            position: idx + 1
+          }));
+
+          const qRes = await createQuizQuestionAndOptionsAction(
+            dbQuizId,
+            q.question_text,
+            q.question_type,
+            q.points,
+            i + 1,
+            optionsPayload
+          );
+
+          if (qRes.error) {
+            throw new Error(`Failed to insert question "${q.question_text}": ${qRes.error}`);
+          }
+        }
+      }
+
+      const assignRes = await assignActivityToCohortAction({
+        activity_id: createdActivity.id,
+        cohort_id: assignCohortId,
+        is_required: assignRequired,
+        available_from: assignFrom || null,
+        available_until: assignUntil || null
+      });
+
+      if (assignRes.error) {
+        throw new Error(`Failed assigning to cohort: ${assignRes.error}`);
+      }
+
+      showSuccess(`Learning activity "${title}" successfully published & assigned!`);
+      queryClient.invalidateQueries({ queryKey: ["all-activities", selectedInstId] });
+
+      setTitle("");
+      setDescription("");
+      setInstructions("");
+      setMaxScore(100);
+      setPassingScore(0);
+      setIsMandatory(true);
+      setQuizTimeLimit(30);
+      setQuizMaxAttempts(1);
+      setQuizShuffleQ(false);
+      setQuizShuffleO(false);
+      setProjOverview("");
+      setProjRequirements("");
+      setProjDeliverables("");
+      setAssignFrom("");
+      setAssignUntil("");
+      setQuizQuestionsList([]);
+      setBaseDetailsSaved(false);
+      setReviewMode(false);
+      setCreatedQuizId("");
+      setCreatedActivityId("");
+    } catch (err: any) {
+      console.error("Unified publishing failed:", err);
+      showError(err.message || "Unified publishing failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this activity? This will remove all associated assignments and attempts!")) return;
+    setLoading(true);
+    const res = await deleteActivityAction(id);
+    if (res.success) {
+      showSuccess("Activity deleted successfully!");
+      setActivities(prev => prev.filter(act => act.id !== id));
+      setSelectedActivity(null);
+      queryClient.invalidateQueries({ queryKey: ["all-activities", selectedInstId] });
+    } else {
+      showError(res.error || "Failed to delete activity.");
     }
     setLoading(false);
   };
@@ -442,7 +743,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
 
     if (res.example) {
       setExamplesList(prev => [...prev, res.example]);
-      setSuccess("Visible Example added!");
+      showSuccess("Visible Example added!");
       setNewExInput("");
       setNewExOutput("");
       setNewExExpl("");
@@ -465,7 +766,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
 
     if (res.testCase) {
       setTestCasesList(prev => [...prev, res.testCase]);
-      setSuccess("Execution Test Case added!");
+      showSuccess("Execution Test Case added!");
       setNewTcInput("");
       setNewTcOutput("");
     }
@@ -477,9 +778,9 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     const res = await deleteChallengeExampleAction(id);
     if (res.success) {
       setExamplesList(prev => prev.filter(ex => ex.id !== id));
-      setSuccess("Visible Example deleted!");
+      showSuccess("Visible Example deleted!");
     } else {
-      setError(res.error || "Failed to delete example");
+      showError(res.error || "Failed to delete example");
     }
     setLoading(false);
   };
@@ -489,9 +790,9 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     const res = await deleteChallengeTestCaseAction(id);
     if (res.success) {
       setTestCasesList(prev => prev.filter(tc => tc.id !== id));
-      setSuccess("Test Case deleted!");
+      showSuccess("Test Case deleted!");
     } else {
-      setError(res.error || "Failed to delete test case");
+      showError(res.error || "Failed to delete test case");
     }
     setLoading(false);
   };
@@ -499,13 +800,11 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createdActivityId || !assignCohortId) {
-      setError("Please select a target Cohort for assignment.");
+      showError("Please select a target Cohort for assignment.");
       return;
     }
 
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     // Client-side date check
     const cohort = cohorts.find(c => c.id === assignCohortId);
@@ -516,12 +815,12 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       if (assignFrom) {
         const fromDate = new Date(assignFrom);
         if (start && fromDate < start) {
-          setError(`Available From date (${fromDate.toLocaleDateString()}) cannot be before cohort start date (${start.toLocaleDateString()}).`);
+          showError(`Available From date (${fromDate.toLocaleDateString()}) cannot be before cohort start date (${start.toLocaleDateString()}).`);
           setLoading(false);
           return;
         }
         if (end && fromDate > end) {
-          setError(`Available From date (${fromDate.toLocaleDateString()}) cannot be after cohort end date (${end.toLocaleDateString()}).`);
+          showError(`Available From date (${fromDate.toLocaleDateString()}) cannot be after cohort end date (${end.toLocaleDateString()}).`);
           setLoading(false);
           return;
         }
@@ -529,12 +828,12 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       if (assignUntil) {
         const untilDate = new Date(assignUntil);
         if (start && untilDate < start) {
-          setError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be before cohort start date (${start.toLocaleDateString()}).`);
+          showError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be before cohort start date (${start.toLocaleDateString()}).`);
           setLoading(false);
           return;
         }
         if (end && untilDate > end) {
-          setError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be after cohort end date (${end.toLocaleDateString()}).`);
+          showError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be after cohort end date (${end.toLocaleDateString()}).`);
           setLoading(false);
           return;
         }
@@ -543,7 +842,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
         const fromDate = new Date(assignFrom);
         const untilDate = new Date(assignUntil);
         if (fromDate > untilDate) {
-          setError("Available From date cannot be after Available Until date.");
+          showError("Available From date cannot be after Available Until date.");
           setLoading(false);
           return;
         }
@@ -559,7 +858,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     });
 
     if (res.assignment) {
-      setSuccess("Activity assigned to cohort successfully!");
+      showSuccess("Activity assigned to cohort successfully!");
       setCreatedActivityId("");
       setCreatedQuizId("");
       setCreatedChallengeId("");
@@ -567,7 +866,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       setExamplesList([]);
       setTestCasesList([]);
     } else if (res.error) {
-      setError(res.error);
+      showError(res.error);
     }
     setLoading(false);
   };
@@ -576,9 +875,22 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     e.preventDefault();
     if (!selectedActivity) return;
 
+    if (!editForm.title.trim()) {
+      showError("Activity title is required.");
+      return;
+    }
+
+    if (editForm.max_score <= 0 || editForm.passing_score < 0) {
+      showError("Scores must be positive numbers.");
+      return;
+    }
+
+    if (editForm.passing_score > editForm.max_score) {
+      showError("Passing score cannot be greater than the maximum score.");
+      return;
+    }
+
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     // Validate each assignment date range in the frontend
     if (editForm.assignments && editForm.assignments.length > 0) {
@@ -591,12 +903,12 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
           if (assign.available_from) {
             const fromDate = new Date(assign.available_from);
             if (start && fromDate < start) {
-              setError(`Assignment start date (${fromDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be before cohort start date (${start.toLocaleDateString()}).`);
+              showError(`Assignment start date (${fromDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be before cohort start date (${start.toLocaleDateString()}).`);
               setLoading(false);
               return;
             }
             if (end && fromDate > end) {
-              setError(`Assignment start date (${fromDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be after cohort end date (${end.toLocaleDateString()}).`);
+              showError(`Assignment start date (${fromDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be after cohort end date (${end.toLocaleDateString()}).`);
               setLoading(false);
               return;
             }
@@ -604,12 +916,12 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
           if (assign.available_until) {
             const untilDate = new Date(assign.available_until);
             if (start && untilDate < start) {
-              setError(`Assignment end date (${untilDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be before cohort start date (${start.toLocaleDateString()}).`);
+              showError(`Assignment end date (${untilDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be before cohort start date (${start.toLocaleDateString()}).`);
               setLoading(false);
               return;
             }
             if (end && untilDate > end) {
-              setError(`Assignment end date (${untilDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be after cohort end date (${end.toLocaleDateString()}).`);
+              showError(`Assignment end date (${untilDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be after cohort end date (${end.toLocaleDateString()}).`);
               setLoading(false);
               return;
             }
@@ -618,7 +930,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
             const fromDate = new Date(assign.available_from);
             const untilDate = new Date(assign.available_until);
             if (fromDate > untilDate) {
-              setError(`Assignment start date cannot be after end date for cohort "${cohort.name}".`);
+              showError(`Assignment start date cannot be after end date for cohort "${cohort.name}".`);
               setLoading(false);
               return;
             }
@@ -641,7 +953,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       quiz_max_attempts: Number(editForm.quiz_max_attempts),
       quiz_shuffle_questions: editForm.quiz_shuffle_questions,
       quiz_shuffle_options: editForm.quiz_shuffle_options,
-      quiz_show_results_immediately: editForm.quiz_show_results_immediately,
+      quiz_show_results_immediately: true,
 
       // Project
       project_overview: editForm.project_overview,
@@ -672,9 +984,9 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     });
 
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else if (res.activity) {
-      setSuccess("Learning activity updated successfully!");
+      showSuccess("Learning activity updated successfully!");
       await queryClient.invalidateQueries({ queryKey: ["all-activities", selectedInstId] });
       const updatedActivity = {
         ...selectedActivity,
@@ -773,19 +1085,6 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
 
   return (
     <div className="space-y-6 text-xs text-[#0F172A] w-full">
-      {error && (
-        <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 text-xs flex items-start gap-2">
-          <AlertCircle size={16} className="mt-0.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 text-xs flex items-start gap-2">
-          <CheckCircle size={16} className="mt-0.5 shrink-0" />
-          <span>{success}</span>
-        </div>
-      )}
 
       {/* Top Banner Scope */}
       <div className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-sm">
@@ -795,25 +1094,24 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
         <p className="text-xs text-[#475569] mb-4">
           Select campus context to list or create learning assignments.
         </p>
-        <select
+        <CustomSelect
+          options={institutions}
           value={selectedInstId}
-          onChange={(e) => {
-            setSelectedInstId(e.target.value);
+          onChange={(val) => {
+            setSelectedInstId(val);
             setSelectedActivity(null);
           }}
-          className="w-full max-w-md bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
-        >
-          <option value="">-- Select Institution Campus --</option>
-          {institutions.map((inst) => (
-            <option key={inst.id} value={inst.id}>
-              {inst.name} ({inst.institution_code})
-            </option>
-          ))}
-        </select>
+          placeholder="-- Select Institution Campus --"
+          className="max-w-md"
+        />
       </div>
 
       {selectedInstId && (
-        mode === "create" ? (
+        isDataLoading ? (
+          <div className="bg-white border border-[#E2E8F0] rounded-xl p-8 shadow-sm flex flex-col items-center justify-center min-h-[200px]">
+            <SecondaryLoader variant="skeleton" message="Syncing learning manager records..." className="!border-0 !p-0 shadow-none bg-transparent" />
+          </div>
+        ) : mode === "create" ? (
           // CREATE MODE VIEW
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
@@ -828,9 +1126,8 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                     value={selectedProgId}
                     onChange={(e) => {
                       setSelectedProgId(e.target.value);
-                      setSelectedCourseId("");
-                      setSelectedModuleId("");
-                      setSelectedLessonId("");
+                      handleCourseSelection("");
+                      setAssignCohortId("");
                     }}
                     className="w-full bg-slate-50 border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs outline-none text-[#0F172A]"
                   >
@@ -840,14 +1137,23 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                 </div>
 
                 <div>
+                  <label className="block font-semibold text-[#475569] mb-1">Target Cohort *</label>
+                  <select
+                    value={assignCohortId}
+                    onChange={(e) => setAssignCohortId(e.target.value)}
+                    className="w-full bg-slate-50 border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs outline-none text-[#0F172A]"
+                    required
+                  >
+                    <option value="">-- Select Cohort --</option>
+                    {cohorts.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block font-semibold text-[#475569] mb-1">Course *</label>
                   <select
                     value={selectedCourseId}
-                    onChange={(e) => {
-                      setSelectedCourseId(e.target.value);
-                      setSelectedModuleId("");
-                      setSelectedLessonId("");
-                    }}
+                    onChange={(e) => handleCourseSelection(e.target.value)}
                     className="w-full bg-slate-50 border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs outline-none text-[#0F172A]"
                     required
                   >
@@ -855,38 +1161,6 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                     {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                   </select>
                 </div>
-
-                {selectedCourseId && (
-                  <div>
-                    <label className="block font-semibold text-[#475569] mb-1">Module (Optional)</label>
-                    <select
-                      value={selectedModuleId}
-                      onChange={(e) => {
-                        setSelectedModuleId(e.target.value);
-                        setSelectedLessonId("");
-                      }}
-                      className="w-full bg-slate-50 border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs outline-none text-[#0F172A]"
-                    >
-                      <option value="">-- Select Module --</option>
-                      {modules.map(m => <option key={m.id} value={m.id}>Mod {m.position}: {m.title}</option>)}
-                    </select>
-                  </div>
-                )}
-
-                {selectedCourseId && (
-                  <div>
-                    <label className="block font-semibold text-[#475569] mb-1">Lesson Target *</label>
-                    <select
-                      value={selectedLessonId}
-                      onChange={(e) => setSelectedLessonId(e.target.value)}
-                      className="w-full bg-slate-50 border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs outline-none text-[#0F172A]"
-                      required
-                    >
-                      <option value="">-- Select Lesson --</option>
-                      {lessons.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
-                    </select>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -894,7 +1168,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
             <div className="lg:col-span-8 space-y-6">
               
               {/* Step 1: Base Details Form */}
-              {!createdActivityId && (
+              {!baseDetailsSaved && (
                 <form onSubmit={handleCreateActivityBase} className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-sm space-y-4">
                   <h4 className="font-bold text-xs uppercase text-[#0F172A] border-b border-[#E2E8F0] pb-2 flex items-center gap-1.5">
                     <Plus size={16} className="text-[#2563EB]" /> Create Lesson Activity
@@ -927,7 +1201,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block font-semibold text-[#475569] mb-1">Max Score</label>
                       <input
@@ -960,6 +1234,27 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-[#E2E8F0] pt-4">
+                    <div>
+                      <label className="block font-semibold text-[#475569] mb-1">Available From (Start Date/Time)</label>
+                      <input
+                        type="datetime-local"
+                        value={assignFrom}
+                        onChange={(e) => setAssignFrom(e.target.value)}
+                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-[#475569] mb-1">Available Until (Due Date/Time)</label>
+                      <input
+                        type="datetime-local"
+                        value={assignUntil}
+                        onChange={(e) => setAssignUntil(e.target.value)}
+                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB]"
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block font-semibold text-[#475569] mb-1">Description / Overview</label>
                     <textarea
@@ -985,7 +1280,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                   {/* Subclass-specific fields */}
                   {activityType === "quiz" && (
                     <div className="border-t border-[#E2E8F0] pt-4 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block font-semibold text-[#475569] mb-1">Time Limit (Minutes)</label>
                           <input
@@ -1005,7 +1300,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                           />
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-4 pt-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                         <div className="flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -1026,16 +1321,6 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                           />
                           <label htmlFor="quizShuffleO" className="font-semibold text-[#475569]">Shuffle Options</label>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={quizShowResults}
-                            onChange={(e) => setQuizShowResults(e.target.checked)}
-                            id="quizShowResults"
-                            className="rounded border-[#E2E8F0] text-[#2563EB]"
-                          />
-                          <label htmlFor="quizShowResults" className="font-semibold text-[#475569]">Show Results Immediately</label>
-                        </div>
                       </div>
                     </div>
                   )}
@@ -1053,7 +1338,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block font-semibold text-[#475569] mb-1">Difficulty Level</label>
                           <select
@@ -1103,7 +1388,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block font-semibold text-[#475569] mb-1">Difficulty</label>
                           <select
@@ -1141,11 +1426,11 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
               )}
 
               {/* Quiz questions configuration step */}
-              {createdQuizId && activityType === "quiz" && (
+              {baseDetailsSaved && createdQuizId === "temp-quiz" && !reviewMode && activityType === "quiz" && (
                 <div className="space-y-6">
                   <form onSubmit={handleAddQuestion} className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-sm space-y-4">
                     <h4 className="font-bold text-xs uppercase text-[#0F172A] border-b border-[#E2E8F0] pb-2 flex items-center gap-1.5">
-                      <HelpCircle size={16} className="text-[#2563EB]" /> Add Quiz Questions
+                      <HelpCircle size={16} className="text-[#2563EB]" /> {editingQuestion ? "Edit Quiz Question" : "Add Quiz Questions"}
                     </h4>
 
                     <div>
@@ -1160,7 +1445,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold text-[#475569] mb-1">Question Type</label>
                         <select
@@ -1231,13 +1516,29 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                       ))}
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs cursor-pointer"
-                    >
-                      Add Question to Quiz
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs cursor-pointer"
+                      >
+                        {editingQuestion ? "Save Question Changes" : "Add Question to Quiz"}
+                      </button>
+                      {editingQuestion && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingQuestion(null);
+                            setNewQuestionText("");
+                            setNewQuestionOptions(["", "", "", ""]);
+                            setNewQuestionCorrectIndices([0]);
+                          }}
+                          className="border border-[#E2E8F0] hover:bg-slate-100 text-[#475569] px-4 py-2 rounded-lg font-bold text-xs cursor-pointer"
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
+                    </div>
                   </form>
 
                   {quizQuestionsList.length > 0 && (
@@ -1245,17 +1546,44 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                       <h5 className="font-bold text-xs text-[#0F172A]">Added Questions ({quizQuestionsList.length})</h5>
                       <div className="divide-y divide-[#E2E8F0]">
                         {quizQuestionsList.map((q, idx) => (
-                          <div key={idx} className="py-2 flex justify-between items-center text-xs text-[#0F172A]">
-                            <span>{idx + 1}. {q.question_text}</span>
-                            <span className="font-mono text-[9px] text-[#475569]">({q.points} pts)</span>
+                          <div key={q.id || idx} className="py-2.5 flex justify-between items-center text-xs text-[#0F172A] gap-4">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">{idx + 1}. {q.question_text}</p>
+                              <span className="text-[9px] text-[#475569] font-mono">({q.question_type} &bull; {q.points} pts)</span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditQuestion(q)}
+                                className="p-1 hover:bg-slate-100 text-[#2563EB] rounded transition-colors"
+                                title="Edit Question"
+                              >
+                                <Edit size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteQuestion(q.id)}
+                                className="p-1 hover:bg-red-50 text-[#DC2626] rounded transition-colors"
+                                title="Delete Question"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
                       <button
-                        onClick={() => setCreatedQuizId("")}
+                        onClick={() => {
+                          if (quizQuestionsList.length === 0) {
+                            showError("Please add at least one question before reviewing.");
+                            return;
+                          }
+                          setReviewMode(true);
+                          setEditingQuestion(null);
+                        }}
                         className="bg-[#16A34A] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#16A34A]/95 text-xs w-full mt-3 cursor-pointer"
                       >
-                        Finished Adding Questions &rarr; Go to Assign Cohort
+                        Finished Adding Questions &rarr; Review Activity Details
                       </button>
                     </div>
                   )}
@@ -1270,7 +1598,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                       <Eye size={16} className="text-[#2563EB]" /> Add Visible Examples
                     </h4>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold text-[#475569] mb-1">Example Input</label>
                         <input
@@ -1314,7 +1642,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                       <Layers size={16} className="text-[#2563EB]" /> Add Hidden Test Cases
                     </h4>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block font-semibold text-[#475569] mb-1">Test Case Input</label>
                         <input
@@ -1351,55 +1679,157 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                 </div>
               )}
 
-              {/* Assign Activity to Cohorts */}
-              {createdActivityId && !createdQuizId && !createdChallengeId && (
-                <form onSubmit={handleAssignSubmit} className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-sm space-y-4">
-                  <h4 className="font-bold text-xs uppercase text-[#0F172A] border-b border-[#E2E8F0] pb-2 flex items-center gap-1.5">
-                    <Calendar size={16} className="text-[#2563EB]" /> Assign Activity to Cohort
-                  </h4>
+              {/* Unified Review & Submit Screen */}
+              {baseDetailsSaved && reviewMode && (
+                <div className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-sm space-y-6">
+                  <div className="border-b border-[#E2E8F0] pb-3 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-[#0F172A] flex items-center gap-1.5">
+                        <CheckCircle2 size={16} className="text-[#16A34A]" /> Review & Publish Activity
+                      </h4>
+                      <p className="text-[10px] text-[#475569] mt-0.5">Please verify the details below before publishing to candidates.</p>
+                    </div>
+                    <span className="bg-[#16A34A]/10 text-[#16A34A] border border-[#16A34A]/20 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">
+                      Ready to Publish
+                    </span>
+                  </div>
 
-                  <div>
-                    <label className="block font-semibold text-[#475569] mb-1">Target Cohort *</label>
-                    <select
-                      value={assignCohortId}
-                      onChange={(e) => setAssignCohortId(e.target.value)}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none"
-                      required
+                  {/* General Config Outline */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-[#E2E8F0]">
+                    <div>
+                      <span className="text-[10px] text-[#475569] block font-semibold">Activity Title</span>
+                      <strong className="text-xs text-[#0F172A]">{title}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#475569] block font-semibold">Type</span>
+                      <strong className="text-xs text-[#0F172A] uppercase">{activityType}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#475569] block font-semibold">Max / Pass Score</span>
+                      <strong className="text-xs text-[#0F172A]">{maxScore} / {passingScore}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#475569] block font-semibold">Mandatory</span>
+                      <strong className="text-xs text-[#0F172A]">{isMandatory ? "Required" : "Optional"}</strong>
+                    </div>
+                  </div>
+
+                  {/* Allocation Details */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="border border-[#E2E8F0] p-3 rounded-lg">
+                      <span className="text-[10px] text-[#475569] block font-semibold mb-0.5">Target Cohort</span>
+                      <span className="font-bold text-xs text-[#0F172A]">
+                        {cohorts.find(c => c.id === assignCohortId)?.name || "N/A"}
+                      </span>
+                    </div>
+                    <div className="border border-[#E2E8F0] p-3 rounded-lg font-mono">
+                      <span className="text-[10px] text-[#475569] block font-semibold mb-0.5 font-sans">Available From</span>
+                      <span className="text-xs text-[#0F172A] font-bold">
+                        {assignFrom ? new Date(assignFrom).toLocaleString() : "Immediately"}
+                      </span>
+                    </div>
+                    <div className="border border-[#E2E8F0] p-3 rounded-lg font-mono">
+                      <span className="text-[10px] text-[#475569] block font-semibold mb-0.5 font-sans">Due Date</span>
+                      <span className="text-xs text-[#0F172A] font-bold">
+                        {assignUntil ? new Date(assignUntil).toLocaleString() : "No Limit"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Quiz Questions Student Preview */}
+                  {activityType === "quiz" && (
+                    <div className="space-y-3">
+                      <h5 className="font-bold text-xs text-[#0F172A] uppercase tracking-wider text-[#475569] border-b border-[#E2E8F0] pb-1">
+                        Candidate Quiz Preview ({quizQuestionsList.length} Questions)
+                      </h5>
+                      <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                        {quizQuestionsList.map((q, idx) => (
+                          <div key={q.id || idx} className="border border-[#E2E8F0] p-4 rounded-xl bg-white space-y-3">
+                            <div className="flex justify-between items-start font-semibold text-[#0F172A] text-xs">
+                              <span>Q{idx + 1}: {q.question_text}</span>
+                              <span className="text-[9px] bg-slate-100 px-2 py-0.5 rounded font-mono text-[#475569]">
+                                {q.points} Points
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 pl-2">
+                              {q.options?.map((opt: any, optIdx: number) => (
+                                <div key={opt.id || optIdx} className="flex items-center gap-2 text-xs border border-slate-50 p-2 rounded hover:bg-slate-50/50">
+                                  <input
+                                    type={q.question_type === "multiple_choice" ? "checkbox" : "radio"}
+                                    disabled
+                                    checked={opt.is_correct}
+                                    className="accent-[#2563EB] pointer-events-none scale-90"
+                                  />
+                                  <span className={opt.is_correct ? "text-[#16A34A] font-medium" : "text-[#475569]"}>
+                                    {opt.option_text}
+                                  </span>
+                                  {opt.is_correct && (
+                                    <span className="text-[9px] bg-[#16A34A]/10 text-[#16A34A] border border-[#16A34A]/20 px-1 rounded ml-1 scale-90">
+                                      Correct
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Project Overview Details Preview */}
+                  {activityType === "project" && (
+                    <div className="space-y-3">
+                      <h5 className="font-bold text-xs text-[#0F172A] uppercase tracking-wider text-[#475569] border-b border-[#E2E8F0] pb-1">
+                        Project Outline
+                      </h5>
+                      <div className="bg-slate-50 p-4 rounded-xl space-y-3">
+                        {projOverview && (
+                          <div>
+                            <span className="text-[10px] text-[#475569] font-bold block mb-0.5">Overview</span>
+                            <p className="text-xs text-[#0F172A] whitespace-pre-wrap">{projOverview}</p>
+                          </div>
+                        )}
+                        {projRequirements && (
+                          <div>
+                            <span className="text-[10px] text-[#475569] font-bold block mb-0.5">Requirements</span>
+                            <p className="text-xs text-[#0F172A] whitespace-pre-wrap">{projRequirements}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Publish Actions */}
+                  <div className="border-t border-[#E2E8F0] pt-4 flex flex-wrap gap-3">
+                    <button
+                      onClick={handleConfirmPublish}
+                      disabled={loading}
+                      className="bg-[#16A34A] text-white px-5 py-2.5 rounded-lg font-bold hover:bg-[#16A34A]/95 shadow-sm transition-all text-xs cursor-pointer flex items-center gap-1.5"
                     >
-                      <option value="">-- Select Cohort --</option>
-                      {cohorts.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
-                    </select>
+                      {loading ? "Publishing..." : <>Confirm &amp; Publish Activity</>}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setReviewMode(false);
+                      }}
+                      className="border border-[#E2E8F0] hover:bg-slate-100 text-[#475569] px-4 py-2 rounded-lg font-semibold text-xs cursor-pointer"
+                    >
+                      &larr; Back to {activityType === "quiz" ? "Questions" : "Settings"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBaseDetailsSaved(false);
+                        setReviewMode(false);
+                        setCreatedQuizId("");
+                        setQuizQuestionsList([]);
+                      }}
+                      className="border border-red-100 hover:bg-red-50 text-[#DC2626] px-4 py-2 rounded-lg font-semibold text-xs cursor-pointer ml-auto"
+                    >
+                      Cancel &amp; Reset
+                    </button>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-semibold text-[#475569] mb-1">Available From</label>
-                      <input
-                        type="datetime-local"
-                        value={assignFrom}
-                        onChange={(e) => setAssignFrom(e.target.value)}
-                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-[#475569] mb-1">Due Date (Available Until)</label>
-                      <input
-                        type="datetime-local"
-                        value={assignUntil}
-                        onChange={(e) => setAssignUntil(e.target.value)}
-                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading || !assignCohortId}
-                    className="bg-[#16A34A] text-white px-5 py-2.5 rounded-lg shadow-sm font-semibold hover:bg-[#16A34A]/95 transition-all text-xs cursor-pointer"
-                  >
-                    Publish & Assign Activity
-                  </button>
-                </form>
+                </div>
               )}
             </div>
           </div>
@@ -1467,8 +1897,31 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                               {act.is_mandatory ? "Required" : "Optional"}
                             </span>
                           </td>
-                          <td className="px-4 py-3.5 text-right text-[#2563EB] font-bold flex items-center justify-end gap-1">
-                            View details <ChevronRight size={12} />
+                          <td className="px-4 py-3.5 text-right font-bold flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => {
+                                handleViewActivityClick(act);
+                                setTimeout(() => setIsEditing(true), 100);
+                              }}
+                              className="p-1.5 bg-slate-50 hover:bg-[#2563EB]/10 hover:text-[#2563EB] text-[#475569] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
+                              title="Edit Activity"
+                            >
+                              <Edit size={12} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteActivity(act.id)}
+                              className="p-1.5 bg-red-50 hover:bg-red-100 text-[#DC2626] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
+                              title="Delete Activity"
+                            >
+                              <Trash2 size={12} /> Delete
+                            </button>
+                            <button
+                              onClick={() => handleViewActivityClick(act)}
+                              className="p-1.5 bg-slate-100 hover:bg-slate-200 text-[#0F172A] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
+                              title="View details"
+                            >
+                              View Console
+                            </button>
                           </td>
                         </tr>
                       ));
@@ -1494,11 +1947,11 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
           {/* Drawer backdrop */}
           <div 
             onClick={() => setSelectedActivity(null)}
-            className="fixed inset-0 z-40 bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-lg bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
             
             {/* Header */}
             <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
@@ -1512,7 +1965,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                 onClick={() => setSelectedActivity(null)}
                 className="p-1.5 hover:bg-slate-100 rounded-lg text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer font-bold"
               >
-                ✕
+                âœ•
               </button>
             </div>
 
@@ -1579,7 +2032,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="block font-bold text-[#475569] uppercase text-[9px]">Max Score *</label>
                         <input
@@ -1617,7 +2070,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                     {selectedActivity.activity_type_code === "quiz" && (
                       <div className="border-t border-[#E2E8F0] pt-4 space-y-4">
                         <h4 className="font-bold text-xs uppercase tracking-wider text-[#475569]">Quiz Configuration</h4>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="block font-bold text-[#475569] uppercase text-[9px]">Time Limit (minutes)</label>
                             <input
@@ -1659,16 +2112,169 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                             />
                             <label htmlFor="edit_quiz_shuffle_options" className="font-semibold text-xs text-[#0F172A]">Shuffle Options</label>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              id="edit_quiz_show_results"
-                              checked={editForm.quiz_show_results_immediately}
-                              onChange={(e) => setEditForm({ ...editForm, quiz_show_results_immediately: e.target.checked })}
-                              className="rounded text-[#2563EB] focus:ring-[#2563EB] border-[#E2E8F0]"
-                            />
-                            <label htmlFor="edit_quiz_show_results" className="font-semibold text-xs text-[#0F172A]">Show Results Immediately</label>
-                          </div>
+                        </div>
+
+                        {/* Manage questions during edit */}
+                        <div className="border-t border-[#E2E8F0] pt-4 space-y-4">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-[#475569] flex justify-between items-center">
+                            <span>Quiz Questions ({activityDetails?.questions?.length || 0})</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCreatedQuizId(activityDetails?.quiz?.id);
+                                setEditingQuestion(null);
+                                setNewQuestionText("");
+                                setNewQuestionOptions(["", "", "", ""]);
+                                setNewQuestionCorrectIndices([0]);
+                              }}
+                              className="text-[10px] text-[#2563EB] hover:underline font-bold"
+                            >
+                              + Add New Question
+                            </button>
+                          </h4>
+
+                          {/* Existing questions listing in edit mode */}
+                          {activityDetails?.questions && activityDetails.questions.length > 0 && (
+                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                              {activityDetails.questions.map((q: any, idx: number) => (
+                                <div key={q.id || idx} className="p-2 border border-[#E2E8F0] rounded-lg bg-slate-50 flex justify-between items-center gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold truncate text-[11px]">Q{idx + 1}: {q.question_text}</p>
+                                    <span className="text-[9px] text-[#475569] font-mono">({q.question_type} &bull; {q.points} pts)</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setCreatedQuizId(activityDetails?.quiz?.id);
+                                        handleStartEditQuestion(q);
+                                      }}
+                                      className="p-1 hover:bg-slate-200 text-[#2563EB] rounded transition-colors"
+                                      title="Edit Question"
+                                    >
+                                      <Edit size={12} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteQuestion(q.id)}
+                                      className="p-1 hover:bg-red-100 text-[#DC2626] rounded transition-colors"
+                                      title="Delete Question"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Inline Question editor form in the drawer if createdQuizId matches this quiz */}
+                          {createdQuizId === activityDetails?.quiz?.id && (
+                            <div className="border border-dashed border-[#2563EB]/30 bg-[#2563EB]/5 p-3 rounded-lg space-y-3">
+                              <span className="font-bold text-[10px] uppercase text-[#2563EB] block">
+                                {editingQuestion ? "Edit Quiz Question" : "Add Quiz Question"}
+                              </span>
+                              <div>
+                                <label className="block font-semibold text-[#475569] mb-0.5">Question Text</label>
+                                <input
+                                  type="text"
+                                  value={newQuestionText}
+                                  onChange={(e) => setNewQuestionText(e.target.value)}
+                                  placeholder="e.g. Question text..."
+                                  className="w-full bg-white border border-[#E2E8F0] rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-[#2563EB]"
+                                  required
+                                />
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block font-semibold text-[#475569] mb-0.5">Type</label>
+                                  <select
+                                    value={newQuestionType}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setNewQuestionType(val);
+                                      if (val === "true_false") {
+                                        setNewQuestionOptions(["True", "False"]);
+                                        setNewQuestionCorrectIndices([0]);
+                                      } else {
+                                        setNewQuestionOptions(["", "", "", ""]);
+                                        setNewQuestionCorrectIndices([0]);
+                                      }
+                                    }}
+                                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-2 py-1 text-xs focus:outline-none"
+                                  >
+                                    <option value="single_choice">Single Choice</option>
+                                    <option value="multiple_choice">Multiple Choice</option>
+                                    <option value="true_false">True / False</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block font-semibold text-[#475569] mb-0.5">Points</label>
+                                  <input
+                                    type="number"
+                                    value={newQuestionPoints}
+                                    onChange={(e) => setNewQuestionPoints(Number(e.target.value))}
+                                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-2 py-1 text-xs focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="block font-semibold text-[#475569] mb-0.5">Options & Key</label>
+                                {newQuestionOptions.map((opt, idx) => (
+                                  <div key={idx} className="flex items-center gap-1.5">
+                                    <input
+                                      type={newQuestionType === "multiple_choice" ? "checkbox" : "radio"}
+                                      name="correctIndexEdit"
+                                      checked={newQuestionCorrectIndices.includes(idx)}
+                                      onChange={() => {
+                                        if (newQuestionType === "multiple_choice") {
+                                          if (newQuestionCorrectIndices.includes(idx)) {
+                                            setNewQuestionCorrectIndices(newQuestionCorrectIndices.filter(i => i !== idx));
+                                          } else {
+                                            setNewQuestionCorrectIndices([...newQuestionCorrectIndices, idx]);
+                                          }
+                                        } else {
+                                          setNewQuestionCorrectIndices([idx]);
+                                        }
+                                      }}
+                                      className="accent-[#2563EB]"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={opt}
+                                      disabled={newQuestionType === "true_false"}
+                                      onChange={(e) => {
+                                        const copy = [...newQuestionOptions];
+                                        copy[idx] = e.target.value;
+                                        setNewQuestionOptions(copy);
+                                      }}
+                                      placeholder={`Option ${idx + 1}`}
+                                      className="flex-1 bg-white border border-[#E2E8F0] rounded px-2 py-0.5 text-xs outline-none"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={handleAddQuestion}
+                                  className="bg-[#2563EB] text-white px-3 py-1 rounded text-xs font-bold hover:bg-[#2563EB]/95"
+                                >
+                                  {editingQuestion ? "Save Question" : "Add Question"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCreatedQuizId("");
+                                    setEditingQuestion(null);
+                                  }}
+                                  className="border border-[#E2E8F0] text-[#475569] bg-white px-3 py-1 rounded text-xs font-bold hover:bg-slate-100"
+                                >
+                                  Close
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -1704,7 +2310,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                             className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="block font-bold text-[#475569] uppercase text-[9px]">Difficulty Level</label>
                             <select
@@ -1744,7 +2350,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                             className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="block font-bold text-[#475569] uppercase text-[9px]">Input Format</label>
                             <textarea
@@ -1782,7 +2388,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                             className="w-full bg-slate-900 text-slate-100 border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
                           />
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div className="space-y-1">
                             <label className="block font-bold text-[#475569] uppercase text-[9px]">Difficulty</label>
                             <select
@@ -1848,7 +2454,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                                   </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   <div className="space-y-1">
                                     <label className="block font-semibold text-[#475569] text-[9px] uppercase">Available From</label>
                                     <input
@@ -1921,7 +2527,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                         )}
                         <div className="bg-slate-50/50 p-4 border border-[#E2E8F0] rounded-xl space-y-3">
                           <span className="font-bold text-[9px] uppercase text-[#475569] tracking-wider block">Add New Example</span>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <input
                               type="text"
                               placeholder="Input Example"
@@ -1981,7 +2587,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                         )}
                         <div className="bg-slate-50/50 p-4 border border-[#E2E8F0] rounded-xl space-y-3">
                           <span className="font-bold text-[9px] uppercase text-[#475569] tracking-wider block">Add New Test Case</span>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <textarea
                               placeholder="Input Data"
                               value={newTcInput}
@@ -2022,7 +2628,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                   <div className="space-y-5">
                     <div className="bg-slate-50 border border-[#E2E8F0] p-4 rounded-xl space-y-3.5">
                       <h4 className="font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-1.5 text-xs">General Metrics</h4>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <span className="text-[10px] text-[#475569] block">Max Score</span>
                           <strong className="text-xs font-mono text-[#0F172A]">{selectedActivity.max_score} Points</strong>
@@ -2220,12 +2826,20 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
               ) : (
                 <>
                   {activeDrawerTab === "config" ? (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="border border-[#E2E8F0] hover:bg-slate-100 text-[#2563EB] px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Edit size={14} /> Edit Blueprint
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="border border-[#E2E8F0] hover:bg-slate-100 text-[#2563EB] px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Edit size={14} /> Edit Blueprint
+                      </button>
+                      <button
+                        onClick={() => handleDeleteActivity(selectedActivity.id)}
+                        className="border border-red-100 hover:bg-red-50 text-[#DC2626] px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Trash2 size={14} /> Delete Activity
+                      </button>
+                    </div>
                   ) : (
                     <div />
                   )}

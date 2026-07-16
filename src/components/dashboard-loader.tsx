@@ -14,30 +14,45 @@ export function DashboardLoader({
 }: DashboardLoaderProps) {
   const [progress, setProgress] = useState(0);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-  const [mounted, setMounted] = useState(true);
+  // Only ever show the full-screen takeover if we were actually loading when
+  // this mounted. Data that's already cached (e.g. switching between sections
+  // that remount this component) must never re-trigger the splash screen.
+  const [mounted, setMounted] = useState(loading);
   const [exiting, setExiting] = useState(false);
 
-  /* ── Minimum duration timer (3 seconds) ── */
+  /* ── Loading turned on again after this had settled to hidden ── */
   useEffect(() => {
+    if (loading && !mounted) {
+      setMounted(true);
+      setExiting(false);
+      setMinTimeElapsed(false);
+      setProgress(0);
+    }
+  }, [loading, mounted]);
+
+  /* ── Minimum duration timer (3 seconds), scoped to each time it shows ── */
+  useEffect(() => {
+    if (!mounted || exiting) return;
     const timer = setTimeout(() => {
       setMinTimeElapsed(true);
     }, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [mounted, exiting]);
 
   /* ── Monitor loading state & minimum duration to trigger fade out ── */
   useEffect(() => {
-    if (!loading && minTimeElapsed) {
+    if (mounted && !loading && minTimeElapsed) {
       setExiting(true);
       const timer = setTimeout(() => {
         setMounted(false);
       }, 400); // matches the transition opacity duration
       return () => clearTimeout(timer);
     }
-  }, [loading, minTimeElapsed]);
+  }, [loading, minTimeElapsed, mounted]);
 
   /* ── Progress bar increment ── */
   useEffect(() => {
+    if (!mounted) return;
     const interval = setInterval(() => {
       setProgress((p) => {
         if (p >= 100) {
@@ -50,7 +65,7 @@ export function DashboardLoader({
       });
     }, 30);
     return () => clearInterval(interval);
-  }, [loading, minTimeElapsed]);
+  }, [loading, minTimeElapsed, mounted]);
 
   if (!mounted) return null;
 

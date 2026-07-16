@@ -56,12 +56,15 @@ import {
   Send,
   AlertTriangle,
   History,
-  Code
+  Code,
+  Menu,
+  X
 } from "lucide-react";
 
 import { useStudentDeliveryData } from "@/hooks/use-delivery";
 import { useAcademicPrefetchData } from "@/hooks/use-academics";
 import { DashboardLoader } from "@/components/dashboard-loader";
+import { useToast } from "@/components/toast";
 
 interface StudentConsoleProps {
   studentEmail: string;
@@ -100,10 +103,6 @@ export default function StudentConsole({
     }
   }, []);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [hoveredCourseIdx, setHoveredCourseIdx] = useState<number | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
-
   // Academics exploration state
   const [programs, setPrograms] = useState<any[]>([]);
   const [selectedCohort, setSelectedCohort] = useState<any | null>(null);
@@ -136,10 +135,23 @@ export default function StudentConsole({
   
   const { get, set } = useCache();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const cohortDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cohortDropdownRef.current && !cohortDropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isDropdownOpen]);
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
   const [modules, setModules] = useState<any[]>([]);
   const [lessonProgressMap, setLessonProgressMap] = useState<Record<string, any>>({});
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
+  const [isSyllabusDrawerOpen, setIsSyllabusDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -208,6 +220,14 @@ export default function StudentConsole({
   const hasRestoredCourse = useRef(false);
   const hasRestoredLesson = useRef(false);
 
+  // Scroll-synced line-number gutter for the challenge code editor.
+  const codeEditorGutterRef = useRef<HTMLDivElement>(null);
+  const handleCodeEditorScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    if (codeEditorGutterRef.current) {
+      codeEditorGutterRef.current.scrollTop = e.currentTarget.scrollTop;
+    }
+  };
+
   // Restore selectedCourse from query params when selectedCohort loads
   useEffect(() => {
     if (hasRestoredCourse.current) return;
@@ -259,6 +279,15 @@ export default function StudentConsole({
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string[]>>({});
   const [quizSubmittedResult, setQuizSubmittedResult] = useState<any | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  // Lets the timer's auto-submit read the latest answers without needing
+  // selectedAnswers in its effect deps (which would restart the interval on
+  // every option click). Also guards against the timer and the manual
+  // submit button both firing submitQuizAnswersAction at the same instant.
+  const selectedAnswersRef = useRef(selectedAnswers);
+  useEffect(() => {
+    selectedAnswersRef.current = selectedAnswers;
+  }, [selectedAnswers]);
+  const isSubmittingQuizRef = useRef(false);
 
   // Active project state
   const [selectedProjectActivity, setSelectedProjectActivity] = useState<any | null>(null);
@@ -287,8 +316,7 @@ export default function StudentConsole({
 
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { showSuccess, showError } = useToast();
 
   // Attendance states
   const [attendancePercentage, setAttendancePercentage] = useState<number | null>(null);
@@ -308,6 +336,8 @@ export default function StudentConsole({
       if (res.logs) {
         setAttendancePercentage(res.logs.percentage);
         setAttendanceLogs(res.logs.logs);
+      } else if (res.error) {
+        showError(res.error);
       }
       setLoadingAttendance(false);
     };
@@ -328,7 +358,7 @@ export default function StudentConsole({
       set(`student-activities-${studentId}`, res.activities);
       setActivities(res.activities);
     } else if (res.error) {
-      setError(res.error);
+      showError(res.error);
     }
     setLoadingActivities(false);
   };
@@ -401,7 +431,7 @@ export default function StudentConsole({
         staleTime: 0,
       });
     } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : "Unable to refresh your dashboard.");
+      showError(fetchError instanceof Error ? fetchError.message : "Unable to refresh your dashboard.");
       return;
     }
     if (res.programs) {
@@ -428,12 +458,32 @@ export default function StudentConsole({
     setSelectedCourse(null);
     setModules([]);
     setActiveLesson(null);
+
+    // Clear any assessment detail views so a stale activity from the old
+    // cohort doesn't stay rendered under the newly selected one.
+    setSelectedQuizActivity(null);
+    setQuizDetails(null);
+    setQuizQuestions([]);
+    setActiveAttempt(null);
+    setQuizSubmittedResult(null);
+    setSelectedProjectActivity(null);
+    setProjectDetails(null);
+    setProjectSubmission(null);
+    setProjectReview(null);
+    setSelectedChallengeActivity(null);
+    setChallengeDetails(null);
+    setChallengeExamples([]);
+    setChallengeSubmissions([]);
+    setSelectedSubmissionForResults(null);
+    setSubmissionResults(null);
   };
 
   const handleSelectCourse = async (course: any) => {
     setSelectedCourse(course);
     setActiveLesson(null);
-    setError("");
+    // Clear immediately so a slow/failed fetch never leaves the previous
+    // course's modules rendered under this course's header.
+    setModules([]);
 
     // Check if we have modules already cached from the initial prefetch
     const cachedModules: any[] | undefined = queryClient.getQueryData(["course-modules", course.id]);
@@ -459,28 +509,32 @@ export default function StudentConsole({
 
     // Fallback: slow path — fetch from API only when cache is cold
     setLoading(true);
-    const mRes = await listModulesAction(course.id);
-    if (mRes.error) {
-      setError(mRes.error);
+    try {
+      const mRes = await listModulesAction(course.id);
+      if (mRes.error) {
+        showError(mRes.error);
+        return;
+      }
+      if (mRes.modules) {
+        const modulesWithLessons = await Promise.all(
+          mRes.modules.map(async (m: any) => {
+            const lRes = await listLessonsAction(m.id);
+            const lessons = (lRes.lessons || [])
+              .filter((l: any) => {
+                const typeCode = (l.lesson_type?.code || "").toLowerCase();
+                return typeCode !== "assignment" && typeCode !== "assessment";
+              })
+              .map((l: any) => ({ ...l, resources: [] }));
+            return { ...m, lessons };
+          })
+        );
+        setModules(modulesWithLessons);
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to load course modules.");
+    } finally {
       setLoading(false);
-      return;
     }
-    if (mRes.modules) {
-      const modulesWithLessons = await Promise.all(
-        mRes.modules.map(async (m: any) => {
-          const lRes = await listLessonsAction(m.id);
-          const lessons = (lRes.lessons || [])
-            .filter((l: any) => {
-              const typeCode = (l.lesson_type?.code || "").toLowerCase();
-              return typeCode !== "assignment" && typeCode !== "assessment";
-            })
-            .map((l: any) => ({ ...l, resources: [] }));
-          return { ...m, lessons };
-        })
-      );
-      setModules(modulesWithLessons);
-    }
-    setLoading(false);
   };
 
   const handleStartLesson = async (lesson: any) => {
@@ -488,19 +542,27 @@ export default function StudentConsole({
     if (!selectedCourse) return;
     
     setActionLoading(true);
-    const res = await startOrUpdateLessonProgressAction(studentId, lesson.id, selectedCourse.id);
-    if (res.progress) {
-      setLessonProgressMap(prev => ({
-        ...prev,
-        [lesson.id]: res.progress
-      }));
+    try {
+      const res = await startOrUpdateLessonProgressAction(studentId, lesson.id, selectedCourse.id);
+      if (res.progress) {
+        setLessonProgressMap(prev => ({
+          ...prev,
+          [lesson.id]: res.progress
+        }));
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to start lesson.");
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleCompleteLesson = async (lesson: any) => {
     if (!selectedCourse) return;
     setActionLoading(true);
+
+    // Keep the prior state so a rejected request can be reverted precisely.
+    const previousProgress = lessonProgressMap[lesson.id];
 
     // Optimistically update progress to completed in local state map
     setLessonProgressMap(prev => ({
@@ -513,17 +575,124 @@ export default function StudentConsole({
       }
     }));
 
-    const res = await completeLessonProgressAction(studentId, lesson.id, selectedCourse.id);
-    if (res.progress) {
+    try {
+      const res = await completeLessonProgressAction(studentId, lesson.id, selectedCourse.id);
+      if (res.progress) {
+        setLessonProgressMap(prev => ({
+          ...prev,
+          [lesson.id]: res.progress
+        }));
+        showSuccess(`Completed lesson: ${lesson.title}`);
+        await refreshStudentData();
+      } else if (res.error) {
+        setLessonProgressMap(prev => ({
+          ...prev,
+          [lesson.id]: previousProgress
+        }));
+        showError(res.error);
+      }
+    } catch (err: any) {
       setLessonProgressMap(prev => ({
         ...prev,
-        [lesson.id]: res.progress
+        [lesson.id]: previousProgress
       }));
-      setSuccess(`Completed lesson: ${lesson.title}`);
-      setTimeout(() => setSuccess(""), 3000);
-      await refreshStudentData();
+      showError(err.message || "Failed to complete lesson.");
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
+  };
+
+  // Resolves a lesson's video_url into the right embedded media presentation
+  // (YouTube / direct file / PDF / generic external link), with an explicit
+  // fallback so a malformed URL still renders something actionable.
+  const renderLessonMedia = (lesson: any) => {
+    if (!lesson?.video_url) return null;
+    const url: string = lesson.video_url;
+
+    const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i);
+    if (ytMatch && ytMatch[1]) {
+      return (
+        <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-855 shadow-sm mb-4">
+          <iframe
+            src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+            className="w-full h-full border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={lesson.title}
+          />
+        </div>
+      );
+    }
+
+    if (url.match(/\.(mp4|webm|ogg)/i) || url.includes("storage.googleapis.com") || url.includes("amazonaws.com")) {
+      return (
+        <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-855 shadow-sm mb-4">
+          <video src={url} className="w-full h-full" controls preload="metadata" />
+        </div>
+      );
+    }
+
+    const lowerUrl = url.toLowerCase();
+    const isPdf = lowerUrl.includes(".pdf") || lowerUrl.includes("/object/public/") || lowerUrl.includes("supabase") || lowerUrl.includes("drive.google.com");
+    if (isPdf) {
+      return (
+        <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden shadow-sm h-[380px] sm:h-[480px] md:h-[600px] w-full flex flex-col mb-4">
+          <div className="bg-slate-50 border-b border-[#E2E8F0] px-4 py-2.5 flex items-center justify-between text-[10px]">
+            <span className="font-bold text-[#0F172A] flex items-center gap-1.5">
+              <File size={13} className="text-[#2563EB]" /> Embedded PDF Study Material
+            </span>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#2563EB] hover:underline font-bold flex items-center gap-0.5"
+            >
+              Open in New Tab <ExternalLink size={10} />
+            </a>
+          </div>
+          <iframe src={url} className="w-full h-full border-0" title={lesson.title} />
+        </div>
+      );
+    }
+
+    // Fallback: unrecognized URL shape — still give the student a way in
+    // rather than silently mislabeling it.
+    return (
+      <div className="bg-slate-900 aspect-video rounded-xl flex flex-col items-center justify-center text-white p-6 text-center border border-slate-800 shadow-sm mb-4">
+        <Play size={32} className="text-[#2563EB] mb-2 fill-[#2563EB]" />
+        <p className="text-xs font-semibold mb-3">External Video Resource</p>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-[#2563EB] hover:bg-[#2563EB]/90 text-white font-bold text-[11px] px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+        >
+          Play Video External Link <ExternalLink size={10} />
+        </a>
+      </div>
+    );
+  };
+
+  // Shared status pill for assessment list/detail views (quiz, project, challenge,
+  // and submission statuses) so each tab doesn't hand-roll its own color mapping.
+  const StatusBadge = ({ status, size = "xs" }: { status: string | null | undefined; size?: "xs" | "sm" }) => {
+    const normalized = (status || "assigned").toLowerCase();
+    const isDone = ["completed", "reviewed", "passed", "accepted"].includes(normalized);
+    const isActive = ["started", "submitted", "in_progress", "pending", "running"].includes(normalized);
+    const isFailed = ["rejected", "failed"].includes(normalized);
+    const style = isDone
+      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+      : isFailed
+      ? "bg-red-50 text-red-700 border-red-100"
+      : isActive
+      ? "bg-amber-50 text-amber-700 border-amber-100"
+      : "bg-slate-50 text-[#475569] border-[#E2E8F0]";
+    const sizeClasses = size === "sm" ? "px-2 py-0.5 text-[9px]" : "px-1.5 py-0.5 text-[8px]";
+    return (
+      <span className={`rounded font-bold border uppercase tracking-wide ${sizeClasses} ${style}`}>
+        {normalized.replace(/_/g, " ")}
+      </span>
+    );
   };
 
   // Quiz interactive flows
@@ -532,8 +701,11 @@ export default function StudentConsole({
     setQuizSubmittedResult(null);
     setActiveAttempt(null);
     setSelectedAnswers({});
+    // Clear the previous quiz's details so a failed fetch for this one
+    // doesn't leave stale data rendered under the new activity's title.
+    setQuizDetails(null);
+    setQuizQuestions([]);
     setLoading(true);
-    setError("");
 
     try {
       // 1. Fetch main quiz configuration
@@ -553,10 +725,10 @@ export default function StudentConsole({
           }
         }
       } else if (res && "error" in res) {
-        setError(res.error);
+        showError(res.error);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load quiz details.");
+      showError(err.message || "Failed to load quiz details.");
     } finally {
       setLoading(false);
     }
@@ -565,25 +737,28 @@ export default function StudentConsole({
   const handleStartQuiz = async () => {
     if (!quizDetails) return;
     setActionLoading(true);
-    setError("");
-    const attemptNum = (selectedQuizActivity.progress?.attempt_number || 0) + 1;
-    const res = await startQuizAttemptAction(quizDetails.id, studentId, selectedQuizActivity.progress?.id || "new", attemptNum);
-    if (res.attempt) {
-      // Fetch shuffled session questions for this attempt
-      const sessionRes = await getQuizSessionDetailsAction(res.attempt.id);
-      if (sessionRes && "questions" in sessionRes) {
-        setQuizQuestions(sessionRes.questions);
-        setActiveAttempt(sessionRes.attempt);
-      } else {
-        setActiveAttempt(res.attempt);
+    try {
+      const attemptNum = (selectedQuizActivity.progress?.attempt_number || 0) + 1;
+      const res = await startQuizAttemptAction(quizDetails.id, studentId, selectedQuizActivity.progress?.id || "new", attemptNum);
+      if (res.attempt) {
+        // Fetch shuffled session questions for this attempt
+        const sessionRes = await getQuizSessionDetailsAction(res.attempt.id);
+        if (sessionRes && "questions" in sessionRes) {
+          setQuizQuestions(sessionRes.questions);
+          setActiveAttempt(sessionRes.attempt);
+        } else {
+          setActiveAttempt(res.attempt);
+        }
+        setSelectedAnswers({});
+        showSuccess("Quiz attempt started. Good luck!");
+      } else if (res.error) {
+        showError(res.error);
       }
-      setSelectedAnswers({});
-      setSuccess("Quiz attempt started. Good luck!");
-      setTimeout(() => setSuccess(""), 3000);
-    } else if (res.error) {
-      setError(res.error);
+    } catch (err: any) {
+      showError(err.message || "Failed to start quiz.");
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleOptionSelect = (questionId: string, optionId: string, questionType?: string) => {
@@ -611,27 +786,32 @@ export default function StudentConsole({
   };
 
   const handleSubmitQuiz = async () => {
-    if (!activeAttempt) return;
+    if (!activeAttempt || isSubmittingQuizRef.current) return;
+    isSubmittingQuizRef.current = true;
     setActionLoading(true);
-    setError("");
-    const payload = Object.entries(selectedAnswers).flatMap(([qId, optIds]) =>
-      optIds.map(optId => ({
-        questionId: qId,
-        selectedOptionId: optId
-      }))
-    );
+    try {
+      const payload = Object.entries(selectedAnswers).flatMap(([qId, optIds]) =>
+        optIds.map(optId => ({
+          questionId: qId,
+          selectedOptionId: optId
+        }))
+      );
 
-    const res = await submitQuizAnswersAction(activeAttempt.id, payload);
-    if (res.attempt) {
-      setQuizSubmittedResult(res.attempt);
-      setActiveAttempt(null);
-      setSuccess("Quiz submitted successfully!");
-      setTimeout(() => setSuccess(""), 3000);
-      await refreshStudentData();
-    } else if (res.error) {
-      setError(res.error);
+      const res = await submitQuizAnswersAction(activeAttempt.id, payload);
+      if (res.attempt) {
+        setQuizSubmittedResult(res.attempt);
+        setActiveAttempt(null);
+        showSuccess("Quiz submitted successfully!");
+        await refreshStudentData();
+      } else if (res.error) {
+        showError(res.error);
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to submit quiz.");
+    } finally {
+      setActionLoading(false);
+      isSubmittingQuizRef.current = false;
     }
-    setActionLoading(false);
   };
 
   // Countdown Timer logic for quizzes
@@ -656,32 +836,40 @@ export default function StudentConsole({
       setTimeLeft(remaining);
       if (remaining <= 0) {
         clearInterval(interval);
+        if (isSubmittingQuizRef.current) return;
+        isSubmittingQuizRef.current = true;
         // Auto-submit when timer expires
         setActionLoading(true);
-        const payload = Object.entries(selectedAnswers).flatMap(([qId, optIds]) =>
+        const payload = Object.entries(selectedAnswersRef.current).flatMap(([qId, optIds]) =>
           optIds.map(optId => ({
             questionId: qId,
             selectedOptionId: optId
           }))
         );
-        submitQuizAnswersAction(activeAttempt.id, payload).then((res) => {
-          if (res.attempt) {
-            setQuizSubmittedResult(res.attempt);
-            setActiveAttempt(null);
-            setSuccess("Time limit reached. Quiz automatically submitted.");
-            setTimeout(() => setSuccess(""), 4000);
-            refreshStudentData();
-          } else if (res.error) {
-            setError(res.error);
-            setActiveAttempt(null);
-          }
-          setActionLoading(false);
-        });
+        submitQuizAnswersAction(activeAttempt.id, payload)
+          .then((res) => {
+            if (res.attempt) {
+              setQuizSubmittedResult(res.attempt);
+              setActiveAttempt(null);
+              showSuccess("Time limit reached. Quiz automatically submitted.");
+              refreshStudentData();
+            } else if (res.error) {
+              showError(res.error);
+              setActiveAttempt(null);
+            }
+          })
+          .catch((err: any) => {
+            showError(err.message || "Failed to auto-submit quiz.");
+          })
+          .finally(() => {
+            setActionLoading(false);
+            isSubmittingQuizRef.current = false;
+          });
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeAttempt, quizDetails, selectedAnswers]);
+  }, [activeAttempt, quizDetails]);
 
   // Load associated activity and project details when active lesson changes
   useEffect(() => {
@@ -757,14 +945,11 @@ export default function StudentConsole({
     if (!assocAct || !lessonGithubUrl.trim() || !lessonProjectDetails) return;
     
     if (!lessonGithubUrl.trim().startsWith("https://github.com/")) {
-      setError("Please provide a valid GitHub repository URL (starts with https://github.com/).");
-      setTimeout(() => setError(""), 4000);
+      showError("Please provide a valid GitHub repository URL (starts with https://github.com/).");
       return;
     }
 
     setActionLoading(true);
-    setError("");
-    setSuccess("");
 
     try {
       const res = await submitProjectAction(
@@ -783,14 +968,13 @@ export default function StudentConsole({
           await completeLessonProgressAction(studentId, activeLesson.id, selectedCourse.id);
         }
         
-        setSuccess("Assignment submitted successfully and marked as completed!");
-        setTimeout(() => setSuccess(""), 4000);
+        showSuccess("Assignment submitted successfully and marked as completed!");
         await refreshStudentData();
       } else if (res.error) {
-        setError(res.error);
+        showError(res.error);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to submit assignment.");
+      showError(err.message || "Failed to submit assignment.");
     } finally {
       setActionLoading(false);
     }
@@ -799,44 +983,57 @@ export default function StudentConsole({
   // Project interactive flows
   const handleEnterProject = async (activity: any) => {
     setSelectedProjectActivity(activity);
+    setProjectDetails(null);
+    setProjectSubmission(null);
+    setProjectReview(null);
+    setGithubUrl("");
+    setSubmissionNotes("");
     setLoading(true);
-    const res = await getProjectDetailsAction(activity.id, studentId);
-    if (res && "project" in res) {
-      setProjectDetails(res.project);
-      setProjectSubmission(res.submission);
-      setProjectReview(res.review);
-      setGithubUrl(res.submission?.github_url || "");
-      setSubmissionNotes(res.submission?.submission_notes || "");
-    } else if (res && "error" in res) {
-      setError(res.error);
+    try {
+      const res = await getProjectDetailsAction(activity.id, studentId);
+      if (res && "project" in res) {
+        setProjectDetails(res.project);
+        setProjectSubmission(res.submission);
+        setProjectReview(res.review);
+        setGithubUrl(res.submission?.github_url || "");
+        setSubmissionNotes(res.submission?.submission_notes || "");
+      } else if (res && "error" in res) {
+        showError(res.error);
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to load project details.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmitProjectUrl = async () => {
     if (!projectDetails) return;
     if (!githubUrl.trim().startsWith("https://github.com/")) {
-      setError("Please provide a valid GitHub repository URL (starts with https://github.com/).");
-      setTimeout(() => setError(""), 4000);
+      showError("Please provide a valid GitHub repository URL (starts with https://github.com/).");
       return;
     }
     setActionLoading(true);
-    const res = await submitProjectAction(
-      projectDetails.id,
-      studentId,
-      selectedProjectActivity.progress?.id || "new",
-      githubUrl,
-      submissionNotes
-    );
-    if (res.submission) {
-      setProjectSubmission(res.submission);
-      setSuccess("Project submitted successfully for mentor review!");
-      setTimeout(() => setSuccess(""), 4000);
-      await refreshStudentData();
-    } else if (res.error) {
-      setError(res.error);
+    try {
+      const res = await submitProjectAction(
+        projectDetails.id,
+        studentId,
+        selectedProjectActivity.progress?.id || "new",
+        githubUrl,
+        submissionNotes
+      );
+      if (res.submission) {
+        setProjectSubmission(res.submission);
+        showSuccess("Project submitted successfully for mentor review!");
+        await refreshStudentData();
+      } else if (res.error) {
+        showError(res.error);
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to submit project.");
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   // Programming challenge flows
@@ -844,55 +1041,72 @@ export default function StudentConsole({
     setSelectedChallengeActivity(activity);
     setSelectedSubmissionForResults(null);
     setSubmissionResults(null);
+    setChallengeDetails(null);
+    setChallengeExamples([]);
+    setChallengeSubmissions([]);
+    setEditorCode("");
     setLoading(true);
-    const res = await getProgrammingChallengeDetailsAction(activity.id, studentId);
-    if (res && "challenge" in res) {
-      setChallengeDetails(res.challenge);
-      setChallengeExamples(res.examples || []);
-      setChallengeSubmissions(res.submissions || []);
-      setEditorCode(res.challenge.starter_code || "");
-    } else if (res && "error" in res) {
-      setError(res.error);
+    try {
+      const res = await getProgrammingChallengeDetailsAction(activity.id, studentId);
+      if (res && "challenge" in res) {
+        setChallengeDetails(res.challenge);
+        setChallengeExamples(res.examples || []);
+        setChallengeSubmissions(res.submissions || []);
+        setEditorCode(res.challenge.starter_code || "");
+      } else if (res && "error" in res) {
+        showError(res.error);
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to load challenge details.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSubmitChallenge = async () => {
     if (!challengeDetails) return;
     if (!editorCode.trim()) {
-      setError("Source code cannot be blank.");
-      setTimeout(() => setError(""), 3000);
+      showError("Source code cannot be blank.");
       return;
     }
     setActionLoading(true);
-    const res = await submitChallengeCodeAction(
-      challengeDetails.id,
-      studentId,
-      selectedChallengeActivity.progress?.id || "new",
-      editorLanguage,
-      editorCode
-    );
-    if (res.submission) {
-      setSuccess("Code submitted successfully. Added to execution queue!");
-      setTimeout(() => setSuccess(""), 4000);
-      // Reload submissions list
-      const updatedData = await getProgrammingChallengeDetailsAction(selectedChallengeActivity.id, studentId);
-      if (updatedData && "submissions" in updatedData) {
-        setChallengeSubmissions(updatedData.submissions || []);
+    try {
+      const res = await submitChallengeCodeAction(
+        challengeDetails.id,
+        studentId,
+        selectedChallengeActivity.progress?.id || "new",
+        editorLanguage,
+        editorCode
+      );
+      if (res.submission) {
+        showSuccess("Code submitted successfully. Added to execution queue!");
+        // Reload submissions list
+        const updatedData = await getProgrammingChallengeDetailsAction(selectedChallengeActivity.id, studentId);
+        if (updatedData && "submissions" in updatedData) {
+          setChallengeSubmissions(updatedData.submissions || []);
+        }
+        await refreshStudentData();
+      } else if (res.error) {
+        showError(res.error);
       }
-      await refreshStudentData();
-    } else if (res.error) {
-      setError(res.error);
+    } catch (err: any) {
+      showError(err.message || "Failed to submit challenge code.");
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleViewSubmissionResults = async (sub: any) => {
     setSelectedSubmissionForResults(sub);
     setLoading(true);
-    const res = await getChallengeSubmissionResultsAction(sub.id);
-    setSubmissionResults(res);
-    setLoading(false);
+    try {
+      const res = await getChallengeSubmissionResultsAction(sub.id);
+      setSubmissionResults(res);
+    } catch (err: any) {
+      showError(err.message || "Failed to load submission results.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Quick stats calculations
@@ -926,6 +1140,17 @@ export default function StudentConsole({
     .sort((a, b) => new Date(b.progress?.updated_at || b.progress?.submitted_at || 0).getTime() - new Date(a.progress?.updated_at || a.progress?.submitted_at || 0).getTime())
     .slice(0, 3);
 
+  // Best candidate course to resume: prefer one already in progress, then any
+  // partially completed course, then the first untouched course.
+  const continueCourse =
+    activeCoursesList.find((c: any) => c.progress?.status_code === "in_progress") ||
+    activeCoursesList.find((c: any) => {
+      const pct = c.progress?.progress_percentage || 0;
+      return pct > 0 && pct < 100;
+    }) ||
+    activeCoursesList.find((c: any) => (c.progress?.progress_percentage || 0) === 0) ||
+    null;
+
   if (studentDeliveryError) {
     return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load your student dashboard. {studentDeliveryError.message}</div>;
   }
@@ -933,11 +1158,11 @@ export default function StudentConsole({
   return (
     <>
       <DashboardLoader loading={loadingStudentDelivery} message="Setting up your Student Hub..." />
-      <div className="flex flex-col gap-6 w-full" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1) both" }}>
+      <div className="flex flex-col gap-6 w-full max-w-full overflow-x-hidden" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
       {/* Global Program Selector Bar */}
       <div className="bg-white border border-[#E2E8F0] p-4 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="relative">
+          <div className="relative" ref={cohortDropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-2.5 bg-white border border-[#E2E8F0] px-4 py-2.5 rounded-xl hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 transition-all text-xs font-semibold text-[#0F172A] shadow-xs"
@@ -989,9 +1214,9 @@ export default function StudentConsole({
                             selectedCohort?.id === coh.id ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#475569]"
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold truncate pr-2">{coh.name} ({coh.code})</span>
-                            {selectedCohort?.id === coh.id && <CheckCircle2 size={13} className="text-[#2563EB]" />}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold truncate min-w-0 flex-1">{coh.name} ({coh.code})</span>
+                            {selectedCohort?.id === coh.id && <CheckCircle2 size={13} className="text-[#2563EB] shrink-0" />}
                           </div>
                           <span className="text-[9px] text-[#475569] truncate font-medium">Program: {coh.programTitle}</span>
                         </button>
@@ -1014,7 +1239,7 @@ export default function StudentConsole({
         )}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6 items-start text-xs">
+      <div className="flex flex-col md:flex-row gap-6 md:items-start text-xs">
 
         {/* MOBILE TAB STRIP (below md) */}
         <div className="md:hidden w-full -mx-0 bg-white border border-[#E2E8F0] rounded-2xl shadow-sm p-2 flex flex-col gap-2">
@@ -1105,151 +1330,103 @@ export default function StudentConsole({
           )}
         </div>
 
-        {/* GROUPED DUAL SIDEBAR (md and up) */}
-        <div className="hidden md:flex flex-col sm:flex-row gap-4 shrink-0 w-full md:w-auto">
+        {/* NAV RAIL (md and up) */}
+        <div className="hidden md:flex flex-col gap-1 shrink-0 w-56 bg-white border border-[#E2E8F0] p-3 rounded-2xl shadow-sm h-fit">
+          <button
+            onClick={() => {
+              setActiveParentTab("overview");
+              setActiveTab("overview");
+              setSelectedCourse(null);
+              setActiveLesson(null);
+            }}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all cursor-pointer ${
+              activeParentTab === "overview"
+                ? "bg-[#2563EB] text-white shadow-sm"
+                : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+            }`}
+          >
+            <Building size={16} /> Overview
+          </button>
 
-          {/* PRIMARY ICON BAR */}
-          <div className="flex sm:flex-col gap-2 shrink-0 bg-white border border-[#E2E8F0] p-2.5 rounded-2xl shadow-sm justify-between sm:justify-start">
-            <button
-              onClick={() => {
-                setActiveParentTab("overview");
-                setActiveTab("overview");
-                setSelectedCourse(null);
-                setActiveLesson(null);
-              }}
-              className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                activeParentTab === "overview"
-                  ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                  : "bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#475569] hover:text-[#0F172A]"
-              }`}
-              title="Overview space"
-            >
-              <Building size={18} />
-            </button>
-            
-            <button
-              onClick={() => {
-                setActiveParentTab("curriculum");
-                setActiveTab("academics");
-                setSelectedCourse(null);
-                setActiveLesson(null);
-              }}
-              className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                activeParentTab === "curriculum"
-                  ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                  : "bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#475569] hover:text-[#0F172A]"
-              }`}
-              title="Academics & Syllabus"
-            >
-              <BookOpen size={18} />
-            </button>
-            
-            <button
-              onClick={() => {
-                setActiveParentTab("assessments");
-                setActiveTab("quizzes");
-                setSelectedQuizActivity(null);
-                setSelectedProjectActivity(null);
-                setSelectedChallengeActivity(null);
-              }}
-              className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                activeParentTab === "assessments"
-                  ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                  : "bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#475569] hover:text-[#0F172A]"
-              }`}
-              title="Assessments & Tasks"
-            >
-              <Award size={18} />
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setActiveParentTab("curriculum");
+              setActiveTab("academics");
+              setSelectedCourse(null);
+              setActiveLesson(null);
+            }}
+            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all cursor-pointer ${
+              activeParentTab === "curriculum"
+                ? "bg-[#2563EB] text-white shadow-sm"
+                : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+            }`}
+          >
+            <span className="flex items-center gap-2.5"><BookOpen size={16} /> Syllabus</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeParentTab === "curriculum" ? "bg-white/20" : "bg-slate-100 text-slate-700"}`}>
+              {selectedCohort?.courses?.length || 0}
+            </span>
+          </button>
 
-          {/* SECONDARY SIDEBAR */}
-          {isSidebarOpen && (
-            <div className="w-full sm:w-52 shrink-0 flex flex-col gap-2 border border-[#E2E8F0] bg-white p-4 rounded-2xl shadow-sm">
-              <h4 className="text-[10px] font-bold text-[#475569] uppercase tracking-wider px-2 mb-2">
-                {activeParentTab === "overview" && "Overview space"}
-                {activeParentTab === "curriculum" && "Syllabus Hub"}
-                {activeParentTab === "assessments" && "Auditing space"}
-              </h4>
-              
-              {activeParentTab === "overview" && (
-                <button
-                  onClick={() => setActiveTab("overview")}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "overview"
-                      ? "bg-[#2563EB]/10 text-[#2563EB]"
-                      : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-                  }`}
-                >
-                  Dashboard Overview
-                </button>
-              )}
+          <button
+            onClick={() => {
+              setActiveParentTab("assessments");
+              setActiveTab("quizzes");
+              setSelectedQuizActivity(null);
+              setSelectedProjectActivity(null);
+              setSelectedChallengeActivity(null);
+            }}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all cursor-pointer ${
+              activeParentTab === "assessments"
+                ? "bg-[#2563EB] text-white shadow-sm"
+                : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+            }`}
+          >
+            <Award size={16} /> Assessments
+          </button>
 
-              {activeParentTab === "curriculum" && (
-                <button
-                  onClick={() => {
-                    setActiveTab("academics");
-                    setSelectedCourse(null);
-                    setActiveLesson(null);
-                  }}
-                  className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "academics"
-                      ? "bg-[#2563EB]/10 text-[#2563EB]"
-                      : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-                  }`}
-                >
-                  <span>Syllabus Lessons</span>
-                  <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                    {selectedProgram?.courses?.length || 0}
-                  </span>
-                </button>
-              )}
+          {activeParentTab === "assessments" && (
+            <div className="flex flex-col gap-1 pl-4 mt-1 border-l-2 border-[#E2E8F0] ml-4">
+              <button
+                onClick={() => {
+                  setActiveTab("quizzes");
+                  setSelectedQuizActivity(null);
+                  setSelectedProjectActivity(null);
+                  setSelectedChallengeActivity(null);
+                }}
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
+                  activeTab === "quizzes"
+                    ? "bg-[#2563EB]/10 text-[#2563EB]"
+                    : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                }`}
+              >
+                <span>Quizzes</span>
+                <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{quizCount}</span>
+              </button>
 
-              {activeParentTab === "assessments" && (
-                <div className="flex flex-col gap-1.5">
-                  <button
-                    onClick={() => {
-                      setActiveTab("quizzes");
-                      setSelectedQuizActivity(null);
-                      setSelectedProjectActivity(null);
-                      setSelectedChallengeActivity(null);
-                    }}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                      activeTab === "quizzes"
-                        ? "bg-[#2563EB]/10 text-[#2563EB]"
-                        : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-                    }`}
-                  >
-                    <span>Quizzes</span>
-                    <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{quizCount}</span>
-                  </button>
+              <button
+                onClick={() => {
+                  setActiveTab("projects");
+                  setSelectedQuizActivity(null);
+                  setSelectedProjectActivity(null);
+                  setSelectedChallengeActivity(null);
+                }}
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
+                  activeTab === "projects"
+                    ? "bg-[#2563EB]/10 text-[#2563EB]"
+                    : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                }`}
+              >
+                <span>Projects</span>
+                <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{projectCount}</span>
+              </button>
 
-                  <button
-                    onClick={() => {
-                      setActiveTab("projects");
-                      setSelectedQuizActivity(null);
-                      setSelectedProjectActivity(null);
-                      setSelectedChallengeActivity(null);
-                    }}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                      activeTab === "projects"
-                        ? "bg-[#2563EB]/10 text-[#2563EB]"
-                        : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-                    }`}
-                  >
-                    <span>Projects</span>
-                    <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{projectCount}</span>
-                  </button>
-
-                  <Link
-                    href="/student/programming"
-                    className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-                  >
-                    <span>Code Challenges</span>
-                    <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{challengeCount}</span>
-                  </Link>
-                </div>
-              )}
+              <Link
+                href="/student/programming"
+                className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+              >
+                <span>Code Challenges</span>
+                <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{challengeCount}</span>
+              </Link>
             </div>
           )}
         </div>
@@ -1257,151 +1434,187 @@ export default function StudentConsole({
         {/* Main Content Area */}
         <div className="flex-1 min-w-0 flex flex-col gap-6">
         
-        {error && (
-          <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 text-xs font-semibold">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 text-xs flex items-center gap-2 font-semibold">
-            <CheckCircle2 size={14} />
-            {success}
-          </div>
-        )}
-
         {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
           <div className="space-y-8 animate-fadeIn">
-            
-            {/* Elegant Header Greeting Block */}
-            <div className="relative overflow-hidden bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-subtle flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-              <div className="absolute top-0 right-0 w-80 h-full bg-gradient-to-l from-[#2563EB]/5 to-transparent pointer-events-none rounded-r-2xl" />
-              <div className="relative z-10 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/15 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-                    Student Hub
-                  </span>
-                  {selectedCohort && (
-                    <span className="text-[10px] text-[#64748B] font-semibold">
-                      • {selectedCohort.name} ({selectedCohort.code})
+
+            {/* Header Greeting Block */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] p-6 sm:p-7 rounded-2xl shadow-md flex flex-col gap-6">
+              <div className="absolute -top-16 -right-16 w-64 h-64 bg-[#2563EB]/25 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-20 -left-10 w-56 h-56 bg-[#10B981]/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col md:flex-row justify-between md:items-center gap-6">
+                <div className="space-y-1.5 w-full md:w-auto min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="bg-white/10 text-white border border-white/15 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm">
+                      Student Hub
                     </span>
-                  )}
+                    {selectedCohort && (
+                      <span className="text-[10px] text-slate-300 font-semibold">
+                        • {selectedCohort.name} ({selectedCohort.code})
+                      </span>
+                    )}
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight pt-1">
+                    Welcome back, {fullName.split(" ")[0]}! 👋
+                  </h1>
+                  <p className="text-xs text-slate-300 font-medium max-w-xl">
+                    {continueCourse
+                      ? `You're ${continueCourse.progress?.progress_percentage || 0}% through "${continueCourse.title}". Keep the momentum going.`
+                      : "Track your modules, review pending assignments, and explore your batch curriculum."}
+                  </p>
                 </div>
-                <h1 className="text-xl font-bold text-[#0F172A] tracking-tight pt-1">
-                  Welcome back, {fullName}! 👋
-                </h1>
-                <p className="text-xs text-[#64748B] font-medium max-w-xl">
-                  Ready to resume your academic journey? Track your modules, review pending assignments, and explore your batch curriculum.
-                </p>
+
+                {continueCourse && (
+                  <button
+                    onClick={async () => {
+                      await handleSelectCourse(continueCourse);
+                      setActiveParentTab("curriculum");
+                      setActiveTab("academics");
+                    }}
+                    className="relative z-10 flex items-center gap-2 bg-[#2563EB] hover:bg-[#3B82F6] text-white px-4 py-2.5 rounded-xl shadow-sm text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shrink-0"
+                  >
+                    <Play size={13} className="fill-white" />
+                    <span>Continue Learning</span>
+                  </button>
+                )}
               </div>
 
-              {selectedCohort && (
-                <button
-                  onClick={() => {
-                    setSelectedCourse(null);
-                    setActiveLesson(null);
-                    setActiveTab("academics");
-                  }}
-                  className="relative z-10 flex items-center gap-2 bg-[#2563EB] hover:bg-[#2563EB]/95 text-white px-4 py-2.5 rounded-xl shadow-sm text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shrink-0"
-                >
-                  <span>Go to Curriculum</span>
-                  <ArrowRight size={13} />
-                </button>
-              )}
+              {/* Quick action pills */}
+              <div className="relative z-10 flex flex-wrap items-center gap-2 pt-1 border-t border-white/10">
+                {[
+                  { label: "Syllabus", icon: BookOpen, onClick: () => { setActiveParentTab("curriculum"); setActiveTab("academics"); } },
+                  { label: "Quizzes", icon: FileQuestion, onClick: () => { setActiveParentTab("assessments"); setActiveTab("quizzes"); setSelectedQuizActivity(null); } },
+                  { label: "Projects", icon: Award, onClick: () => { setActiveParentTab("assessments"); setActiveTab("projects"); setSelectedProjectActivity(null); } },
+                  { label: "Code Challenges", icon: Code, onClick: () => { setActiveParentTab("assessments"); setActiveTab("challenges"); setSelectedChallengeActivity(null); } },
+                ].map((pill) => (
+                  <button
+                    key={pill.label}
+                    onClick={pill.onClick}
+                    className="mt-2 flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                  >
+                    <pill.icon size={12} /> {pill.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Glowing Stats Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              
-              {/* Stat 1: Overall Progress */}
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-subtle space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-wider">Program Progress</span>
-                  <div className="bg-[#2563EB]/10 text-[#2563EB] p-2 rounded-xl">
-                    <BookOpen size={16} />
+              {[
+                {
+                  key: "progress",
+                  label: "Program Progress",
+                  icon: BookOpen,
+                  color: "#2563EB",
+                  value: activeCoursesList.length > 0
+                    ? `${Math.round(activeCoursesList.reduce((acc: number, c: any) => acc + (c.progress?.progress_percentage || 0), 0) / activeCoursesList.length)}%`
+                    : "0%",
+                  caption: "Overall Completion Rate",
+                },
+                {
+                  key: "active-courses",
+                  label: "Active Courses",
+                  icon: Clock,
+                  color: "#F59E0B",
+                  value: `${inProgressCourses} / ${totalEnrolledCourses}`,
+                  caption: "Courses in Progress",
+                },
+                {
+                  key: "completed-tasks",
+                  label: "Completed Tasks",
+                  icon: Award,
+                  color: "#10B981",
+                  value: `${completedActivities} Done`,
+                  caption: "Assessments Completed",
+                },
+                {
+                  key: "pending-tasks",
+                  label: "Pending Work",
+                  icon: FileQuestion,
+                  color: "#06B6D4",
+                  value: `${pendingActivities} Tasks`,
+                  caption: "Awaiting Submission",
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.key}
+                  className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-subtle space-y-3 hover:shadow-md hover:border-[#2563EB]/15 transition-all duration-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-wider">{stat.label}</span>
+                    <div className="p-2 rounded-xl" style={{ backgroundColor: `${stat.color}1A`, color: stat.color }}>
+                      <stat.icon size={16} />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#0F172A] leading-tight">{stat.value}</h3>
+                    <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">{stat.caption}</p>
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#0F172A] leading-tight">
-                    {activeCoursesList.length > 0 
-                      ? `${Math.round(activeCoursesList.reduce((acc: number, c: any) => acc + (c.progress?.progress_percentage || 0), 0) / activeCoursesList.length)}%`
-                      : "0%"}
-                  </h3>
-                  <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">Overall Completion Rate</p>
-                </div>
-              </div>
-
-              {/* Stat 2: Active Courses */}
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-subtle space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-wider">Active Courses</span>
-                  <div className="bg-[#F59E0B]/10 text-[#F59E0B] p-2 rounded-xl">
-                    <Clock size={16} />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#0F172A] leading-tight">
-                    {inProgressCourses} / {totalEnrolledCourses}
-                  </h3>
-                  <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">Courses in Progress</p>
-                </div>
-              </div>
-
-              {/* Stat 3: Tasks Done */}
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-subtle space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-wider">Completed Tasks</span>
-                  <div className="bg-[#10B981]/10 text-[#10B981] p-2 rounded-xl">
-                    <Award size={16} />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#0F172A] leading-tight">
-                    {completedActivities} Done
-                  </h3>
-                  <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">Assessments Completed</p>
-                </div>
-              </div>
-
-              {/* Stat 4: Pending Tasks */}
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-subtle space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-wider">Pending Work</span>
-                  <div className="bg-[#06B6D4]/10 text-[#06B6D4] p-2 rounded-xl">
-                    <FileQuestion size={16} />
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#0F172A] leading-tight">
-                    {pendingActivities} Tasks
-                  </h3>
-                  <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">Awaiting Submission</p>
-                </div>
-              </div>
-
+              ))}
             </div>
 
             {/* Split Grid Area */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* Left 2 Columns: Enrolled Courses & Progress Details */}
+              {/* Left 2 Columns: Continue Learning, Enrolled Courses & Challenges */}
               <div className="lg:col-span-2 space-y-6">
 
-                {/* Course Grid Path */}
+                {/* Continue Learning spotlight */}
+                {continueCourse && (
+                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0 w-full sm:w-auto">
+                      <div className="relative w-14 h-14 shrink-0">
+                        <svg viewBox="0 0 40 40" className="w-14 h-14 -rotate-90">
+                          <circle cx="20" cy="20" r="16" fill="none" stroke="#E2E8F0" strokeWidth="4" />
+                          <circle
+                            cx="20" cy="20" r="16" fill="none"
+                            stroke="#2563EB" strokeWidth="4" strokeLinecap="round"
+                            strokeDasharray={`${(2 * Math.PI * 16 * (continueCourse.progress?.progress_percentage || 0)) / 100} ${2 * Math.PI * 16}`}
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-[#0F172A]">
+                          {continueCourse.progress?.progress_percentage || 0}%
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#2563EB]">Continue Learning</p>
+                        <h3 className="font-bold text-sm text-[#0F172A] truncate">{continueCourse.title}</h3>
+                        <p className="text-[10px] text-[#64748B] mt-0.5">
+                          Lessons {continueCourse.progress?.completed_lessons || 0}/{continueCourse.progress?.total_lessons || 0}
+                          {(continueCourse.progress?.completed_lessons || 0) >= (continueCourse.progress?.total_lessons || 0) && (continueCourse.progress?.progress_percentage || 0) < 100
+                            ? " • assessments pending"
+                            : " completed"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await handleSelectCourse(continueCourse);
+                        setActiveParentTab("curriculum");
+                        setActiveTab("academics");
+                      }}
+                      className="bg-[#2563EB] hover:bg-[#2563EB]/90 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98] cursor-pointer shrink-0 w-full sm:w-auto"
+                    >
+                      Resume
+                    </button>
+                  </div>
+                )}
+
+                {/* Enrolled Courses list */}
                 {totalEnrolledCourses > 0 ? (
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-5 relative">
+                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
                     <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
                       <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-2">
-                        <BookOpenCheck className="text-[#2563EB]" size={14} /> Curriculum Progress Graph
+                        <BookOpenCheck className="text-[#2563EB]" size={14} /> Enrolled Courses
                       </h3>
                       <span className="text-[10px] text-[#64748B] font-bold">
-                        {totalEnrolledCourses} Enrolled Course{totalEnrolledCourses > 1 ? "s" : ""}
+                        {totalEnrolledCourses} Course{totalEnrolledCourses > 1 ? "s" : ""}
                       </span>
                     </div>
 
-                    {/* Mobile-friendly simplified progress list (below md) */}
-                    <div className="md:hidden space-y-3">
+                    <div className="space-y-3">
                       {activeCoursesList.map((course: any) => {
                         const pct = course.progress?.progress_percentage || 0;
                         return (
@@ -1409,12 +1622,13 @@ export default function StudentConsole({
                             key={course.id}
                             onClick={async () => {
                               await handleSelectCourse(course);
+                              setActiveParentTab("curriculum");
                               setActiveTab("academics");
                             }}
-                            className="w-full text-left border border-[#E2E8F0] rounded-xl p-3 space-y-2 active:scale-[0.98] transition-all cursor-pointer"
+                            className="w-full text-left border border-[#E2E8F0] hover:border-[#2563EB]/25 hover:bg-slate-50/50 rounded-xl p-3 space-y-2 active:scale-[0.98] transition-all cursor-pointer"
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-bold text-xs text-[#0F172A] truncate">{course.title}</span>
+                              <span className="font-bold text-xs text-[#0F172A] truncate min-w-0 flex-1">{course.title}</span>
                               <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase shrink-0 ${pct === 100 ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"}`}>
                                 {pct}%
                               </span>
@@ -1426,215 +1640,12 @@ export default function StudentConsole({
                               />
                             </div>
                             <div className="flex justify-between text-[9px] text-[#64748B] font-semibold">
-                              <span>{(course.progress?.status_code || "Not Started").replace("_", " ")}</span>
-                              <span>{course.progress?.completed_lessons || 0} / {course.progress?.total_lessons || 0} Lessons</span>
+                              <span className="capitalize">{(course.progress?.status_code || "Not Started").replace("_", " ")}</span>
+                              <span>Lessons {course.progress?.completed_lessons || 0}/{course.progress?.total_lessons || 0}</span>
                             </div>
                           </button>
                         );
                       })}
-                    </div>
-
-                    {/* Custom Interactive SVG Bar Chart (md and up) */}
-                    <div className="relative pt-2 hidden md:block">
-                      <svg className="w-full h-auto" viewBox="0 0 600 260" fill="none">
-                        <defs>
-                          <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#2563EB" />
-                            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.85" />
-                          </linearGradient>
-                          <linearGradient id="emeraldGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10B981" />
-                            <stop offset="100%" stopColor="#059669" stopOpacity="0.85" />
-                          </linearGradient>
-                        </defs>
-
-                        {/* Y-Axis Grid Lines & Labels */}
-                        {[
-                          { pct: 100, y: 35 },
-                          { pct: 75, y: 76.25 },
-                          { pct: 50, y: 117.5 },
-                          { pct: 25, y: 158.75 },
-                          { pct: 0, y: 200 }
-                        ].map((grid) => (
-                          <g key={grid.pct}>
-                            <line 
-                              x1="55" 
-                              y1={grid.y} 
-                              x2="575" 
-                              y2={grid.y} 
-                              stroke={grid.pct === 0 ? "#CBD5E1" : "#F1F5F9"} 
-                              strokeWidth={grid.pct === 0 ? "1.5" : "1"} 
-                              strokeDasharray={grid.pct === 0 ? undefined : "4 4"} 
-                            />
-                            <text 
-                              x="45" 
-                              y={grid.y + 3.5} 
-                              fill="#94A3B8" 
-                              fontSize="9" 
-                              textAnchor="end" 
-                              fontWeight="bold"
-                              className="font-mono"
-                            >
-                              {grid.pct}%
-                            </text>
-                          </g>
-                        ))}
-
-                        {/* X-Axis Data Bars */}
-                        {activeCoursesList.map((course: any, idx: number) => {
-                          const segW = 520 / activeCoursesList.length;
-                          const centerX = 55 + segW * idx + segW / 2;
-                          const barW = Math.min(segW * 0.42, 38);
-                          const barX = centerX - barW / 2;
-                          
-                          const pct = course.progress?.progress_percentage || 0;
-                          const barH = (pct / 100) * 165; // Max height 165px (from Y=35 to Y=200)
-                          const barY = 200 - barH;
-
-                          return (
-                            <g key={course.id}>
-                              {/* Background trace bar */}
-                              <rect 
-                                x={barX} 
-                                y="35" 
-                                width={barW} 
-                                height="165" 
-                                rx="5" 
-                                fill="#F8FAFC" 
-                                stroke="#F1F5F9" 
-                                strokeWidth="1" 
-                              />
-
-                              {/* Progress fill bar */}
-                              {pct > 0 && (
-                                <rect 
-                                  x={barX} 
-                                  y={barY} 
-                                  width={barW} 
-                                  height={barH} 
-                                  rx="5" 
-                                  fill={pct === 100 ? "url(#emeraldGrad)" : "url(#blueGrad)"}
-                                  className="transition-all duration-300"
-                                />
-                              )}
-
-                              {/* Glowing border if hovered */}
-                              {hoveredCourseIdx === idx && (
-                                <rect 
-                                  x={barX - 2} 
-                                  y={barY - 2} 
-                                  width={barW + 4} 
-                                  height={barH + (pct > 0 ? 2 : 0) + 2} 
-                                  rx="7" 
-                                  fill="none" 
-                                  stroke={pct === 100 ? "#10B981" : "#2563EB"} 
-                                  strokeWidth="1.5" 
-                                  className="animate-pulse"
-                                />
-                              )}
-
-                              {/* Label course title below bar */}
-                              <text 
-                                x={centerX} 
-                                y="222" 
-                                fill={hoveredCourseIdx === idx ? "#2563EB" : "#64748B"} 
-                                fontSize="9" 
-                                textAnchor="middle" 
-                                fontWeight="bold" 
-                                className="transition-colors cursor-pointer select-none"
-                                onClick={async () => {
-                                  await handleSelectCourse(course);
-                                  setActiveTab("academics");
-                                }}
-                              >
-                                {course.title.length > 14 ? course.title.slice(0, 12) + "..." : course.title}
-                              </text>
-
-                              {/* Interactive full-height hit area block */}
-                              <rect
-                                x={55 + segW * idx}
-                                y="30"
-                                width={segW}
-                                height="198"
-                                fill="transparent"
-                                className="cursor-pointer"
-                                onMouseEnter={() => setHoveredCourseIdx(idx)}
-                                onMouseLeave={() => {
-                                  setHoveredCourseIdx(null);
-                                  setTooltipPos(null);
-                                }}
-                                onMouseMove={(e) => {
-                                  const rect = e.currentTarget.parentNode?.parentElement?.getBoundingClientRect();
-                                  if (rect) {
-                                    setTooltipPos({
-                                      x: e.clientX - rect.left + 12,
-                                      y: e.clientY - rect.top - 85,
-                                    });
-                                  }
-                                }}
-                                onClick={async () => {
-                                  await handleSelectCourse(course);
-                                  setActiveTab("academics");
-                                }}
-                              />
-                            </g>
-                          );
-                        })}
-                      </svg>
-
-                      {/* Tooltip Overlay */}
-                      {hoveredCourseIdx !== null && tooltipPos && activeCoursesList[hoveredCourseIdx] && (
-                        <div 
-                          className="absolute z-30 bg-[#0F172A]/95 text-white p-3.5 rounded-xl shadow-xl border border-slate-700 pointer-events-none text-xs space-y-1.5 min-w-[220px] backdrop-blur-xs"
-                          style={{ left: tooltipPos.x, top: tooltipPos.y }}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="font-bold truncate max-w-[130px]">{activeCoursesList[hoveredCourseIdx].title}</span>
-                            <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                              activeCoursesList[hoveredCourseIdx].progress?.progress_percentage === 100 
-                                ? "bg-emerald-500/20 text-emerald-300" 
-                                : "bg-blue-500/20 text-blue-300"
-                            }`}>
-                              {activeCoursesList[hoveredCourseIdx].course_type || "CORE"}
-                            </span>
-                          </div>
-                          <div className="h-[1px] bg-slate-800 w-full" />
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-slate-400">Milestone Progress:</span>
-                            <span className="font-bold text-[#60A5FA] text-xs font-mono">{activeCoursesList[hoveredCourseIdx].progress?.progress_percentage || 0}%</span>
-                          </div>
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-slate-400">Completed Syllabus:</span>
-                            <span className="font-semibold text-slate-200">{activeCoursesList[hoveredCourseIdx].progress?.completed_lessons || 0} / {activeCoursesList[hoveredCourseIdx].progress?.total_lessons || 0} Lessons</span>
-                          </div>
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-slate-400">Current Status:</span>
-                            <span className={`font-bold capitalize text-[10px] ${
-                              activeCoursesList[hoveredCourseIdx].progress?.progress_percentage === 100 
-                                ? "text-emerald-400" 
-                                : "text-amber-400"
-                            }`}>
-                              {(activeCoursesList[hoveredCourseIdx].progress?.status_code || "Not Started").replace("_", " ")}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="hidden md:flex pt-2 items-center justify-between text-[10px] text-[#64748B] font-semibold border-t border-[#E2E8F0] flex-wrap gap-2">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-sm bg-[#2563EB]" />
-                          <span>In Progress</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-sm bg-[#10B981]" />
-                          <span>Completed</span>
-                        </div>
-                      </div>
-                      <span className="italic flex items-center gap-1">
-                        💡 Click on any bar or title to resume your lessons
-                      </span>
                     </div>
                   </div>
                 ) : (
@@ -1643,67 +1654,142 @@ export default function StudentConsole({
                     <p className="text-xs text-[#64748B]">You are not currently enrolled in any active cohorts.</p>
                   </div>
                 )}
+
+                {/* Coding Challenges Snapshot */}
+                {assignedChallengesCount > 0 && (
+                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+                      <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-2">
+                        <Code className="text-[#2563EB]" size={14} /> Coding Challenges
+                      </h3>
+                      <Link href="/student/programming" className="text-[10px] text-[#2563EB] font-bold hover:underline flex items-center gap-0.5">
+                        Open Workspace <ArrowRight size={10} />
+                      </Link>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div className="bg-slate-50/50 rounded-xl p-3">
+                        <p className="text-base font-bold text-[#0F172A]">{assignedChallengesCount}</p>
+                        <p className="text-[9px] text-[#64748B] font-semibold uppercase tracking-wider mt-0.5">Assigned</p>
+                      </div>
+                      <div className="bg-slate-50/50 rounded-xl p-3">
+                        <p className="text-base font-bold text-[#10B981]">{completedChallengesCount}</p>
+                        <p className="text-[9px] text-[#64748B] font-semibold uppercase tracking-wider mt-0.5">Completed</p>
+                      </div>
+                      <div className="bg-slate-50/50 rounded-xl p-3">
+                        <p className="text-base font-bold text-[#0F172A]">{averageChallengeScore}</p>
+                        <p className="text-[9px] text-[#64748B] font-semibold uppercase tracking-wider mt-0.5">Avg Score</p>
+                      </div>
+                    </div>
+
+                    {recentSubmissions.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#64748B]">Recent Submissions</p>
+                        <div className="divide-y divide-[#E2E8F0]">
+                          {recentSubmissions.map((sub: any) => {
+                            const isDone = sub.progress?.status_code === "completed" || sub.progress?.status_code === "reviewed";
+                            return (
+                              <div key={sub.id} className="py-2 flex items-center justify-between gap-2 text-[10px]">
+                                <span className="font-semibold text-[#0F172A] truncate min-w-0 flex-1">{sub.title}</span>
+                                <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[8px] border shrink-0 ${
+                                  isDone ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
+                                }`}>
+                                  {sub.progress?.status_code || "in progress"}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Pending tasks, attendance & performance */}
               <div className="space-y-6">
 
-                {/* Pending Tasks card */}
-                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
-                  <h3 className="text-xs font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-3 flex items-center gap-2 uppercase tracking-wider">
-                    <FileQuestion className="text-[#2563EB]" size={14} /> Pending Activities
-                  </h3>
+                {/* Attendance Overview card */}
+                {selectedCohort && (
+                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
+                    <h3 className="text-xs font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-3 flex items-center gap-2 uppercase tracking-wider">
+                      <Calendar className="text-[#2563EB]" size={14} /> Attendance Overview
+                    </h3>
 
-                  <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
-                    {programActivities.filter(a => a.progress?.status_code !== "completed" && a.progress?.status_code !== "reviewed").length > 0 ? (
-                      programActivities.filter(a => a.progress?.status_code !== "completed" && a.progress?.status_code !== "reviewed").map((act) => {
-                        const isProjectOrAssignment = act.activity_type_code === "project" || act.activity_type_code === "assignment";
-                        const typeLabel = act.activity_type_code === "quiz" ? "Quiz" : isProjectOrAssignment ? "Assignment" : "Challenge";
-                        const typeColor = 
-                          act.activity_type_code === "quiz" 
-                            ? "bg-purple-50 text-purple-700 border-purple-100" 
-                            : isProjectOrAssignment
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-100"
-                            : "bg-cyan-50 text-cyan-700 border-cyan-100";
-                        
-                        return (
-                          <div key={act.id} className="border border-[#E2E8F0] rounded-xl p-3 bg-slate-50/20 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                            <div className="min-w-0">
-                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold border capitalize ${typeColor}`}>
-                                {typeLabel}
-                              </span>
-                              <h4 className="font-bold text-[#0F172A] text-xs truncate mt-1.5">{act.title}</h4>
-                              <p className="text-[9px] text-[#64748B] mt-0.5 font-medium">Status: {act.progress?.status_code || "assigned"}</p>
-                            </div>
-
-                            <button
-                              onClick={() => {
-                                if (act.activity_type_code === "quiz") {
-                                  setActiveTab("quizzes");
-                                  handleEnterQuiz(act);
-                                } else if (isProjectOrAssignment) {
-                                  setActiveTab("projects");
-                                  handleEnterProject(act);
-                                } else {
-                                  setActiveTab("challenges");
-                                  handleEnterChallenge(act);
-                                }
-                              }}
-                              className="bg-white border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 text-[#2563EB] px-3 py-2 sm:py-1.5 rounded-lg text-[9px] font-bold shrink-0 transition-all cursor-pointer shadow-2xs w-full sm:w-auto min-h-[36px]"
+                    {loadingAttendance ? (
+                      <div className="space-y-2">
+                        <div className="h-6 bg-slate-100 animate-pulse rounded-lg w-1/3"></div>
+                        <div className="h-2 bg-slate-100 animate-pulse rounded-full"></div>
+                      </div>
+                    ) : attendancePercentage !== null ? (
+                      <>
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <span
+                              className={`text-2xl font-bold leading-none ${
+                                attendancePercentage >= 75 ? "text-[#10B981]" : attendancePercentage >= 50 ? "text-[#F59E0B]" : "text-red-500"
+                              }`}
                             >
-                              Open
-                            </button>
+                              {Math.round(attendancePercentage)}%
+                            </span>
+                            <p className="text-[10px] text-[#64748B] font-semibold mt-1">Present across {attendanceLogs.length} session{attendanceLogs.length !== 1 ? "s" : ""}</p>
                           </div>
-                        );
-                      })
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wide ${
+                              attendancePercentage >= 75
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                : attendancePercentage >= 50
+                                ? "bg-amber-50 text-amber-700 border-amber-100"
+                                : "bg-red-50 text-red-700 border-red-100"
+                            }`}
+                          >
+                            {attendancePercentage >= 75 ? "Good Standing" : attendancePercentage >= 50 ? "At Risk" : "Low Attendance"}
+                          </span>
+                        </div>
+                        <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              attendancePercentage >= 75 ? "bg-[#10B981]" : attendancePercentage >= 50 ? "bg-[#F59E0B]" : "bg-red-500"
+                            }`}
+                            style={{ width: `${Math.min(attendancePercentage, 100)}%` }}
+                          />
+                        </div>
+
+                        {attendanceLogs.length > 0 && (
+                          <div className="space-y-1.5 pt-1">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#64748B]">Recent Sessions</p>
+                            <div className="divide-y divide-[#E2E8F0]">
+                              {[...attendanceLogs].reverse().slice(0, 5).map((log: any, idx: number) => {
+                                const statusStyle =
+                                  log.status === "present"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                    : log.status === "late"
+                                    ? "bg-amber-50 text-amber-700 border-amber-100"
+                                    : log.status === "absent"
+                                    ? "bg-red-50 text-red-700 border-red-100"
+                                    : "bg-slate-50 text-[#64748B] border-[#E2E8F0]";
+                                return (
+                                  <div key={`${log.date}-${idx}`} className="py-1.5 flex items-center justify-between text-[10px]">
+                                    <span className="text-[#475569] font-medium">
+                                      {new Date(log.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                    </span>
+                                    <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[8px] border ${statusStyle}`}>
+                                      {log.status}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     ) : (
-                      <div className="text-center py-8 bg-slate-50/20 rounded-xl border border-dashed border-[#E2E8F0] space-y-1">
-                        <CheckCircle className="text-emerald-500 mx-auto" size={18} />
-                        <span className="text-[10px] text-[#64748B] font-bold block">All activities completed!</span>
+                      <div className="text-center py-6 bg-slate-50/20 rounded-xl border border-dashed border-[#E2E8F0] text-[10px] text-[#64748B] font-medium">
+                        No attendance records found for this group yet.
                       </div>
                     )}
                   </div>
-                </div>
+                )}
 
               </div>
 
@@ -1727,48 +1813,60 @@ export default function StudentConsole({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {activeCoursesList.length > 0 ? (
-                    activeCoursesList.map((course: any) => (
+                    activeCoursesList.map((course: any) => {
+                      const pct = course.progress?.progress_percentage || 0;
+                      return (
                       <div
                         key={course.id}
                         onClick={() => handleSelectCourse(course)}
-                        className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md hover:border-[#2563EB]/20 transition-all flex flex-col justify-between cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open course ${course.title}`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSelectCourse(course);
+                          }
+                        }}
+                        className="group bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md hover:border-[#2563EB]/25 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40 transition-all duration-200 flex flex-col justify-between cursor-pointer"
                       >
                         <div>
                           <div className="flex items-center justify-between mb-3">
-                            <div className="bg-[#2563EB]/10 text-[#2563EB] p-2 rounded-lg">
-                              <BookOpen size={16} />
+                            <div className="relative w-11 h-11 shrink-0">
+                              <svg viewBox="0 0 40 40" className="w-11 h-11 -rotate-90">
+                                <circle cx="20" cy="20" r="16" fill="none" stroke="#E2E8F0" strokeWidth="4" />
+                                <circle
+                                  cx="20" cy="20" r="16" fill="none"
+                                  stroke="#2563EB" strokeWidth="4" strokeLinecap="round"
+                                  strokeDasharray={`${(2 * Math.PI * 16 * pct) / 100} ${2 * Math.PI * 16}`}
+                                />
+                              </svg>
+                              <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-[#0F172A]">
+                                {pct}%
+                              </span>
                             </div>
                             <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-slate-50 text-[#475569] border-[#E2E8F0]">
                               {course.course_type}
                             </span>
                           </div>
-                          
+
                           <h3 className="font-bold text-xs text-[#0F172A] mb-1">{course.title}</h3>
                           <p className="text-[10px] text-[#475569] line-clamp-2 leading-relaxed mb-4">
                             {course.description || "No course description provided."}
                           </p>
                         </div>
 
-                        <div className="space-y-2 mb-3">
-                          <div className="flex justify-between text-[10px] text-[#475569]">
-                            <span>Progress</span>
-                            <span className="font-bold">{course.progress?.progress_percentage || 0}%</span>
-                          </div>
-                          <div className="w-full bg-[#E2E8F0] h-1 rounded-full overflow-hidden">
-                            <div className="bg-[#2563EB] h-full rounded-full" style={{ width: `${course.progress?.progress_percentage || 0}%` }}></div>
-                          </div>
-                        </div>
-
                         <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0] text-[10px] text-[#475569]">
                           <span className="flex items-center gap-1">
                             <Clock size={11} /> {course.duration_minutes || 0} mins
                           </span>
-                          <span className="flex items-center gap-0.5 font-bold text-[#2563EB] hover:underline">
-                            Start Learning <ArrowRight size={11} />
+                          <span className="flex items-center gap-1.5 font-bold text-white bg-[#2563EB] group-hover:bg-[#2563EB]/90 px-3 py-1.5 rounded-lg transition-colors">
+                            {pct > 0 ? "Continue" : "Start Learning"} <ArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" />
                           </span>
                         </div>
                       </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="col-span-2 text-center py-8 text-[#475569] font-medium bg-slate-50/20 rounded-xl">
                       No assigned courses registered under this program.
@@ -1776,55 +1874,171 @@ export default function StudentConsole({
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="space-y-6 w-full max-w-full">
-                {/* Course Header Bar */}
-                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4 w-full">
-                  <div className="flex items-center gap-2 text-xs border-b border-[#E2E8F0] pb-2.5">
-                    <button
-                      onClick={() => {
-                        setSelectedCourse(null);
-                        setActiveLesson(null);
-                      }}
-                      className="text-[#2563EB] hover:underline flex items-center gap-1 font-bold cursor-pointer"
-                    >
-                      <ChevronLeft size={14} /> Courses
-                    </button>
-                    <span className="text-slate-300">/</span>
-                    <span className="font-semibold text-[#0F172A] truncate max-w-[140px] sm:max-w-[300px] md:max-w-[420px]">{selectedCourse.title}</span>
+            ) : (() => {
+              const flatCourseLessons = modules.flatMap((m: any) => m.lessons || []);
+              const totalCourseLessons = flatCourseLessons.length;
+              const completedCourseLessons = flatCourseLessons.filter((l: any) => lessonProgressMap[l.id]?.status_code === "completed").length;
+              const currentLessonIdx = activeLesson ? flatCourseLessons.findIndex((l: any) => l.id === activeLesson.id) : -1;
+              const prevLesson = currentLessonIdx > 0 ? flatCourseLessons[currentLessonIdx - 1] : null;
+              const nextLesson = currentLessonIdx >= 0 && currentLessonIdx < flatCourseLessons.length - 1 ? flatCourseLessons[currentLessonIdx + 1] : null;
+              const coursePct = totalCourseLessons > 0 ? Math.round((completedCourseLessons / totalCourseLessons) * 100) : (selectedCourse.progress?.progress_percentage || 0);
+
+              const syllabusPanel = (
+                <>
+                  <div className="p-4 border-b border-[#E2E8F0] shrink-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-bold text-xs text-[#0F172A] truncate min-w-0 flex-1">{selectedCourse.title}</h3>
+                      <button
+                        onClick={() => setIsSyllabusDrawerOpen(false)}
+                        className="lg:hidden shrink-0 text-[#475569] hover:text-[#0F172A] cursor-pointer p-1"
+                        aria-label="Close syllabus"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] text-[#475569] font-bold mt-2">
+                      <span>{totalCourseLessons > 0 ? `${completedCourseLessons}/${totalCourseLessons} lessons` : "No lessons yet"}</span>
+                      <span>{coursePct}%</span>
+                    </div>
+                    <div className="w-full bg-[#E2E8F0] h-1 rounded-full overflow-hidden mt-1.5">
+                      <div className="bg-[#2563EB] h-full rounded-full transition-all duration-300" style={{ width: `${coursePct}%` }} />
+                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-slate-50 border border-[#E2E8F0] rounded-xl p-4">
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-[#0F172A] text-sm break-words">{selectedCourse.title}</h4>
-                      <p className="text-[#475569] text-[10px] mt-1">{selectedCourse.description || "No description set."}</p>
-                    </div>
-                    <div className="bg-white px-3 py-2 rounded-lg border border-[#E2E8F0] text-center shrink-0 self-start sm:self-auto">
-                      <p className="font-bold text-[#0F172A] text-xs font-mono">{selectedCourse.progress?.progress_percentage || 0}%</p>
-                      <p className="text-[8px] text-[#475569] font-bold uppercase tracking-wider mt-0.5">COMPLETED</p>
-                    </div>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                    {loading ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="h-10 bg-slate-100 animate-pulse rounded-lg"></div>
+                        <div className="h-10 bg-slate-100 animate-pulse rounded-lg"></div>
+                        <div className="h-10 bg-slate-100 animate-pulse rounded-lg"></div>
+                      </div>
+                    ) : modules.length > 0 ? (
+                      modules.map((mod) => (
+                        <div key={mod.id}>
+                          <p className="sticky top-0 z-10 bg-white/95 backdrop-blur px-1.5 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-[#64748B] truncate">
+                            Module {mod.position} · {mod.title}
+                          </p>
+                          <div className="space-y-1 mt-0.5">
+                            {mod.lessons && mod.lessons.length > 0 ? (
+                              mod.lessons.map((les: any) => {
+                                const progState = lessonProgressMap[les.id];
+                                const isCompleted = progState?.status_code === "completed";
+                                const isInProgress = progState?.status_code === "in_progress";
+                                const isActive = activeLesson?.id === les.id;
+                                return (
+                                  <div
+                                    key={les.id}
+                                    onClick={() => {
+                                      handleStartLesson(les);
+                                      setIsSyllabusDrawerOpen(false);
+                                    }}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`Open lesson ${les.title}${isCompleted ? " (completed)" : isInProgress ? " (in progress)" : ""}`}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        handleStartLesson(les);
+                                        setIsSyllabusDrawerOpen(false);
+                                      }
+                                    }}
+                                    className={`flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer select-none transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40 ${
+                                      isActive
+                                        ? "bg-[#2563EB]/10 ring-1 ring-[#2563EB]/20"
+                                        : "hover:bg-slate-50"
+                                    }`}
+                                  >
+                                    <div className="shrink-0" aria-hidden="true">
+                                      {isCompleted ? (
+                                        <CheckCircle2 size={15} className="text-[#16A34A]" />
+                                      ) : isInProgress ? (
+                                        <Circle size={15} className="text-[#F59E0B] fill-[#F59E0B]/10 animate-pulse" />
+                                      ) : (
+                                        <Circle size={15} className="text-[#CBD5E1]" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className={`text-[11px] font-semibold truncate ${isActive ? "text-[#2563EB]" : isCompleted ? "text-[#475569] line-through" : "text-[#0F172A]"}`}>
+                                        {les.title}
+                                      </p>
+                                      <p className="text-[9px] text-[#64748B] font-mono">{les.duration || 0} mins</p>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <p className="text-[9px] text-[#64748B] italic px-1.5 py-1">No lessons in this module.</p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-[10px] text-[#64748B] font-medium">
+                        No curriculum modules have been defined for this course.
+                      </div>
+                    )}
                   </div>
+                </>
+              );
+
+              return (
+              <div className="w-full max-w-full">
+                {/* Top bar */}
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <button
+                    onClick={() => {
+                      setSelectedCourse(null);
+                      setActiveLesson(null);
+                    }}
+                    className="text-[#2563EB] hover:underline flex items-center gap-1 font-bold cursor-pointer text-xs shrink-0"
+                  >
+                    <ChevronLeft size={14} /> Courses
+                  </button>
+                  <button
+                    onClick={() => setIsSyllabusDrawerOpen(true)}
+                    className="lg:hidden flex items-center gap-1.5 bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-[10px] font-bold text-[#0F172A] shadow-2xs cursor-pointer"
+                  >
+                    <Menu size={13} /> Syllabus ({completedCourseLessons}/{totalCourseLessons})
+                  </button>
                 </div>
 
-                {/* 2-Column Workspace Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start w-full max-w-full">
-                  
-                  {/* Left Column: Lesson Player */}
-                  <div className="lg:col-span-2 space-y-6 w-full min-w-0">
+                <div className="flex flex-col lg:flex-row gap-6 lg:items-start w-full max-w-full">
+
+                  {/* Persistent left sidebar (desktop) */}
+                  <div className="hidden lg:flex lg:flex-col w-[300px] shrink-0 bg-white border border-[#E2E8F0] rounded-2xl shadow-sm sticky top-4 max-h-[calc(100vh-32px)] overflow-hidden">
+                    {syllabusPanel}
+                  </div>
+
+                  {/* Mobile drawer overlay */}
+                  {isSyllabusDrawerOpen && (
+                    <div className="fixed inset-0 z-50 lg:hidden">
+                      <div
+                        className="absolute inset-0 bg-black/40"
+                        onClick={() => setIsSyllabusDrawerOpen(false)}
+                        aria-hidden="true"
+                      />
+                      <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-xl flex flex-col animate-fadeIn">
+                        {syllabusPanel}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Main content area: lesson player */}
+                  <div className="flex-1 min-w-0 w-full space-y-6">
                     {activeLesson ? (
-                      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-5 w-full overflow-hidden">
-                        <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-4">
-                          <div>
+                      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm w-full overflow-hidden max-h-[calc(100vh-140px)] overflow-y-auto">
+                        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-4 sm:px-6 pt-4 sm:pt-6 pb-4 flex items-center justify-between border-b border-[#E2E8F0]">
+                          <div className="min-w-0 flex-1">
                             <span className="bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/15 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide">
                               {activeLesson.lesson_type?.description || "Theory Material"}
                             </span>
-                            <h4 className="font-bold text-base text-[#0F172A] mt-2 tracking-tight">{activeLesson.title}</h4>
+                            <h4 className="font-bold text-base text-[#0F172A] mt-2 tracking-tight truncate">{activeLesson.title}</h4>
                           </div>
                           {(() => {
                             const isCompleted = lessonProgressMap[activeLesson.id]?.status_code === "completed";
                             if (isCompleted) {
                               return (
-                                <span className="bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/25 px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0">
+                                <span className="bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/25 px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 ml-3">
                                   <CheckCircle size={11} /> Completed
                                 </span>
                               );
@@ -1833,75 +2047,111 @@ export default function StudentConsole({
                           })()}
                         </div>
 
-                        {activeLesson.video_url && (() => {
-                          const ytMatch = activeLesson.video_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i);
-                          if (ytMatch && ytMatch[1]) {
-                            return (
-                              <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-855 shadow-sm mb-4">
-                                <iframe
-                                  src={`https://www.youtube.com/embed/${ytMatch[1]}`}
-                                  className="w-full h-full border-0"
-                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                  allowFullScreen
-                                  title={activeLesson.title}
-                                />
-                              </div>
-                            );
-                          } else if (activeLesson.video_url.match(/\.(mp4|webm|ogg)/i) || activeLesson.video_url.includes("storage.googleapis.com") || activeLesson.video_url.includes("amazonaws.com")) {
-                            return (
-                              <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-855 shadow-sm mb-4">
-                                <video
-                                  src={activeLesson.video_url}
-                                  className="w-full h-full"
-                                  controls
-                                  preload="metadata"
-                                />
-                              </div>
-                            );
-                          } else {
-                            const pdfUrl = activeLesson.video_url;
-                            const isPdf = pdfUrl.toLowerCase().includes(".pdf") || pdfUrl.toLowerCase().includes("/object/public/") || pdfUrl.toLowerCase().includes("supabase") || pdfUrl.toLowerCase().includes("drive.google.com");
-                            if (isPdf) {
-                              return (
-                                <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden shadow-sm h-[380px] sm:h-[480px] md:h-[600px] w-full flex flex-col mb-4">
-                                  <div className="bg-slate-50 border-b border-[#E2E8F0] px-4 py-2.5 flex items-center justify-between text-[10px]">
-                                    <span className="font-bold text-[#0F172A] flex items-center gap-1.5">
-                                      <File size={13} className="text-[#2563EB]" /> Embedded PDF Study Material
-                                    </span>
-                                    <a 
-                                      href={pdfUrl} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer" 
-                                      className="text-[#2563EB] hover:underline font-bold flex items-center gap-0.5"
-                                    >
-                                      Open in New Tab <ExternalLink size={10} />
-                                    </a>
+                        <div className="p-4 sm:p-6 pt-5 space-y-5">
+
+                        {renderLessonMedia(activeLesson)}
+
+                        {!activeLesson.video_url &&
+                          !(activeLesson.content_json?.body || activeLesson.content_json?.text) &&
+                          !(activeLesson.resources && activeLesson.resources.length > 0) &&
+                          !["assignment", "assessment"].includes((activeLesson.lesson_type?.code || "").toLowerCase()) && (
+                          <div className="bg-slate-50/50 border border-dashed border-[#E2E8F0] rounded-xl p-6 text-center text-[#475569] font-medium text-xs">
+                            No study material has been attached to this lesson yet. You can still mark it as completed once you've covered it with your instructor.
+                          </div>
+                        )}
+
+                        {["assignment", "assessment"].includes((activeLesson.lesson_type?.code || "").toLowerCase()) && (
+                          lessonProjectDetails ? (
+                            <div className="border border-[#E2E8F0] rounded-xl p-4 sm:p-5 space-y-4 bg-slate-50/20">
+                              <h4 className="font-bold text-xs text-[#0f172a] flex items-center gap-1.5">
+                                <FolderCode className="text-[#2563EB]" size={14} /> Assignment Submission
+                              </h4>
+
+                              <div className="text-xs text-[#475569] leading-relaxed space-y-2">
+                                {lessonProjectDetails.project_overview && <p>{lessonProjectDetails.project_overview}</p>}
+                                {lessonProjectDetails.requirements && (
+                                  <div>
+                                    <p className="font-bold text-[#0F172A] text-[11px]">Requirements</p>
+                                    <p className="whitespace-pre-line">{lessonProjectDetails.requirements}</p>
                                   </div>
-                                  <iframe
-                                    src={pdfUrl}
-                                    className="w-full h-full border-0"
-                                    title={activeLesson.title}
+                                )}
+                                {lessonProjectDetails.deliverables && (
+                                  <div>
+                                    <p className="font-bold text-[#0F172A] text-[11px]">Deliverables</p>
+                                    <p className="whitespace-pre-line">{lessonProjectDetails.deliverables}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {lessonProjectSubmission && (
+                                <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                                  <CheckCircle2 size={12} />
+                                  <span>Last Submitted: {new Date(lessonProjectSubmission.submitted_at).toLocaleString()}</span>
+                                </div>
+                              )}
+
+                              <div className="space-y-3 text-xs">
+                                <div className="flex flex-col gap-1.5">
+                                  <label htmlFor="lesson-github-url" className="font-bold text-[#0f172a]">GitHub Repository URL</label>
+                                  <input
+                                    id="lesson-github-url"
+                                    type="text"
+                                    value={lessonGithubUrl}
+                                    onChange={(e) => setLessonGithubUrl(e.target.value)}
+                                    placeholder="https://github.com/username/repository"
+                                    className="bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#2563EB] transition-all"
                                   />
                                 </div>
-                              );
-                            }
 
-                            return (
-                              <div className="bg-slate-900 aspect-video rounded-xl flex flex-col items-center justify-center text-white p-6 text-center border border-slate-800 shadow-sm mb-4">
-                                <Play size={32} className="text-[#2563EB] mb-2 fill-[#2563EB]" />
-                                <p className="text-xs font-semibold mb-3">External Video Resource</p>
-                                <a
-                                  href={activeLesson.video_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-[#2563EB] hover:bg-[#2563EB]/90 text-white font-bold text-[11px] px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+                                <div className="flex flex-col gap-1.5">
+                                  <label htmlFor="lesson-submission-notes" className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
+                                  <textarea
+                                    id="lesson-submission-notes"
+                                    value={lessonSubmissionNotes}
+                                    onChange={(e) => setLessonSubmissionNotes(e.target.value)}
+                                    placeholder="Write details or instructions for running the codebase here..."
+                                    rows={3}
+                                    className="bg-white border border-[#E2E8F0] rounded-lg p-3 w-full text-xs outline-none focus:border-[#2563EB] transition-all"
+                                  />
+                                </div>
+
+                                <button
+                                  onClick={handleLessonSubmitProjectUrl}
+                                  disabled={actionLoading}
+                                  className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs disabled:opacity-50"
                                 >
-                                  Play Video External Link <ExternalLink size={10} />
-                                </a>
+                                  Submit Assignment
+                                </button>
                               </div>
-                            );
-                          }
-                        })()}
+
+                              {lessonProjectReview && (
+                                <div className="border border-[#F59E0B]/20 bg-[#F59E0B]/5 rounded-xl p-4 space-y-2">
+                                  <h4 className="font-bold text-[10px] text-[#F59E0B] uppercase tracking-wide">Mentor Review</h4>
+                                  <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
+                                    <div>
+                                      <span className="text-[9px] text-[#64748B] block">Status</span>
+                                      <span className="capitalize">{lessonProjectReview.review_status}</span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[9px] text-[#64748B] block">Score</span>
+                                      <span>{lessonProjectReview.score !== null ? `${lessonProjectReview.score} / ${lessonProjectDetails.max_score}` : "Not Graded"}</span>
+                                    </div>
+                                  </div>
+                                  {lessonProjectReview.feedback && (
+                                    <div className="bg-white p-3 rounded-lg border border-[#e2e8f0] text-[#475569]">
+                                      <span className="text-[9px] font-bold text-[#0f172a] block mb-1">Mentor Feedback</span>
+                                      <p className="italic">{lessonProjectReview.feedback}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="bg-slate-50/50 border border-dashed border-[#E2E8F0] rounded-xl p-6 text-center text-[#64748B] font-medium text-xs">
+                              Preparing this assignment's submission form...
+                            </div>
+                          )
+                        )}
 
                         {(activeLesson.content_json?.body || activeLesson.content_json?.text) && (
                           <div className="bg-white border border-[#E2E8F0] p-4 sm:p-6 md:p-8 rounded-2xl shadow-subtle space-y-4">
@@ -1981,6 +2231,29 @@ export default function StudentConsole({
                           </div>
                         </div>
 
+                        {/* Previous / Next lesson navigation */}
+                        {(prevLesson || nextLesson) && (
+                          <div className="flex items-center justify-between gap-3 border-t border-[#E2E8F0] pt-4">
+                            <button
+                              onClick={() => prevLesson && handleStartLesson(prevLesson)}
+                              disabled={!prevLesson}
+                              className="flex items-center gap-1.5 text-[10px] font-bold text-[#475569] hover:text-[#2563EB] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer min-w-0"
+                            >
+                              <ChevronLeft size={14} className="shrink-0" />
+                              <span className="truncate max-w-[110px] sm:max-w-[180px]">{prevLesson?.title || "Previous"}</span>
+                            </button>
+                            <button
+                              onClick={() => nextLesson && handleStartLesson(nextLesson)}
+                              disabled={!nextLesson}
+                              className="flex items-center gap-1.5 text-[10px] font-bold text-[#2563EB] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer min-w-0"
+                            >
+                              <span className="truncate max-w-[110px] sm:max-w-[180px]">{nextLesson?.title || "Next"}</span>
+                              <ChevronRight size={14} className="shrink-0" />
+                            </button>
+                          </div>
+                        )}
+
+                        </div>
                       </div>
                     ) : (
                       <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 text-center shadow-sm text-slate-500 font-semibold w-full">
@@ -1989,119 +2262,10 @@ export default function StudentConsole({
                     )}
                   </div>
 
-                  {/* Right Column: Syllabus Curriculum outline */}
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-sm space-y-4 w-full min-w-0">
-                    <h3 className="font-bold text-xs text-[#0F172A] uppercase tracking-wide border-b border-[#E2E8F0] pb-2.5 flex items-center gap-1.5">
-                      <BookOpenCheck size={14} className="text-[#2563EB]" /> Course Syllabus
-                    </h3>
-                    
-                    {loading ? (
-                      <div className="flex flex-col gap-4">
-                        <div className="h-12 bg-slate-100 animate-pulse rounded-xl"></div>
-                        <div className="h-12 bg-slate-100 animate-pulse rounded-xl"></div>
-                      </div>
-                    ) : modules.length > 0 ? (
-                      <div className="space-y-4">
-                        {modules.map((mod) => (
-                          <div key={mod.id} className="border border-[#E2E8F0] rounded-xl overflow-hidden shadow-xs bg-white">
-                            <div className="bg-slate-50/70 px-4 py-3.5 border-b border-[#E2E8F0] flex flex-col gap-1">
-                              <p className="font-bold text-xs text-[#0F172A] tracking-tight">
-                                Module {mod.position}: {mod.title}
-                              </p>
-                              {mod.description && <p className="text-[10px] text-[#475569] mt-0.5 font-medium">{mod.description}</p>}
-                            </div>
-
-                            <div className="p-4 space-y-3 bg-white">
-                              {mod.lessons && mod.lessons.length > 0 ? (
-                                mod.lessons.map((les: any) => {
-                                  const progState = lessonProgressMap[les.id];
-                                  const isCompleted = progState?.status_code === "completed";
-                                  const isInProgress = progState?.status_code === "in_progress";
-                                  
-                                  const typeCode = (les.lesson_type?.code || "lesson").toLowerCase();
-                                  const typeBadge = 
-                                    typeCode.includes("video") 
-                                      ? "bg-purple-50 text-purple-700 border-purple-100"
-                                      : typeCode.includes("interactive") || typeCode.includes("code")
-                                      ? "bg-cyan-50 text-cyan-700 border-cyan-100"
-                                      : "bg-[#2563EB]/5 text-[#2563EB] border-[#2563EB]/15";
-
-                                  const isActive = activeLesson?.id === les.id;
-                                    
-                                  return (
-                                    <div 
-                                      key={les.id} 
-                                      onClick={() => handleStartLesson(les)}
-                                      className={`border rounded-xl p-3 flex items-center justify-between gap-3 transition-all duration-150 cursor-pointer select-none ${
-                                        isActive
-                                          ? "border-[#2563EB] ring-2 ring-[#2563EB]/10 bg-[#2563EB]/5"
-                                          : isCompleted 
-                                          ? "border-emerald-100 bg-emerald-50/10" 
-                                          : isInProgress 
-                                          ? "border-[#2563EB]/20 bg-[#2563EB]/5" 
-                                          : "border-[#E2E8F0] bg-white hover:border-[#2563EB]/15 hover:bg-slate-50/50"
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-3 min-w-0">
-                                        <div className="shrink-0">
-                                          {isCompleted ? (
-                                            <CheckCircle2 size={16} className="text-[#16A34A] fill-[#16A34A]/5" />
-                                          ) : isInProgress ? (
-                                            <Circle size={16} className="text-[#F59E0B] fill-[#F59E0B]/10 animate-pulse" />
-                                          ) : (
-                                            <Circle size={16} className="text-[#94A3B8]" />
-                                          )}
-                                        </div>
-                                        
-                                        <div className="min-w-0">
-                                          <div className="flex flex-wrap items-center gap-1.5">
-                                            <span className={`font-semibold text-xs tracking-tight truncate max-w-[140px] sm:max-w-xs ${isCompleted ? 'text-[#475569] line-through' : 'text-[#0F172A]'}`}>
-                                              {les.title}
-                                            </span>
-                                            <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase border shrink-0 ${typeBadge}`}>
-                                              {les.lesson_type?.code || "lesson"}
-                                            </span>
-                                          </div>
-                                          <div className="text-[9px] text-[#475569] font-mono mt-0.5 flex items-center gap-1">
-                                            <Clock size={9} /> {les.duration || 0} mins
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      <div className="shrink-0 flex items-center gap-1">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleStartLesson(les);
-                                          }}
-                                          className="hidden sm:inline-block bg-white border border-[#E2E8F0] hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 px-3 py-1.5 rounded-lg font-bold text-[#0F172A] text-[10px] shadow-2xs transition-all cursor-pointer"
-                                        >
-                                          Open Lesson
-                                        </button>
-                                        <ChevronRight size={14} className="text-slate-400 sm:hidden shrink-0" />
-                                      </div>
-                                    </div>
-                                  );
-                                })
-                              ) : (
-                                <p className="text-[10px] text-[#475569] font-medium text-center py-2 bg-slate-50/50 rounded-lg border border-dashed border-[#E2E8F0]">
-                                  No lessons in this module.
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-10 bg-slate-50/30 rounded-xl border border-dashed border-[#E2E8F0] text-[#475569] font-medium">
-                        No curriculum modules have been defined for this course.
-                      </div>
-                    )}
-                  </div>
-
                 </div>
               </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
@@ -2114,7 +2278,10 @@ export default function StudentConsole({
                   <FileQuestion className="text-[#2563EB]" size={16} /> My Assigned Quizzes
                 </h3>
                 {loadingActivities ? (
-                  <p className="text-slate-500 animate-pulse py-4 font-semibold text-center">Loading quizzes...</p>
+                  <div className="space-y-3">
+                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                  </div>
                 ) : programActivities.filter(a => a.activity_type_code === "quiz").length > 0 ? (
                   <div className="space-y-4">
                     {programActivities.filter(a => a.activity_type_code === "quiz").map((act) => (
@@ -2123,15 +2290,7 @@ export default function StudentConsole({
                           <h4 className="font-bold text-xs text-[#0F172A]">{act.title}</h4>
                           <p className="text-[#475569] text-[10px] mt-1.5 max-w-xl leading-relaxed">{act.description || "No description provided."}</p>
                           <div className="flex flex-wrap items-center gap-2 mt-3 text-[9px]">
-                            <span className={`px-2 py-0.5 rounded font-bold border uppercase ${
-                              act.progress?.status_code === "completed" || act.progress?.status_code === "passed"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                : act.progress?.status_code === "started"
-                                ? "bg-amber-50 text-amber-700 border-amber-100"
-                                : "bg-slate-50 text-[#475569] border-[#E2E8F0]"
-                            }`}>
-                              Status: {act.progress?.status_code || "assigned"}
-                            </span>
+                            <StatusBadge status={act.progress?.status_code} size="sm" />
                             {act.progress?.score !== null && (
                               <span className="bg-[#16A34A]/10 text-[#16A34A] px-2 py-0.5 rounded font-bold border border-[#16A34A]/15">
                                 Score: {act.progress?.score} / {act.progress?.max_score || 100}
@@ -2149,7 +2308,9 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center py-6 text-slate-500 font-medium">No quizzes assigned to your group.</p>
+                  <div className="text-center py-10 bg-slate-50/30 rounded-xl border border-dashed border-[#E2E8F0] text-[#475569] font-medium">
+                    No quizzes assigned to your group yet.
+                  </div>
                 )}
               </>
             ) : (
@@ -2170,8 +2331,11 @@ export default function StudentConsole({
                 </div>
 
                 {loading ? (
-                  <p className="text-slate-500 animate-pulse text-center py-8">Loading quiz details...</p>
-                ) : (
+                  <div className="space-y-3">
+                    <div className="h-24 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-10 bg-slate-100 animate-pulse rounded-xl w-1/3"></div>
+                  </div>
+                ) : quizDetails ? (
                   <div className="space-y-6">
                     {!activeAttempt && (
                       (() => {
@@ -2189,7 +2353,7 @@ export default function StudentConsole({
                               </div>
                               <div className="bg-white p-3 rounded-lg border border-[#e2e8f0]">
                                 <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Attempts Done</span>
-                                <span className="font-bold text-[#0F172A] text-xs font-mono">{selectedQuizActivity.progress?.attempt_number || 0} / {quizDetails.max_attempts}</span>
+                                <span className="font-bold text-[#0F172A] text-xs font-mono">{selectedQuizActivity.progress?.attempt_number || 0} / {quizDetails.max_attempts ?? "—"}</span>
                               </div>
                               {assignment?.available_from && (
                                 <div className="bg-white p-3 rounded-lg border border-[#e2e8f0]">
@@ -2307,7 +2471,7 @@ export default function StudentConsole({
                         </div>
 
                         {quizDetails.show_results_immediately && (
-                          <div className="grid grid-cols-3 gap-4 max-w-md mx-auto text-xs pt-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-md mx-auto text-xs pt-2">
                             <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
                               <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wider">Score</span>
                               <span className="font-bold text-xs text-[#0F172A]">{quizSubmittedResult.score} / {quizSubmittedResult.max_score}</span>
@@ -2320,7 +2484,7 @@ export default function StudentConsole({
                             </div>
                             <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
                               <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wider">Duration</span>
-                              <span className="font-bold text-xs text-[#0F172A]">{quizSubmittedResult.time_spent_seconds} Secs</span>
+                              <span className="font-bold text-xs text-[#0F172A]">{quizSubmittedResult.time_spent_seconds ?? "—"} Secs</span>
                             </div>
                           </div>
                         )}
@@ -2337,6 +2501,16 @@ export default function StudentConsole({
                       </div>
                     )}
                   </div>
+                ) : (
+                  <div className="text-center py-10 bg-red-50/50 rounded-xl border border-dashed border-red-200 text-red-700 font-medium text-xs space-y-2">
+                    <p>This quiz's details couldn't be loaded.</p>
+                    <button
+                      onClick={() => handleEnterQuiz(selectedQuizActivity)}
+                      className="text-[#2563EB] font-bold hover:underline cursor-pointer"
+                    >
+                      Try Again
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -2352,7 +2526,10 @@ export default function StudentConsole({
                   <FolderCode className="text-[#2563EB]" size={16} /> My Assigned Projects & Assignments
                 </h3>
                 {loadingActivities ? (
-                  <p className="text-slate-500 animate-pulse py-4 font-semibold text-center">Loading projects & assignments...</p>
+                  <div className="space-y-3">
+                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                  </div>
                 ) : programActivities.filter(a => a.activity_type_code === "project" || a.activity_type_code === "assignment").length > 0 ? (
                   <div className="space-y-4">
                     {programActivities.filter(a => a.activity_type_code === "project" || a.activity_type_code === "assignment").map((act) => (
@@ -2361,17 +2538,7 @@ export default function StudentConsole({
                           <h4 className="font-bold text-xs text-[#0F172A]">{act.title}</h4>
                           <p className="text-[#475569] text-[10px] mt-1.5 max-w-xl leading-relaxed">{act.description || "No description provided."}</p>
                           <div className="flex flex-wrap items-center gap-2 mt-3 text-[9px]">
-                            <span className={`px-2 py-0.5 rounded font-bold border uppercase ${
-                              act.progress?.status_code === "completed" || act.progress?.status_code === "reviewed"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                : act.progress?.status_code === "submitted"
-                                ? "bg-blue-50 text-blue-700 border-blue-100"
-                                : act.progress?.status_code === "started"
-                                ? "bg-amber-50 text-amber-700 border-amber-100"
-                                : "bg-slate-50 text-[#475569] border-[#E2E8F0]"
-                            }`}>
-                              Status: {act.progress?.status_code || "assigned"}
-                            </span>
+                            <StatusBadge status={act.progress?.status_code} size="sm" />
                             {act.progress?.score !== null && (
                               <span className="bg-[#16A34A]/10 text-[#16A34A] px-2 py-0.5 rounded font-bold border border-[#16A34A]/15">
                                 Score: {act.progress?.score} / {act.progress?.max_score || 100}
@@ -2389,7 +2556,9 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center py-6 text-slate-500 font-medium">No projects assigned to your group.</p>
+                  <div className="text-center py-10 bg-slate-50/30 rounded-xl border border-dashed border-[#E2E8F0] text-[#475569] font-medium">
+                    No projects or assignments assigned to your group yet.
+                  </div>
                 )}
               </>
             ) : (
@@ -2409,7 +2578,10 @@ export default function StudentConsole({
                 </div>
 
                 {loading ? (
-                  <p className="text-slate-500 animate-pulse text-center py-8">Loading details...</p>
+                  <div className="space-y-3">
+                    <div className="h-32 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-24 bg-slate-100 animate-pulse rounded-xl"></div>
+                  </div>
                 ) : projectDetails && (
                   <div className="space-y-6">
                     <div className="border border-[#E2E8F0] rounded-xl p-5 bg-slate-50/20 space-y-4 text-xs">
@@ -2463,8 +2635,9 @@ export default function StudentConsole({
 
                       <div className="space-y-3 text-xs">
                         <div className="flex flex-col gap-1.5">
-                          <label className="font-bold text-[#0f172a]">GitHub Repository URL</label>
+                          <label htmlFor="project-github-url" className="font-bold text-[#0f172a]">GitHub Repository URL</label>
                           <input
+                            id="project-github-url"
                             type="text"
                             value={githubUrl}
                             onChange={(e) => setGithubUrl(e.target.value)}
@@ -2474,8 +2647,9 @@ export default function StudentConsole({
                         </div>
 
                         <div className="flex flex-col gap-1.5">
-                          <label className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
+                          <label htmlFor="project-submission-notes" className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
                           <textarea
+                            id="project-submission-notes"
                             value={submissionNotes}
                             onChange={(e) => setSubmissionNotes(e.target.value)}
                             placeholder="Write details or instructions for running the codebase here..."
@@ -2532,7 +2706,10 @@ export default function StudentConsole({
                   <TerminalIcon className="text-[#2563EB]" size={16} /> My Assigned Coding Challenges
                 </h3>
                 {loadingActivities ? (
-                  <p className="text-slate-500 animate-pulse py-4 font-semibold text-center">Loading challenges...</p>
+                  <div className="space-y-3">
+                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                  </div>
                 ) : programActivities.filter(a => a.activity_type_code === "programming_challenge" || a.activity_type_code === "programming").length > 0 ? (
                   <div className="space-y-4">
                     {programActivities.filter(a => a.activity_type_code === "programming_challenge" || a.activity_type_code === "programming").map((act) => (
@@ -2541,7 +2718,7 @@ export default function StudentConsole({
                           <h4 className="font-bold text-xs text-[#0F172A]">{act.title}</h4>
                           <p className="text-[#475569] text-[10px] mt-1 line-clamp-1">{act.description}</p>
                           <div className="flex flex-wrap gap-2 text-[9px] text-[#475569] font-semibold mt-2.5">
-                            <span className="bg-slate-100 px-2 py-0.5 rounded uppercase font-bold border text-slate-700">Status: {act.progress?.status_code}</span>
+                            <StatusBadge status={act.progress?.status_code} size="sm" />
                             {act.progress?.score !== null && (
                               <span className="bg-[#16A34A]/10 text-[#16A34A] px-2 py-0.5 rounded font-bold border border-[#16A34A]/20">Score: {act.progress?.score} / {act.progress?.max_score || 100}</span>
                             )}
@@ -2557,7 +2734,9 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center py-6 text-slate-500 font-medium">No challenges assigned to your group.</p>
+                  <div className="text-center py-10 bg-slate-50/30 rounded-xl border border-dashed border-[#E2E8F0] text-[#475569] font-medium">
+                    No coding challenges assigned to your group yet.
+                  </div>
                 )}
               </>
             ) : (
@@ -2578,11 +2757,35 @@ export default function StudentConsole({
                   <span className="font-semibold text-[#0F172A]">{selectedChallengeActivity.title}</span>
                 </div>
 
+                {/* Mobile: the code editor workspace needs a larger screen */}
+                <div className="lg:hidden bg-amber-50 border border-amber-200 rounded-xl p-6 text-center space-y-3">
+                  <TerminalIcon className="mx-auto text-amber-600" size={28} />
+                  <p className="text-sm font-bold text-[#0F172A]">Desktop Required</p>
+                  <p className="text-xs text-amber-800 leading-relaxed max-w-xs mx-auto">
+                    Coding challenges need a full code editor that isn't available on mobile yet. Please switch to a laptop or desktop to attempt this challenge.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSelectedChallengeActivity(null);
+                      setChallengeDetails(null);
+                      setSelectedSubmissionForResults(null);
+                      setSubmissionResults(null);
+                    }}
+                    className="inline-flex items-center gap-1 bg-white border border-amber-300 text-amber-800 font-bold text-xs px-4 py-2 rounded-lg hover:bg-amber-100 transition-all cursor-pointer"
+                  >
+                    <ChevronLeft size={13} /> Back to Challenges
+                  </button>
+                </div>
+
+                <div className="hidden lg:block">
                 {loading ? (
-                  <p className="text-slate-500 animate-pulse text-center py-8">Loading details...</p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="h-40 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-40 bg-slate-100 animate-pulse rounded-xl"></div>
+                  </div>
                 ) : challengeDetails && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                    
+
                     {/* Left: Problem statement & Examples */}
                     <div className="space-y-6">
                       <div className="border border-[#E2E8F0] rounded-xl p-5 bg-slate-50/20 space-y-4">
@@ -2659,7 +2862,8 @@ export default function StudentConsole({
                           <select
                             value={editorLanguage}
                             onChange={(e) => setEditorLanguage(e.target.value)}
-                            className="bg-slate-50 border border-[#E2E8F0] rounded-md px-2 py-1 text-[10px] font-semibold text-[#0F172A] outline-none"
+                            aria-label="Programming language"
+                            className="bg-white border border-[#E2E8F0] hover:border-[#2563EB]/30 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/15 transition-all cursor-pointer"
                           >
                             <option value="javascript">JavaScript (Node.js)</option>
                             <option value="python">Python 3</option>
@@ -2669,13 +2873,27 @@ export default function StudentConsole({
                           </select>
                         </div>
 
-                        <textarea
-                          value={editorCode}
-                          onChange={(e) => setEditorCode(e.target.value)}
-                          rows={12}
-                          className="bg-[#0F172A] text-emerald-400 font-mono p-4 rounded-xl w-full text-[10px] outline-none border border-slate-800 leading-normal"
-                          placeholder="// Write your code solution here..."
-                        />
+                        <div className="flex rounded-xl border border-slate-800 overflow-hidden">
+                          <div
+                            ref={codeEditorGutterRef}
+                            aria-hidden="true"
+                            className="bg-[#0F172A] text-slate-600 font-mono text-[10px] leading-normal py-4 pl-3 pr-2 text-right select-none overflow-hidden shrink-0"
+                            style={{ height: "18rem" }}
+                          >
+                            {Array.from({ length: Math.max(editorCode.split("\n").length, 12) }, (_, i) => (
+                              <div key={i}>{i + 1}</div>
+                            ))}
+                          </div>
+                          <textarea
+                            value={editorCode}
+                            onChange={(e) => setEditorCode(e.target.value)}
+                            onScroll={handleCodeEditorScroll}
+                            spellCheck={false}
+                            className="bg-[#0F172A] text-emerald-400 font-mono p-4 w-full text-[10px] outline-none leading-normal resize-none"
+                            style={{ height: "18rem" }}
+                            placeholder="// Write your code solution here..."
+                          />
+                        </div>
 
                         <button
                           onClick={handleSubmitChallenge}
@@ -2699,15 +2917,7 @@ export default function StudentConsole({
                                 <span className="font-bold capitalize text-[#0F172A]">{sub.language}</span>
                                 <span className="text-[10px] text-[#475569] ml-2">{new Date(sub.submitted_at).toLocaleTimeString()}</span>
                                 <div className="mt-1 flex gap-2">
-                                  <span className={`px-1.5 py-0.5 rounded-[4px] font-bold text-[8px] uppercase border ${
-                                    sub.submission_status_code === "accepted"
-                                      ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                                      : sub.submission_status_code === "pending" || sub.submission_status_code === "running"
-                                      ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
-                                      : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
-                                  }`}>
-                                    {sub.submission_status_code}
-                                  </span>
+                                  <StatusBadge status={sub.submission_status_code} />
                                 </div>
                               </div>
                               <button
@@ -2775,6 +2985,7 @@ export default function StudentConsole({
 
                   </div>
                 )}
+                </div>
               </div>
             )}
           </div>

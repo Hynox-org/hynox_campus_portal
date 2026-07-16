@@ -17,6 +17,8 @@ export function useAllTeachers() {
       if (res.error) throw new Error(res.error);
       return res.teachers || [];
     },
+    staleTime: DASHBOARD_STALE_TIME,
+    gcTime: DASHBOARD_GC_TIME,
   });
 }
 
@@ -28,6 +30,8 @@ export function useAllCohorts() {
       if (res.error) throw new Error(res.error);
       return res.cohorts || [];
     },
+    staleTime: DASHBOARD_STALE_TIME,
+    gcTime: DASHBOARD_GC_TIME,
   });
 }
 

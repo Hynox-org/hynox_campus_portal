@@ -1193,6 +1193,7 @@ export async function createQuizQuestionAndOptions(
 
   if (qError) throw qError;
 
+  let insertedOptions: any[] = [];
   if (options.length > 0) {
     const optionsToInsert = options.map(opt => ({
       question_id: question.id,
@@ -1201,15 +1202,20 @@ export async function createQuizQuestionAndOptions(
       position: opt.position
     }));
 
-    const { error: optError } = await supabase
+    const { data: optsData, error: optError } = await supabase
       .schema("learning")
       .from("quiz_options")
-      .insert(optionsToInsert);
+      .insert(optionsToInsert)
+      .select();
 
     if (optError) throw optError;
+    insertedOptions = optsData || [];
   }
 
-  return question;
+  return {
+    ...question,
+    options: insertedOptions
+  };
 }
 
 export async function createChallengeExample(input: {
@@ -2061,4 +2067,92 @@ export async function listCohortQuizAttempts(cohortId: string) {
     };
   });
 }
+
+export async function deleteActivity(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .schema("learning")
+    .from("activities")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteQuizQuestion(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .schema("learning")
+    .from("quiz_questions")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+  return true;
+}
+
+export async function updateQuizQuestionAndOptions(
+  questionId: string,
+  questionText: string,
+  questionType: string,
+  points: number,
+  options: Array<{ optionText: string; isCorrect: boolean; position: number }>
+) {
+  const supabase = await createClient();
+  
+  const { error: qError } = await supabase
+    .schema("learning")
+    .from("quiz_questions")
+    .update({
+      question_text: questionText,
+      question_type: questionType,
+      points,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", questionId);
+    
+  if (qError) throw qError;
+
+  const { error: dError } = await supabase
+    .schema("learning")
+    .from("quiz_options")
+    .delete()
+    .eq("question_id", questionId);
+    
+  if (dError) throw dError;
+  
+  let insertedOptions: any[] = [];
+  if (options.length > 0) {
+    const { data: optsData, error: iError } = await supabase
+      .schema("learning")
+      .from("quiz_options")
+      .insert(
+        options.map(o => ({
+          question_id: questionId,
+          option_text: o.optionText,
+          is_correct: o.isCorrect,
+          position: o.position
+        }))
+      )
+      .select();
+      
+    if (iError) throw iError;
+    insertedOptions = optsData || [];
+  }
+  
+  const { data: updatedQ } = await supabase
+    .schema("learning")
+    .from("quiz_questions")
+    .select("*")
+    .eq("id", questionId)
+    .single();
+    
+  return {
+    ...updatedQ,
+    options: insertedOptions
+  };
+}
+
 

@@ -23,6 +23,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
 import { usePrograms } from "@/hooks/use-academics";
 import AttendancePanel from "@/components/attendance-panel";
+import { useToast } from "@/components/toast";
 import { 
   Building, 
   Users, 
@@ -32,8 +33,7 @@ import {
   Trash2, 
   Edit, 
   Calendar, 
-  Check, 
-  AlertCircle,
+  Check,
   FileText,
   TrendingUp,
   Award,
@@ -86,8 +86,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
   const [enrollmentStatuses, setEnrollmentStatuses] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { showSuccess, showError } = useToast();
 
   // Modals & Form states
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
@@ -131,6 +130,19 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
   const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
   const [expandedQuizId, setExpandedQuizId] = useState<string | null>(null);
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+
+  // Scroll lock when any sidebar drawer is open to prevent background viewport scrolling
+  useEffect(() => {
+    const isOpen = cohortModalOpen || enrollModalOpen || assignModalOpen || !!selectedStudent;
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [cohortModalOpen, enrollModalOpen, assignModalOpen, selectedStudent]);
 
   // Fetch drawer details on student click
   useEffect(() => {
@@ -181,8 +193,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
 
   const handleCohortSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
     setLoading(true);
     
     try {
@@ -195,9 +205,9 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           status_code: cohortForm.status_code
         });
         if (res.error) {
-          setError(res.error);
+          showError(res.error);
         } else {
-          setSuccess("Cohort updated successfully!");
+          showSuccess("Cohort updated successfully!");
           setCohortModalOpen(false);
           setEditingCohort(null);
           await refreshLists();
@@ -214,15 +224,15 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           status_code: cohortForm.status_code
         });
         if (res.error) {
-          setError(res.error);
+          showError(res.error);
         } else {
-          setSuccess("Cohort created successfully!");
+          showSuccess("Cohort created successfully!");
           setCohortModalOpen(false);
           await refreshLists();
         }
       }
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+      showError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
@@ -245,20 +255,18 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
     if (!confirm("Are you sure you want to soft delete this cohort?")) return;
     const res = await deleteCohortAction(id);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Cohort deleted successfully!");
+      showSuccess("Cohort deleted successfully!");
       await refreshLists();
     }
   };
 
   const handleEnrollSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
 
     if (selectedStudentIds.length === 0) {
-      setError("Please select at least one student to enroll.");
+      showError("Please select at least one student to enroll.");
       return;
     }
 
@@ -276,13 +284,13 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       const errors = results.filter(r => r.error);
       
       if (errors.length > 0) {
-        setError(`Enrolled some students, but encountered errors: ${errors.map(e => e.error).join(", ")}`);
+        showError(`Enrolled some students, but encountered errors: ${errors.map(e => e.error).join(", ")}`);
       } else {
-        setSuccess(`Successfully enrolled ${selectedStudentIds.length} student(s) into the cohort!`);
+        showSuccess(`Successfully enrolled ${selectedStudentIds.length} student(s) into the cohort!`);
         setEnrollModalOpen(false);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to enroll students.");
+      showError(err.message || "Failed to enroll students.");
     } finally {
       setLoading(false);
       await refreshLists();
@@ -292,9 +300,9 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
   const handleEnrollStatusChange = async (id: string, newStatus: string) => {
     const res = await updateEnrollmentStatusAction(id, newStatus);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Enrollment status updated!");
+      showSuccess("Enrollment status updated!");
       await refreshLists();
     }
   };
@@ -303,17 +311,15 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
     if (!confirm("Are you sure you want to remove this enrollment?")) return;
     const res = await removeEnrollmentAction(id);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Enrollment removed successfully!");
+      showSuccess("Enrollment removed successfully!");
       await refreshLists();
     }
   };
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
     setLoading(true);
 
     try {
@@ -321,47 +327,8 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         ass => ass.cohort_id === assignForm.cohort_id && ass.course_id === assignForm.course_id
       );
       if (isAlreadyAssigned) {
-        setError("This course is already assigned to the selected cohort.");
+        showError("This course is already assigned to the selected cohort.");
         return;
-      }
-
-      const selectedCohort = cohorts.find(c => c.id === assignForm.cohort_id);
-      if (selectedCohort) {
-        const cohortStart = selectedCohort.start_date ? new Date(selectedCohort.start_date) : null;
-        const cohortEnd = selectedCohort.end_date ? new Date(selectedCohort.end_date) : null;
-
-        if (assignForm.start_date) {
-          const assignStart = new Date(assignForm.start_date);
-          if (cohortStart && assignStart < cohortStart) {
-            setError(`Course assignment start date cannot be before cohort start date (${selectedCohort.start_date.split('T')[0]}).`);
-            return;
-          }
-          if (cohortEnd && assignStart > cohortEnd) {
-            setError(`Course assignment start date cannot be after cohort end date (${selectedCohort.end_date.split('T')[0]}).`);
-            return;
-          }
-        }
-
-        if (assignForm.due_date) {
-          const assignDue = new Date(assignForm.due_date);
-          if (cohortStart && assignDue < cohortStart) {
-            setError(`Course assignment due/end date cannot be before cohort start date (${selectedCohort.start_date.split('T')[0]}).`);
-            return;
-          }
-          if (cohortEnd && assignDue > cohortEnd) {
-            setError(`Course assignment due/end date cannot be after cohort end date (${selectedCohort.end_date.split('T')[0]}).`);
-            return;
-          }
-        }
-
-        if (assignForm.start_date && assignForm.due_date) {
-          const assignStart = new Date(assignForm.start_date);
-          const assignDue = new Date(assignForm.due_date);
-          if (assignStart > assignDue) {
-            setError("Course assignment start date cannot be after due date.");
-            return;
-          }
-        }
       }
 
       const res = await assignCourseAction({
@@ -373,14 +340,14 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       });
 
       if (res.error) {
-        setError(res.error);
+        showError(res.error);
       } else {
-        setSuccess("Course successfully assigned to cohort!");
+        showSuccess("Course successfully assigned to cohort!");
         setAssignModalOpen(false);
         await refreshLists();
       }
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred.");
+      showError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
@@ -390,9 +357,9 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
     if (!confirm("Are you sure you want to remove this course assignment?")) return;
     const res = await removeCourseAssignmentAction(id);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Course assignment removed!");
+      showSuccess("Course assignment removed!");
       await refreshLists();
     }
   };
@@ -422,18 +389,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           ))}
         </select>
       </div>
-
-      {error && (
-        <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 text-xs">
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 text-xs">
-          {success}
-        </div>
-      )}
 
       {/* Sub Tabs */}
       <div className="flex overflow-x-auto whitespace-nowrap border-b border-[#d2d2d7] scrollbar-none">
@@ -495,7 +450,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       {/* cohorts view */}
       {!loading && activeSubTab === "cohorts" && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-wrap justify-between items-center gap-2">
             <h4 className="font-bold text-xs text-[#1d1d1f] uppercase tracking-wider">Active Cohorts</h4>
             <button
               onClick={() => {
@@ -503,7 +458,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                 setCohortForm({ name: "", code: "", start_date: "", end_date: "", status_code: "active", program_id: programs[0]?.id || "" });
                 setCohortModalOpen(true);
               }}
-              className="bg-[#0066cc] text-white px-3 py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#0066cc]/95 transition-all flex items-center gap-1"
+              className="bg-[#0066cc] text-white px-3 py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#0066cc]/95 transition-all flex items-center gap-1 shrink-0"
             >
               <Plus size={13} /> Create Cohort
             </button>
@@ -684,7 +639,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                     <th className="px-6 py-3">Cohort</th>
                     <th className="px-6 py-3">Type</th>
                     <th className="px-6 py-3">Required</th>
-                    <th className="px-6 py-3">Timelines</th>
                     <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -702,9 +656,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                             {ass.is_required ? "Required" : "Optional"}
                           </span>
                         </td>
-                        <td className="px-6 py-3.5 text-[#86868b] font-mono">
-                          {ass.start_date ? ass.start_date.substring(0, 10) : "Immediate"} to {ass.due_date ? ass.due_date.substring(0, 10) : "Open"}
-                        </td>
                         <td className="px-6 py-3.5 text-right">
                           <button onClick={() => handleRemoveAssignment(ass.id)} className="text-[#DC2626] hover:text-[#DC2626]/80" title="Remove course assignment">
                             <Trash2 size={14} />
@@ -714,7 +665,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-[#86868b] font-semibold bg-slate-50/10">
+                      <td colSpan={5} className="px-6 py-8 text-center text-[#86868b] font-semibold bg-slate-50/10">
                         No course assignments defined.
                       </td>
                     </tr>
@@ -740,11 +691,11 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           {/* Backdrop overlay */}
           <div
             onClick={() => setCohortModalOpen(false)}
-            className="fixed inset-0 z-40 bg-[#1d1d1f]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
             {/* Header */}
             <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex justify-between items-center shrink-0">
               <div>
@@ -805,7 +756,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="block font-bold text-[#86868b]">Start Date</label>
                     <input
@@ -848,7 +799,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#d2d2d7] p-5 flex justify-end gap-3 shrink-0">
+              <div className="bg-slate-50 border-t border-[#d2d2d7] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setCohortModalOpen(false)}
@@ -875,11 +826,11 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           {/* Backdrop overlay */}
           <div
             onClick={() => setEnrollModalOpen(false)}
-            className="fixed inset-0 z-40 bg-[#1d1d1f]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
             {/* Header */}
             <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex justify-between items-center shrink-0">
               <div>
@@ -1038,7 +989,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#d2d2d7] p-5 flex justify-end gap-3 shrink-0">
+              <div className="bg-slate-50 border-t border-[#d2d2d7] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setEnrollModalOpen(false)}
@@ -1065,11 +1016,11 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           {/* Backdrop overlay */}
           <div
             onClick={() => setAssignModalOpen(false)}
-            className="fixed inset-0 z-40 bg-[#1d1d1f]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
             {/* Header */}
             <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex justify-between items-center shrink-0">
               <div>
@@ -1090,29 +1041,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
             <form onSubmit={handleAssignSubmit} className="flex-1 flex flex-col min-h-0">
               {(() => {
                 const selectedCohortForAssign = cohorts.find(c => c.id === assignForm.cohort_id);
-                const cohortLimits = (() => {
-                  if (!selectedCohortForAssign) return { min: "", max: "" };
-                  
-                  const formatDate = (dStr: string) => {
-                    if (!dStr) return "";
-                    return dStr.split("T")[0];
-                  };
-
-                  const cohortStart = formatDate(selectedCohortForAssign.start_date);
-                  const cohortEnd = formatDate(selectedCohortForAssign.end_date);
-                  const todayStr = new Date().toISOString().split("T")[0];
-
-                  let min = cohortStart;
-                  // If cohort starts in the past (or is running now), set min to today
-                  if (cohortStart && cohortStart < todayStr) {
-                    min = todayStr;
-                  } else if (!cohortStart) {
-                    min = todayStr;
-                  }
-
-                  let max = cohortEnd;
-                  return { min, max };
-                })();
 
                 return (
                   <>
@@ -1166,30 +1094,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                         </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="block font-bold text-[#86868b]">Start Date</label>
-                          <input
-                            type="date"
-                            value={assignForm.start_date}
-                            min={cohortLimits.min}
-                            max={cohortLimits.max || undefined}
-                            onChange={(e) => setAssignForm({ ...assignForm, start_date: e.target.value })}
-                            className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm animate-fadeIn"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="block font-bold text-[#86868b]">Due Date</label>
-                          <input
-                            type="date"
-                            value={assignForm.due_date}
-                            min={assignForm.start_date || cohortLimits.min}
-                            max={cohortLimits.max || undefined}
-                            onChange={(e) => setAssignForm({ ...assignForm, due_date: e.target.value })}
-                            className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm animate-fadeIn"
-                          />
-                        </div>
-                      </div>
+
 
                       <div className="flex items-center gap-2 pt-2">
                         <input
@@ -1204,7 +1109,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                     </div>
 
                     {/* Actions Footer */}
-                    <div className="bg-slate-50 border-t border-[#d2d2d7] p-5 flex justify-end gap-3 shrink-0">
+                    <div className="bg-slate-50 border-t border-[#d2d2d7] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                       <button
                         type="button"
                         onClick={() => setAssignModalOpen(false)}
@@ -1272,19 +1177,19 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         });
 
         return (
-          <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn" onClick={() => setSelectedStudent(null)}>
-            <div className="relative w-full max-w-3xl bg-white h-full shadow-2xl flex flex-col z-50 animate-slideOver overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-[9998] flex justify-end animate-fadeIn" onClick={() => setSelectedStudent(null)}>
+            <div className="relative w-full max-w-3xl bg-white h-full shadow-2xl flex flex-col z-[9999] animate-slideOver overflow-hidden" onClick={(e) => e.stopPropagation()}>
               
               {/* Drawer Header */}
-              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-start gap-4 bg-slate-50 shrink-0">
-                <div className="flex gap-3 items-center">
-                  <div className="w-12 h-12 rounded-2xl bg-[#0066cc] text-white flex items-center justify-center font-bold text-lg uppercase shadow-md border border-[#0066cc]/10">
+              <div className="p-4 sm:p-6 border-b border-[#E2E8F0] flex justify-between items-start gap-3 bg-slate-50 shrink-0">
+                <div className="flex gap-3 items-center min-w-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-[#0066cc] text-white flex items-center justify-center font-bold text-base sm:text-lg uppercase shadow-md border border-[#0066cc]/10 shrink-0">
                     {(selectedStudent.student?.full_name || selectedStudent.student?.email || "S").substring(0, 2)}
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-[#0F172A]">{selectedStudent.student?.full_name || "Enrolled Student"}</h3>
-                    <p className="text-xs text-[#475569]">{selectedStudent.student?.email}</p>
-                    <div className="flex items-center gap-2 mt-1">
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-bold text-[#0F172A] truncate">{selectedStudent.student?.full_name || "Enrolled Student"}</h3>
+                    <p className="text-xs text-[#475569] truncate">{selectedStudent.student?.email}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#0066cc]/10 text-[#0066cc] border border-[#0066cc]/20">
                         {selectedStudent.cohort?.name || "No cohort"}
                       </span>
@@ -1292,24 +1197,24 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                     </div>
                   </div>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => setSelectedStudent(null)}
-                  className="p-1.5 hover:bg-slate-200 rounded-xl transition-all border border-transparent hover:border-[#E2E8F0] cursor-pointer"
+                  className="p-1.5 hover:bg-slate-200 rounded-xl transition-all border border-transparent hover:border-[#E2E8F0] cursor-pointer shrink-0"
                 >
                   <X size={18} className="text-[#475569]" />
                 </button>
               </div>
 
               {/* Drawer Tab Navigation */}
-              <div className="flex border-b border-[#E2E8F0] px-6 bg-white shrink-0">
+              <div className="flex border-b border-[#E2E8F0] px-4 sm:px-6 bg-white shrink-0 overflow-x-auto no-scrollbar">
                 {(["overview", "syllabus", "quizzes", "projects", "challenges"] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setStudentDetailTab(tab)}
-                    className={`py-3 px-4 text-xs font-bold border-b-2 transition-all capitalize cursor-pointer ${
-                      studentDetailTab === tab 
-                        ? "border-[#0066cc] text-[#0066cc] font-bold" 
+                    className={`py-3 px-3 sm:px-4 text-xs font-bold border-b-2 transition-all capitalize cursor-pointer whitespace-nowrap shrink-0 ${
+                      studentDetailTab === tab
+                        ? "border-[#0066cc] text-[#0066cc] font-bold"
                         : "border-transparent text-[#475569] hover:text-[#0F172A]"
                     }`}
                   >
@@ -1319,12 +1224,12 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
               </div>
 
               {/* Drawer Body Scroll */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+
                 {/* 1. OVERVIEW TAB */}
                 {studentDetailTab === "overview" && (
                   <div className="space-y-6 animate-fadeIn">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                       <div className="bg-[#0066cc]/5 border border-[#0066cc]/10 rounded-2xl p-4 text-center">
                         <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Course Progress</span>
                         <div className="text-xl font-black text-[#0066cc] mt-1">{progressPercentage}%</div>
@@ -1623,7 +1528,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                             </span>
                           </div>
                           {sub.result && (
-                            <div className="bg-slate-50 rounded-lg p-3 grid grid-cols-2 gap-2 text-[10px] border border-[#E2E8F0] mt-1">
+                            <div className="bg-slate-50 rounded-lg p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] border border-[#E2E8F0] mt-1">
                               <div>
                                 <span className="text-[#475569] block">Score Awarded:</span>
                                 <strong className="text-[#0066cc] text-xs font-black">{sub.result.score} pts</strong>

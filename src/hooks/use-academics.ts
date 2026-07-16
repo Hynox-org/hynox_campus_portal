@@ -50,6 +50,8 @@ export function usePrograms(institutionId: string) {
       return res.programs || [];
     },
     enabled: !!institutionId,
+    staleTime: DASHBOARD_STALE_TIME,
+    gcTime: DASHBOARD_GC_TIME,
   });
 }
 
@@ -76,6 +78,8 @@ export function useCourses(programId: string) {
       return res.courses || [];
     },
     enabled: !!programId,
+    staleTime: DASHBOARD_STALE_TIME,
+    gcTime: DASHBOARD_GC_TIME,
   });
 }
 

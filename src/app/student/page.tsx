@@ -17,9 +17,9 @@ export default async function StudentPage() {
   const { authUser, primaryRole, institution } = userDetails;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#0F172A] font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#0F172A] font-sans overflow-x-hidden">
       <header className="bg-white border-b border-[#E2E8F0] shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="bg-[#2563EB]/10 text-[#2563EB] p-2 rounded-xl border border-[#2563EB]/20">
               <Terminal size={18} />
@@ -43,7 +43,7 @@ export default async function StudentPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 flex-1 w-full overflow-x-hidden">
         <StudentConsole
           studentEmail={authUser.email}
           fullName={userDetails.user.full_name || "Student"}

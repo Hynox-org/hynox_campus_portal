@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { useToast } from "@/components/toast";
 import { 
   assignCourseInstructorsAction,
   createModuleAction, updateModuleAction, deleteModuleAction,
@@ -52,8 +53,7 @@ export default function CourseSpaceConsole({
   const [selectedLesson, setSelectedLesson] = useState<any | null>(null);
   
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const { showSuccess, showError } = useToast();
 
   const isStaff = ["super_admin", "institution_admin", "teacher", "trainer"].includes(primaryRole);
 
@@ -105,8 +105,6 @@ export default function CourseSpaceConsole({
   // Fetch resources when selecting lesson
   const handleSelectLesson = async (lesson: any) => {
     setSelectedLesson(lesson);
-    setError("");
-    setSuccess("");
 
     if (!lessonResources[lesson.id]) {
       setLoading(true);
@@ -121,14 +119,12 @@ export default function CourseSpaceConsole({
   // Instructor assignment action
   const handleSaveInstructors = async () => {
     setLoading(true);
-    setError("");
-    setSuccess("");
 
     const res = await assignCourseInstructorsAction(course.id, selectedInstructorIds);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
-      setSuccess("Assigned instructors updated successfully!");
+      showSuccess("Assigned instructors updated successfully!");
       router.refresh();
     }
     setLoading(false);
@@ -156,8 +152,7 @@ export default function CourseSpaceConsole({
   const handleModuleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    
+
     const payload = {
       course_id: course.id,
       title: moduleTitle,
@@ -169,7 +164,7 @@ export default function CourseSpaceConsole({
     if (editingItem) {
       const res = await updateModuleAction(editingItem.id, payload);
       if (res.error) {
-        setError(res.error);
+        showError(res.error);
       } else if (res.module) {
         setModules(prev => prev.map(m => m.id === editingItem.id ? { ...m, ...res.module } : m));
         setActiveModal(null);
@@ -177,7 +172,7 @@ export default function CourseSpaceConsole({
     } else {
       const res = await createModuleAction(payload);
       if (res.error) {
-        setError(res.error);
+        showError(res.error);
       } else if (res.module) {
         setModules(prev => [...prev, res.module].sort((a, b) => a.position - b.position));
         setActiveModal(null);
@@ -191,7 +186,7 @@ export default function CourseSpaceConsole({
     setLoading(true);
     const res = await deleteModuleAction(moduleId);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
       setModules(prev => prev.filter(m => m.id !== moduleId));
       if (selectedLesson && selectedLesson.module_id === moduleId) {
@@ -235,7 +230,6 @@ export default function CourseSpaceConsole({
   const handleLessonSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     const payload = {
       module_id: activeModuleIdForLess,
@@ -252,7 +246,7 @@ export default function CourseSpaceConsole({
     if (editingItem) {
       const res = await updateLessonAction(editingItem.id, payload);
       if (res.error) {
-        setError(res.error);
+        showError(res.error);
       } else if (res.lesson) {
         setModuleLessons(prev => ({
           ...prev,
@@ -266,7 +260,7 @@ export default function CourseSpaceConsole({
     } else {
       const res = await createLessonAction(payload);
       if (res.error) {
-        setError(res.error);
+        showError(res.error);
       } else if (res.lesson) {
         setModuleLessons(prev => ({
           ...prev,
@@ -283,7 +277,7 @@ export default function CourseSpaceConsole({
     setLoading(true);
     const res = await deleteLessonAction(less.id);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
       setModuleLessons(prev => ({
         ...prev,
@@ -310,7 +304,6 @@ export default function CourseSpaceConsole({
   const handleResourceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     const payload = {
       lesson_id: selectedLesson.id,
@@ -323,7 +316,7 @@ export default function CourseSpaceConsole({
 
     const res = await createLessonResourceAction(payload);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else if (res.resource) {
       setLessonResources(prev => ({
         ...prev,
@@ -339,7 +332,7 @@ export default function CourseSpaceConsole({
     setLoading(true);
     const res = await deleteLessonResourceAction(resId);
     if (res.error) {
-      setError(res.error);
+      showError(res.error);
     } else {
       setLessonResources(prev => ({
         ...prev,
@@ -485,18 +478,6 @@ export default function CourseSpaceConsole({
 
       {/* RIGHT COLUMN: WORKSPACE CORE (LESSON VIEWER OR INSTRUCTOR CONFIG) */}
       <div className="lg:col-span-2 space-y-6">
-        
-        {/* Global Notifications */}
-        {error && (
-          <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 text-xs">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 text-xs">
-            {success}
-          </div>
-        )}
 
         {selectedLesson ? (
           // LESSON WORKSPACE VIEW
@@ -718,7 +699,7 @@ export default function CourseSpaceConsole({
                     className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm resize-none"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-semibold mb-1 text-[#475569]">Order Position *</label>
                     <input
@@ -743,7 +724,7 @@ export default function CourseSpaceConsole({
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-[#E2E8F0] mt-6">
+                <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-[#E2E8F0] mt-6">
                   <button
                     type="button"
                     onClick={() => setActiveModal(null)}
@@ -809,29 +790,18 @@ export default function CourseSpaceConsole({
                     className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold mb-1 text-[#475569]">Duration (Minutes)</label>
-                    <input
-                      type="number"
-                      value={lessonDuration}
-                      onChange={(e) => setLessonDuration(parseInt(e.target.value) || 0)}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-1 text-[#475569]">Order Position *</label>
-                    <input
-                      type="number"
-                      value={lessonPos}
-                      onChange={(e) => setLessonPos(parseInt(e.target.value) || 1)}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm"
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-[#475569]">Order Position *</label>
+                  <input
+                    type="number"
+                    value={lessonPos}
+                    onChange={(e) => setLessonPos(parseInt(e.target.value) || 1)}
+                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm"
+                    required
+                  />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <label className="flex items-center gap-2 font-semibold text-[#475569] cursor-pointer">
                     <input
                       type="checkbox"
@@ -855,7 +825,7 @@ export default function CourseSpaceConsole({
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-[#E2E8F0] mt-6">
+                <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-[#E2E8F0] mt-6">
                   <button
                     type="button"
                     onClick={() => setActiveModal(null)}
@@ -938,7 +908,7 @@ export default function CourseSpaceConsole({
                   />
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-[#E2E8F0] mt-6">
+                <div className="flex flex-wrap justify-end gap-3 pt-4 border-t border-[#E2E8F0] mt-6">
                   <button
                     type="button"
                     onClick={() => setActiveModal(null)}
