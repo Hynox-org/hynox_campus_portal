@@ -138,6 +138,37 @@ export async function getChallengeSubmissionResultsAction(submissionId: string) 
   }
 }
 
+export async function upsertChallengeStarterTemplateAction(input: {
+  challengeId: string;
+  language: string;
+  starterCode: string;
+}) {
+  try {
+    const template = await service.upsertChallengeStarterTemplate(input);
+    return { template };
+  } catch (error: any) {
+    return { error: error.message || "Failed to save starter template." };
+  }
+}
+
+export async function updateChallengeStrictModeAction(challengeId: string, strictMode: boolean) {
+  try {
+    const challenge = await service.updateChallengeStrictMode(challengeId, strictMode);
+    return { challenge };
+  } catch (error: any) {
+    return { error: error.message || "Failed to update lockdown mode." };
+  }
+}
+
+export async function forfeitChallengeSubmissionAction(progressId: string, studentId: string, reason: string) {
+  try {
+    const progress = await service.forfeitChallengeSubmission(progressId, studentId, reason);
+    return { progress };
+  } catch (error: any) {
+    return { error: error.message || "Failed to forfeit challenge attempt." };
+  }
+}
+
 // Server action to list all activities for a tenant (force recompilation refresh)
 export async function listAllActivitiesAction(tenantId: string) {
   try {
@@ -348,11 +379,23 @@ export async function getActivityDetailsNoStudentAction(activityId: string, acti
         .eq("challenge_id", challenge.id)
         .order("position", { ascending: true });
 
+      const { data: starterTemplates } = await supabase
+        .schema("learning")
+        .from("challenge_starter_templates")
+        .select("language, starter_code")
+        .eq("challenge_id", challenge.id);
+
+      const starterCodeByLanguage: Record<string, string> = {};
+      for (const tpl of starterTemplates || []) {
+        starterCodeByLanguage[tpl.language] = tpl.starter_code;
+      }
+
       return {
         challenge,
         assignments: assignments || [],
         examples: examples || [],
-        testCases: testCases || []
+        testCases: testCases || [],
+        starterCodeByLanguage
       };
     }
     return { error: "Unknown activity type" };

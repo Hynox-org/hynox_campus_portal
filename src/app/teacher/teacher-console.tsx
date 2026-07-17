@@ -2,6 +2,7 @@
 
 import React, { useState, useTransition, useEffect, useRef } from "react";
 import AttendancePanel from "@/components/attendance-panel";
+import ChallengeEditor from "@/app/teacher/challenge-editor";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
@@ -367,7 +368,13 @@ export default function TeacherConsole({
     if (academicPrefetch?.courses && academicPrefetch.courses.length > 0) {
       setTenantCourses(academicPrefetch.courses);
       setCoursesList(academicPrefetch.courses);
-      if (!selectedCourseId) setSelectedCourseId(academicPrefetch.courses[0].id);
+      // Resync if unset, or if the current selection belongs to a course list
+      // from a different institution context and no longer exists in this one
+      // (this was the root cause of the course dropdown appearing "stuck").
+      const stillValid = academicPrefetch.courses.some((c: any) => c.id === selectedCourseId);
+      if (!selectedCourseId || !stillValid) {
+        setSelectedCourseId(academicPrefetch.courses[0].id);
+      }
     }
     // Keep deep course-module queries separate: their result includes lesson
     // resources, which the lightweight prefetch intentionally does not load.
@@ -375,6 +382,7 @@ export default function TeacherConsole({
   }, [academicPrefetch]);
   const [lessonsList, setLessonsList] = useState<any[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState<string>("");
+  const [lessonsLoading, setLessonsLoading] = useState(false);
 
   const [activityType, setActivityType] = useState<"quiz" | "project" | "programming">("quiz");
   const [title, setTitle] = useState("");
@@ -404,7 +412,7 @@ export default function TeacherConsole({
   const [chalInput, setChalInput] = useState("");
   const [chalOutput, setChalOutput] = useState("");
   const [chalConstraints, setChalConstraints] = useState("");
-  const [chalStarter, setChalStarter] = useState("");
+  const [chalStrictMode, setChalStrictMode] = useState(false);
 
   // Subclass creation ids
   const [createdActivityId, setCreatedActivityId] = useState("");
@@ -444,6 +452,7 @@ export default function TeacherConsole({
     chal_starter_code: "",
     chal_time_limit: 1000,
     chal_memory_limit: 256,
+    chal_strict_mode: false,
     assignments: []
   });
 
@@ -516,14 +525,71 @@ export default function TeacherConsole({
   const filteredCohorts = cohorts;
   const filteredCohortIds = cohorts.map(c => c.id);
 
-  // Load lessons whenever course is selected for activity builder
+  // Load lessons whenever course is selected for activity builder. A course with
+  // no modules/lessons yet used to leave this dropdown silently empty with no
+  // way to proceed — auto-provision a default module + lesson in that case,
+  // mirroring the same fallback already used in admin/learning-manager.tsx.
   useEffect(() => {
-    if (selectedCourseId) {
-      listLessonsForCourseAction(selectedCourseId).then(res => setLessonsList(res.lessons || []));
-    } else {
+    setSelectedLessonId("");
+    if (!selectedCourseId) {
       setLessonsList([]);
+      return;
     }
-  }, [selectedCourseId]);
+
+    let cancelled = false;
+    setLessonsLoading(true);
+
+    (async () => {
+      try {
+        const res = await listLessonsForCourseAction(selectedCourseId);
+        let courseLessons = res.lessons || [];
+
+        if (courseLessons.length === 0) {
+          const modRes = await listModulesAction(selectedCourseId);
+          let moduleId = modRes.modules?.[0]?.id || "";
+
+          if (!moduleId) {
+            const newMod = await createModuleAction({
+              course_id: selectedCourseId,
+              title: "Default Module",
+              description: "Auto-generated module for activity placement",
+              position: 1,
+              tenant_id: selectedInstId,
+              institution_id: selectedInstId
+            });
+            moduleId = newMod.module?.id || "";
+          }
+
+          if (moduleId) {
+            const newLes = await createLessonAction({
+              module_id: moduleId,
+              title: "Default Lesson",
+              position: 1,
+              tenant_id: selectedInstId,
+              institution_id: selectedInstId
+            });
+            if (newLes.lesson) {
+              courseLessons = [newLes.lesson];
+            }
+          }
+        }
+
+        if (!cancelled) {
+          setLessonsList(courseLessons);
+          if (courseLessons.length > 0) setSelectedLessonId(courseLessons[0].id);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setLessonsList([]);
+          showError(err.message || "Failed to load lessons for the selected course.");
+        }
+      } finally {
+        if (!cancelled) setLessonsLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedCourseId, selectedInstId]);
 
   // Load modules & lessons for syllabus manager - use prefetch cache first
   useEffect(() => {
@@ -739,8 +805,8 @@ export default function TeacherConsole({
   // Form submit: activity building
   const handleCreateActivityBase = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedLessonId) {
-      showError("Please select a Course and target Lesson.");
+    if (!selectedCourseId || !selectedLessonId) {
+      showError(!selectedCourseId ? "Please select a course." : "Still preparing this course for activities — please wait a moment and try again.");
       return;
     }
     if (activityType === "quiz" && quizStrictMode && !quizTimeLimit) {
@@ -779,7 +845,7 @@ export default function TeacherConsole({
         chal_input_format: chalInput,
         chal_output_format: chalOutput,
         chal_constraints: chalConstraints,
-        chal_starter_code: chalStarter
+        chal_strict_mode: chalStrictMode
       });
 
       if (res.error) {
@@ -931,6 +997,7 @@ export default function TeacherConsole({
       chal_starter_code: detRes?.challenge?.starter_code ?? "",
       chal_time_limit: detRes?.challenge?.time_limit_ms ?? 1000,
       chal_memory_limit: detRes?.challenge?.memory_limit_mb ?? 256,
+      chal_strict_mode: detRes?.challenge?.strict_mode ?? false,
 
       // Assignments
       assignments: (detRes?.assignments || []).map((a: any) => ({
@@ -998,6 +1065,7 @@ export default function TeacherConsole({
         chal_starter_code: editForm.chal_starter_code,
         chal_time_limit: Number(editForm.chal_time_limit),
         chal_memory_limit: Number(editForm.chal_memory_limit),
+        chal_strict_mode: editForm.chal_strict_mode,
 
         // Assignments
         assignments: editForm.assignments.map((a: any) => ({
@@ -1415,14 +1483,22 @@ export default function TeacherConsole({
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="block font-bold text-[#475569] uppercase text-[9px]">Starter Code</label>
+                        <label className="block font-bold text-[#475569] uppercase text-[9px]">Legacy Starter Code (fallback, language-agnostic)</label>
                         <textarea
-                          rows={5}
+                          rows={3}
                           value={editForm.chal_starter_code}
                           onChange={(e) => setEditForm({ ...editForm, chal_starter_code: e.target.value })}
                           className="w-full bg-slate-900 text-slate-100 border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
                         />
                       </div>
+                      {createdChallengeId && (
+                        <ChallengeEditor
+                          challengeId={createdChallengeId}
+                          initialStarterCode={activityDetails?.starterCodeByLanguage}
+                          strictMode={editForm.chal_strict_mode}
+                          onStrictModeChange={(value) => setEditForm({ ...editForm, chal_strict_mode: value })}
+                        />
+                      )}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-1">
                           <label className="block font-bold text-[#475569] uppercase text-[9px]">Difficulty</label>
@@ -3594,36 +3670,27 @@ export default function TeacherConsole({
                       <Plus size={16} className="text-[#2563EB]" /> Create Learning Activity
                     </h3>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                          Select Course *
-                        </label>
-                        <select
-                          value={selectedCourseId}
-                          onChange={(e) => setSelectedCourseId(e.target.value)}
-                          className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
-                          required
-                        >
-                          <option value="">-- Choose Course --</option>
-                          {filteredCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                          Target Lesson *
-                        </label>
-                        <select
-                          value={selectedLessonId}
-                          onChange={(e) => setSelectedLessonId(e.target.value)}
-                          className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
-                          required
-                        >
-                          <option value="">-- Choose Lesson --</option>
-                          {lessonsList.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
-                        </select>
-                      </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                        Select Course *
+                      </label>
+                      <select
+                        value={selectedCourseId}
+                        onChange={(e) => setSelectedCourseId(e.target.value)}
+                        className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                        required
+                      >
+                        <option value="">-- Choose Course --</option>
+                        {filteredCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                      </select>
+                      {lessonsLoading && (
+                        <p className="text-[10px] text-[#475569] font-semibold mt-1">Preparing this course for activities...</p>
+                      )}
+                      {!lessonsLoading && selectedCourseId && lessonsList.length === 0 && (
+                        <p className="text-[10px] text-[#DC2626] font-semibold mt-1">
+                          Could not prepare this course for activities. Try selecting a different course.
+                        </p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3796,21 +3863,37 @@ export default function TeacherConsole({
                         <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-wide">Challenge Definition</h4>
                         <div>
                           <label className="text-[10px] font-semibold text-[#475569] block mb-1">Problem Statement</label>
-                          <textarea 
-                            rows={3} 
-                            value={chalStatement} 
+                          <textarea
+                            rows={3}
+                            value={chalStatement}
                             onChange={(e) => setChalStatement(e.target.value)}
                             className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full font-mono"
                           />
                         </div>
-                        <div>
-                          <label className="text-[10px] font-semibold text-[#475569] block mb-1">Starter Code Outline</label>
-                          <textarea 
-                            rows={2} 
-                            value={chalStarter} 
-                            onChange={(e) => setChalStarter(e.target.value)}
-                            className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full font-mono"
-                          />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-[10px] font-semibold text-[#475569] block mb-1">Available From</label>
+                            <input
+                              type="datetime-local"
+                              value={availableFrom}
+                              onChange={(e) => setAvailableFrom(e.target.value)}
+                              className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-[#475569] block mb-1">Due Date</label>
+                            <input
+                              type="datetime-local"
+                              value={availableUntil}
+                              onChange={(e) => setAvailableUntil(e.target.value)}
+                              className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-2.5 rounded-lg text-[10px] text-[#0f172a] leading-relaxed">
+                          <strong className="text-[#2563EB]">Next step:</strong> save this base problem first — the per-language
+                          starter code editor, lockdown toggle, examples, and visible/hidden test cases all open up in the
+                          panel below immediately after saving, since they attach to the challenge record this creates.
                         </div>
                       </div>
                     )}
@@ -3903,6 +3986,27 @@ export default function TeacherConsole({
 
                     {activityType === "programming" && createdChallengeId && (
                       <div className="space-y-4">
+                        <div className="border border-[#E2E8F0] p-4 rounded-xl">
+                          <ChallengeEditor
+                            challengeId={createdChallengeId}
+                            strictMode={chalStrictMode}
+                            onStrictModeChange={setChalStrictMode}
+                          />
+                        </div>
+
+                        {examplesList.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#475569]">Examples Added ({examplesList.length})</h4>
+                            {examplesList.map((ex, index) => (
+                              <div key={ex.id || index} className="p-2.5 bg-slate-50 border border-[#E2E8F0] rounded-lg flex justify-between items-start gap-3 text-[10px] font-mono">
+                                <div>Ex {ex.example_number}: Input: {ex.input_example} → Output: {ex.output_example}</div>
+                                <button type="button" onClick={() => handleDeleteExample(ex.id)} className="p-1 bg-red-50 border border-red-100 hover:bg-red-100 text-[#DC2626] rounded shrink-0">
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <form onSubmit={handleAddExample} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
                           <h4 className="text-xs font-bold flex items-center gap-1"><FileCode size={14} /> Add Code Example</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3912,11 +4016,39 @@ export default function TeacherConsole({
                           <button type="submit" className="bg-[#2563EB] text-white px-4 py-1.5 rounded-xl font-bold">Add Example</button>
                         </form>
 
+                        {testCasesList.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#475569]">Test Cases Added ({testCasesList.length})</h4>
+                            {testCasesList.map((tc, index) => (
+                              <div key={tc.id || index} className="p-2.5 bg-slate-50 border border-[#E2E8F0] rounded-lg flex justify-between items-start gap-3 text-[10px] font-mono">
+                                <div>
+                                  Test {index + 1}: Input: {tc.input_data} → Expected: {tc.expected_output}
+                                  <span className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-bold ${tc.is_hidden ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                                    {tc.is_hidden ? "HIDDEN" : "VISIBLE"}
+                                  </span>
+                                </div>
+                                <button type="button" onClick={() => handleDeleteTestCase(tc.id)} className="p-1 bg-red-50 border border-red-100 hover:bg-red-100 text-[#DC2626] rounded shrink-0">
+                                  <Trash2 size={11} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <form onSubmit={handleAddTestCase} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
                           <h4 className="text-xs font-bold flex items-center gap-1"><CheckSquare size={14} /> Add Judge Test Case</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <textarea placeholder="Input data" value={newTcInput} onChange={e=>setNewTcInput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
                             <textarea placeholder="Expected Output" value={newTcOutput} onChange={e=>setNewTcOutput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              id="create_tc_is_hidden_teacher"
+                              checked={newTcHidden}
+                              onChange={(e) => setNewTcHidden(e.target.checked)}
+                              className="rounded text-[#2563EB] focus:ring-[#2563EB] border-[#E2E8F0]"
+                            />
+                            <label htmlFor="create_tc_is_hidden_teacher" className="font-semibold text-xs text-[#475569]">Hidden Test Case (not shown to students, used for grading only)</label>
                           </div>
                           <button type="submit" className="bg-[#2563EB] text-white px-4 py-1.5 rounded-xl font-bold">Add Test Case</button>
                         </form>
@@ -3924,20 +4056,35 @@ export default function TeacherConsole({
                     )}
 
                     <form onSubmit={handleAssignSubmit} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
-                      <h4 className="text-xs font-bold flex items-center gap-1"><Calendar size={14} /> Schedule Deployment Assignment</h4>
-                      <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-3 rounded-xl text-xs">
-                        <span className="text-[10px] font-bold text-[#2563EB] uppercase block">DEPLOYING TO COHORT</span>
-                        <span className="font-bold text-[#0F172A]">{cohorts.find(c => c.id === selectedCohortId)?.name || "Active Cohort"}</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <h4 className="text-xs font-bold flex items-center gap-1"><Calendar size={14} /> Review & Deploy</h4>
+                      <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-3 rounded-xl text-xs space-y-2">
                         <div>
-                          <label className="text-[10px] block font-bold text-[#475569]">Available From</label>
-                          <input type="datetime-local" value={availableFrom} onChange={e=>setAvailableFrom(e.target.value)} className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full" />
+                          <span className="text-[10px] font-bold text-[#2563EB] uppercase block">Deploying To Cohort</span>
+                          <span className="font-bold text-[#0F172A]">{cohorts.find(c => c.id === selectedCohortId)?.name || "Active Cohort"}</span>
                         </div>
-                        <div>
-                          <label className="text-[10px] block font-bold text-[#475569]">Due Date</label>
-                          <input type="datetime-local" value={availableUntil} onChange={e=>setAvailableUntil(e.target.value)} className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full" />
-                        </div>
+                        {activityType === "programming" ? (
+                          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#2563EB]/15">
+                            <div>
+                              <span className="text-[10px] font-bold text-[#2563EB] uppercase block">Available From</span>
+                              <span className="font-semibold text-[#0F172A]">{availableFrom ? new Date(availableFrom).toLocaleString() : "Immediately"}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold text-[#2563EB] uppercase block">Due Date</span>
+                              <span className="font-semibold text-[#0F172A]">{availableUntil ? new Date(availableUntil).toLocaleString() : "No due date"}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#2563EB]/15">
+                            <div>
+                              <label className="text-[10px] block font-bold text-[#475569]">Available From</label>
+                              <input type="datetime-local" value={availableFrom} onChange={e=>setAvailableFrom(e.target.value)} className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full" />
+                            </div>
+                            <div>
+                              <label className="text-[10px] block font-bold text-[#475569]">Due Date</label>
+                              <input type="datetime-local" value={availableUntil} onChange={e=>setAvailableUntil(e.target.value)} className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full" />
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <button type="submit" className="w-full bg-[#16A34A] text-white font-bold text-xs py-2 rounded-xl">
                         Schedule & Deploy Activity

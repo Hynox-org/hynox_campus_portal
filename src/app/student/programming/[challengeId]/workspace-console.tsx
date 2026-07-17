@@ -6,7 +6,8 @@ import {
   runChallengeCodeAction,
   submitChallengeCodeAction,
   getChallengeSubmissionResultsAction,
-  getProgrammingChallengeDetailsAction
+  getProgrammingChallengeDetailsAction,
+  forfeitChallengeSubmissionAction
 } from "@/app/actions/learning-actions";
 import {
   Code,
@@ -16,15 +17,24 @@ import {
   History,
   AlertTriangle,
   CheckCircle2,
+  XCircle,
   Maximize2,
   Minimize2,
   Clock,
   Cpu,
   BookOpen,
-  ChevronLeft,
-  Loader2
+  Loader2,
+  ShieldAlert
 } from "lucide-react";
-import Link from "next/link";
+
+const LANGUAGE_OPTIONS = [
+  { value: "javascript", label: "JavaScript (Node.js)" },
+  { value: "python", label: "Python 3" },
+  { value: "java", label: "Java (OpenJDK)" },
+  { value: "cpp", label: "C++ (GCC)" },
+  { value: "c", label: "C (GCC)" },
+  { value: "typescript", label: "TypeScript" }
+];
 
 interface WorkspaceConsoleProps {
   activityId: string;
@@ -34,6 +44,7 @@ interface WorkspaceConsoleProps {
     progress: any;
     examples: any[];
     submissions: any[];
+    starterCodeByLanguage?: Record<string, string>;
   };
 }
 
@@ -43,6 +54,7 @@ export default function WorkspaceConsole({
   initialData
 }: WorkspaceConsoleProps) {
   const { challenge, examples } = initialData;
+  const strictMode = !!challenge.strict_mode;
 
   const [submissions, setSubmissions] = useState(initialData.submissions);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
@@ -63,7 +75,15 @@ export default function WorkspaceConsole({
   const [activeSubmissionResults, setActiveSubmissionResults] = useState<any | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Editor Theme & Custom settings
+  // Lockdown mode state
+  const [lockdownActive, setLockdownActive] = useState(!strictMode); // true once fullscreen is entered (or immediately if not strict)
+  const [violationWarning, setViolationWarning] = useState<{ deadline: number } | null>(null);
+  const [, setViolationTick] = useState(0);
+  const [forfeited, setForfeited] = useState(false);
+  const violationCountRef = useRef(0);
+  const lockdownActiveRef = useRef(!strictMode);
+  const forfeitingRef = useRef(false);
+
   const editorRef = useRef<any>(null);
 
   // Load starter code or local storage draft
@@ -73,11 +93,11 @@ export default function WorkspaceConsole({
     if (savedDraft) {
       setCode(savedDraft);
     } else {
-      setCode(challenge.starter_code || "");
+      const template = initialData.starterCodeByLanguage?.[selectedLanguage];
+      setCode(template || challenge.starter_code || "");
     }
-  }, [selectedLanguage, challenge.id, challenge.starter_code]);
+  }, [selectedLanguage, challenge.id, challenge.starter_code, initialData.starterCodeByLanguage]);
 
-  // Handle autosave on code change
   const handleCodeChange = (value: string | undefined) => {
     const newCode = value || "";
     setCode(newCode);
@@ -87,12 +107,122 @@ export default function WorkspaceConsole({
     }
   };
 
-  // Full Screen Toggle
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
 
-  // Run Code Action
+  // Must be entered synchronously inside this click handler for the browser's
+  // fullscreen permission gesture requirement to be satisfied.
+  const handleEnterLockdown = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      lockdownActiveRef.current = true;
+      setLockdownActive(true);
+    } catch {
+      // Leave the gate up; the button stays visible so the student can retry.
+    }
+  };
+
+  const forfeitChallenge = async (reason: string) => {
+    if (!lockdownActiveRef.current || forfeitingRef.current || forfeited) return;
+    forfeitingRef.current = true;
+    lockdownActiveRef.current = false;
+    setViolationWarning(null);
+    try {
+      const progressId = initialData.progress?.id;
+      if (progressId) {
+        await forfeitChallengeSubmissionAction(progressId, studentId, reason);
+      }
+      setForfeited(true);
+      if (document.fullscreenElement) {
+        try {
+          await document.exitFullscreen();
+        } catch {}
+      }
+    } finally {
+      forfeitingRef.current = false;
+    }
+  };
+
+  const registerViolation = (reason: string) => {
+    if (!lockdownActiveRef.current || forfeitingRef.current || forfeited) return;
+    if (violationCountRef.current === 0) {
+      violationCountRef.current = 1;
+      setViolationWarning({ deadline: Date.now() + 15000 });
+    } else {
+      forfeitChallenge(reason);
+    }
+  };
+
+  // Grace-period countdown, mirrors the quiz lockdown pattern.
+  useEffect(() => {
+    if (!violationWarning) return;
+
+    const check = () => {
+      const cleared = typeof document !== "undefined" && !!document.fullscreenElement && !document.hidden;
+      if (cleared) {
+        setViolationWarning(null);
+        return;
+      }
+      if (Date.now() >= violationWarning.deadline) {
+        forfeitChallenge("grace_period_expired");
+        return;
+      }
+      setViolationTick((t) => t + 1);
+    };
+
+    check();
+    const interval = setInterval(check, 500);
+    return () => clearInterval(interval);
+  }, [violationWarning]);
+
+  // Lockdown listeners, active only once fullscreen has been entered for a strict-mode challenge.
+  useEffect(() => {
+    if (!strictMode || !lockdownActive || forfeited) return;
+
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        registerViolation("fullscreen_exit");
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        registerViolation("tab_switch");
+      }
+    };
+    const onPopState = () => {
+      window.history.pushState(null, "", window.location.href);
+      registerViolation("back_navigation");
+    };
+    const onPageHide = () => {
+      if (lockdownActiveRef.current && initialData.progress?.id) {
+        const blob = new Blob(
+          [JSON.stringify({ progressId: initialData.progress.id, studentId, reason: "tab_closed" })],
+          { type: "application/json" }
+        );
+        navigator.sendBeacon("/api/challenge-forfeit", blob);
+      }
+    };
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [strictMode, lockdownActive, forfeited]);
+
   const handleRunCode = async () => {
     setRunningCode(true);
     setRunResults(null);
@@ -113,7 +243,6 @@ export default function WorkspaceConsole({
     }
   };
 
-  // Submit Solution Action
   const handleSubmitSolution = async () => {
     setSubmitting(true);
     setStatusMessage("Creating submission & queuing judge...");
@@ -145,7 +274,6 @@ export default function WorkspaceConsole({
     }
   };
 
-  // Polling for Submission results
   useEffect(() => {
     if (!pollingSubmissionId) return;
 
@@ -153,7 +281,6 @@ export default function WorkspaceConsole({
     const interval = setInterval(async () => {
       attempts++;
       if (attempts > 30) {
-        // Timeout after 30 seconds
         clearInterval(interval);
         setStatusMessage(null);
         setRunConsoleError("Grading timeout. Please check submission history.");
@@ -165,19 +292,15 @@ export default function WorkspaceConsole({
       try {
         const res = await getChallengeSubmissionResultsAction(pollingSubmissionId);
         if (res && !("error" in res) && res.result) {
-          // If status is no longer pending/running
-          if (res.result) {
-            clearInterval(interval);
-            setActiveSubmissionResults(res);
-            setStatusMessage(null);
-            setPollingSubmissionId(null);
-            setSubmitting(false);
+          clearInterval(interval);
+          setActiveSubmissionResults(res);
+          setStatusMessage(null);
+          setPollingSubmissionId(null);
+          setSubmitting(false);
 
-            // Refresh submissions history list
-            const refreshDetails = await getProgrammingChallengeDetailsAction(activityId, studentId);
-            if (refreshDetails && "submissions" in refreshDetails) {
-              setSubmissions(refreshDetails.submissions || []);
-            }
+          const refreshDetails = await getProgrammingChallengeDetailsAction(activityId, studentId);
+          if (refreshDetails && "submissions" in refreshDetails) {
+            setSubmissions(refreshDetails.submissions || []);
           }
         }
       } catch (e) {
@@ -188,7 +311,6 @@ export default function WorkspaceConsole({
     return () => clearInterval(interval);
   }, [pollingSubmissionId, activityId, studentId]);
 
-  // Load detailed results from history
   const handleLoadSubmissionResults = async (sub: any) => {
     setSubmitting(true);
     setStatusMessage("Loading submission logs...");
@@ -208,9 +330,67 @@ export default function WorkspaceConsole({
     }
   };
 
+  // Lockdown gate: strict-mode challenges require entering fullscreen before any editing.
+  if (strictMode && !lockdownActive && !forfeited) {
+    return (
+      <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm p-10 text-center space-y-4 max-w-lg mx-auto">
+        <ShieldAlert size={32} className="text-[#DC2626] mx-auto" />
+        <h2 className="text-sm font-bold text-[#0F172A]">Lockdown Mode Challenge</h2>
+        <p className="text-xs text-[#475569] leading-relaxed">
+          This challenge is proctored. Once you begin, you must stay in fullscreen and on this tab.
+          Switching tabs or exiting fullscreen will trigger a warning, and a second violation will
+          forfeit your attempt with a score of 0.
+        </p>
+        <button
+          onClick={handleEnterLockdown}
+          className="bg-[#2563EB] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold text-xs inline-flex items-center gap-1.5"
+        >
+          <Maximize2 size={13} /> Enter Fullscreen & Begin
+        </button>
+      </div>
+    );
+  }
+
+  if (forfeited) {
+    return (
+      <div className="bg-white border border-red-200 rounded-xl shadow-sm p-10 text-center space-y-3 max-w-lg mx-auto">
+        <XCircle size={32} className="text-red-600 mx-auto" />
+        <h2 className="text-sm font-bold text-[#0F172A]">Attempt Forfeited</h2>
+        <p className="text-xs text-[#475569]">
+          Your attempt was forfeited because you left the lockdown environment. Contact your
+          instructor if you believe this was an error.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch ${isFullscreen ? "fixed inset-0 bg-[#F8FAFC] z-50 p-6 overflow-auto" : ""}`}>
-      
+
+      {violationWarning && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-6">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 text-center shadow-2xl">
+            <ShieldAlert size={28} className="text-[#DC2626] mx-auto" />
+            <h3 className="text-sm font-bold text-[#0F172A]">Lockdown Violation Detected</h3>
+            <p className="text-xs text-[#475569] leading-relaxed">
+              Return to fullscreen within{" "}
+              <span className="font-bold text-[#DC2626]">
+                {Math.max(0, Math.ceil((violationWarning.deadline - Date.now()) / 1000))}s
+              </span>{" "}
+              or your attempt will be forfeited with a score of 0. This is your only warning.
+            </p>
+            <button
+              onClick={() => {
+                document.documentElement.requestFullscreen().catch(() => {});
+              }}
+              className="bg-[#DC2626] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold hover:bg-[#DC2626]/90 transition-all text-xs flex items-center gap-1.5 justify-center w-full"
+            >
+              <Maximize2 size={13} /> Return to Fullscreen & Continue
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Left Pane: Problem Description */}
       <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col justify-between overflow-hidden min-h-[500px]">
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
@@ -218,15 +398,22 @@ export default function WorkspaceConsole({
             <h2 className="text-sm font-bold text-[#0F172A] flex items-center gap-1.5">
               <BookOpen size={16} className="text-[#2563EB]" /> Problem Specification
             </h2>
-            <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase ${
-              challenge.difficulty_level === "easy"
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : challenge.difficulty_level === "medium"
-                ? "bg-amber-50 text-amber-700 border-amber-200"
-                : "bg-red-50 text-red-700 border-red-200"
-            }`}>
-              {challenge.difficulty_level}
-            </span>
+            <div className="flex items-center gap-1.5">
+              {strictMode && (
+                <span className="px-2 py-0.5 rounded text-[9px] font-bold border bg-red-50 text-red-700 border-red-200 flex items-center gap-1">
+                  <ShieldAlert size={10} /> Lockdown
+                </span>
+              )}
+              <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase ${
+                challenge.difficulty_level === "easy"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : challenge.difficulty_level === "medium"
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }`}>
+                {challenge.difficulty_level}
+              </span>
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -301,13 +488,13 @@ export default function WorkspaceConsole({
         </div>
 
         <div className="bg-slate-50 border-t border-[#E2E8F0] p-4 flex justify-between items-center text-[10px] text-[#475569]">
-          <span>Security check: Hidden test cases are active.</span>
+          <span>Security: submissions run in an isolated, network-disabled sandbox. Hidden test cases are active.</span>
         </div>
       </div>
 
       {/* Right Pane: Editor, Results & History */}
       <div className="flex flex-col gap-6">
-        
+
         {/* Workspace Navigation Header */}
         <div className="bg-white border border-[#E2E8F0] rounded-xl p-3 shadow-sm flex items-center justify-between">
           <div className="flex gap-2">
@@ -356,7 +543,7 @@ export default function WorkspaceConsole({
 
         {/* Dynamic Panel Content */}
         <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col min-h-[400px]">
-          
+
           {/* TAB 1: MONACO EDITOR */}
           {activeTab === "editor" && (
             <div className="flex flex-col flex-1">
@@ -369,11 +556,9 @@ export default function WorkspaceConsole({
                   onChange={(e) => setSelectedLanguage(e.target.value)}
                   className="bg-white border border-[#E2E8F0] rounded-lg px-2.5 py-1 text-[10px] font-semibold text-[#0F172A] outline-none shadow-sm focus:border-[#2563EB]/30 transition-all"
                 >
-                  <option value="javascript">JavaScript (Node.js)</option>
-                  <option value="python">Python 3</option>
-                  <option value="java">Java (OpenJDK)</option>
-                  <option value="cpp">C++ (GCC)</option>
-                  <option value="c">C (GCC)</option>
+                  {LANGUAGE_OPTIONS.map((lang) => (
+                    <option key={lang.value} value={lang.value}>{lang.label}</option>
+                  ))}
                 </select>
               </div>
 
@@ -386,8 +571,7 @@ export default function WorkspaceConsole({
                   theme="hynox-dark"
                   onMount={(editor, monaco) => {
                     editorRef.current = editor;
-                    
-                    // Register custom Hynox Campus theme matching Deep Navy and SaaS aesthetic
+
                     monaco.editor.defineTheme("hynox-dark", {
                       base: "vs-dark",
                       inherit: true,
@@ -400,15 +584,15 @@ export default function WorkspaceConsole({
                         { token: "type", foreground: "B392F0" }
                       ],
                       colors: {
-                        "editor.background": "#0F172A", // Secondary (Deep Navy)
-                        "editor.foreground": "#F8FAFC", // Background (Off-white)
-                        "editorLineNumber.foreground": "#475569", // Text Secondary
-                        "editorLineNumber.activeForeground": "#2563EB", // Primary Blue
-                        "editor.lineHighlightBackground": "#1E293B", // subtle highlight
-                        "editor.selectionBackground": "#334155" // slate selection
+                        "editor.background": "#0F172A",
+                        "editor.foreground": "#F8FAFC",
+                        "editorLineNumber.foreground": "#475569",
+                        "editorLineNumber.activeForeground": "#2563EB",
+                        "editor.lineHighlightBackground": "#1E293B",
+                        "editor.selectionBackground": "#334155"
                       }
                     });
-                    
+
                     monaco.editor.setTheme("hynox-dark");
                   }}
                   options={{
@@ -452,7 +636,6 @@ export default function WorkspaceConsole({
                   Execution Report
                 </h3>
 
-                {/* State: Loading/Queueing */}
                 {statusMessage && (
                   <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 text-[#2563EB] p-4 rounded-xl flex items-center gap-2 text-xs font-semibold animate-pulse">
                     <Loader2 size={14} className="animate-spin" />
@@ -460,7 +643,6 @@ export default function WorkspaceConsole({
                   </div>
                 )}
 
-                {/* State: Compile/Runtime Errors */}
                 {runConsoleError && (
                   <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl space-y-2 text-xs">
                     <div className="flex items-center gap-1.5 font-bold">
@@ -473,9 +655,16 @@ export default function WorkspaceConsole({
                   </div>
                 )}
 
-                {/* State: Run Code Results */}
                 {runResults && (
                   <div className="space-y-4">
+                    <div className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-bold ${
+                      runResults.every((r) => r.passed)
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                        : "bg-red-50 border-red-200 text-red-700"
+                    }`}>
+                      {runResults.every((r) => r.passed) ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                      {runResults.filter((r) => r.passed).length} / {runResults.length} visible test cases passed
+                    </div>
                     {runResults.map((res, idx) => (
                       <div key={idx} className="border border-[#E2E8F0] rounded-xl p-4 bg-slate-50/20 space-y-3 text-xs">
                         <div className="flex justify-between items-center">
@@ -522,10 +711,23 @@ export default function WorkspaceConsole({
                   </div>
                 )}
 
-                {/* State: Submit Code Detailed Results */}
                 {activeSubmissionResults && (
                   <div className="space-y-5">
-                    {/* Summary Card */}
+                    <div className={`p-4 rounded-xl border flex items-center gap-2 text-sm font-bold ${
+                      activeSubmissionResults.submission?.submission_status_code === "accepted"
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                        : "bg-red-50 border-red-200 text-red-700"
+                    }`}>
+                      {activeSubmissionResults.submission?.submission_status_code === "accepted" ? (
+                        <CheckCircle2 size={18} />
+                      ) : (
+                        <XCircle size={18} />
+                      )}
+                      {activeSubmissionResults.submission?.submission_status_code === "accepted"
+                        ? "Accepted — Challenge Completed"
+                        : `${(activeSubmissionResults.submission?.submission_status_code || "wrong_answer").replace(/_/g, " ")} — ${activeSubmissionResults.result?.passed_test_cases || 0}/${activeSubmissionResults.result?.total_test_cases || 0} test cases passed`}
+                    </div>
+
                     <div className="bg-slate-50 border border-[#E2E8F0] rounded-xl p-4 flex flex-wrap justify-between items-center gap-4 text-xs">
                       <div>
                         <span className="text-[9px] text-[#475569] block font-bold uppercase tracking-wider">Passed Cases</span>
@@ -553,7 +755,6 @@ export default function WorkspaceConsole({
                       </div>
                     </div>
 
-                    {/* Detailed Test Results */}
                     <div className="space-y-3">
                       <h4 className="text-[9px] font-bold uppercase tracking-wider text-[#0F172A]">Detailed Results</h4>
                       <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl bg-white overflow-hidden">
@@ -575,7 +776,6 @@ export default function WorkspaceConsole({
                       </div>
                     </div>
 
-                    {/* Console Logs */}
                     {activeSubmissionResults.logs?.length > 0 && (
                       <div className="space-y-2">
                         <h4 className="text-[9px] font-bold uppercase tracking-wider text-[#0F172A]">Judge Engine Outputs</h4>
@@ -591,7 +791,6 @@ export default function WorkspaceConsole({
                   </div>
                 )}
 
-                {/* Idle State */}
                 {!runningCode && !submitting && !runResults && !activeSubmissionResults && !runConsoleError && (
                   <div className="text-center py-10 text-slate-500 font-medium">
                     No execution outputs. Write code and click "Run Code" or "Submit Solution".
@@ -631,7 +830,7 @@ export default function WorkspaceConsole({
                               </span>
                             </div>
                           </div>
-                          
+
                           <button
                             onClick={() => handleLoadSubmissionResults(sub)}
                             className="text-[#2563EB] hover:underline font-bold text-[10px] cursor-pointer"

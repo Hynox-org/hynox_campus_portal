@@ -38,6 +38,7 @@ import {
   Edit, Save
 } from "lucide-react";
 import { SecondaryLoader } from "@/components/secondary-loader";
+import ChallengeEditor from "@/app/teacher/challenge-editor";
 import { CustomSelect } from "@/components/custom-select";
 import { useToast } from "@/components/toast";
 
@@ -135,6 +136,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     chal_starter_code: string;
     chal_time_limit: number;
     chal_memory_limit: number;
+    chal_strict_mode: boolean;
 
     // Assignments list
     assignments: Array<{
@@ -171,6 +173,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     chal_starter_code: "",
     chal_time_limit: 1000,
     chal_memory_limit: 256,
+    chal_strict_mode: false,
     assignments: []
   });
 
@@ -204,9 +207,9 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   const [chalInput, setChalInput] = useState("");
   const [chalOutput, setChalOutput] = useState("");
   const [chalConstraints, setChalConstraints] = useState("");
-  const [chalStarter, setChalStarter] = useState("");
   const [chalTime, setChalTime] = useState(1000);
   const [chalMemory, setChalMemory] = useState(256);
+  const [chalStrictMode, setChalStrictMode] = useState(false);
 
   // Newly created subclass reference
   const [createdActivityId, setCreatedActivityId] = useState("");
@@ -635,9 +638,9 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
         chal_input_format: chalInput,
         chal_output_format: chalOutput,
         chal_constraints: chalConstraints,
-        chal_starter_code: chalStarter,
         chal_time_limit: chalTime,
-        chal_memory_limit: chalMemory
+        chal_memory_limit: chalMemory,
+        chal_strict_mode: chalStrictMode
       });
 
       if (res.error) {
@@ -987,6 +990,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       chal_starter_code: editForm.chal_starter_code,
       chal_time_limit: Number(editForm.chal_time_limit),
       chal_memory_limit: Number(editForm.chal_memory_limit),
+      chal_strict_mode: editForm.chal_strict_mode,
 
       // Assignments
       assignments: editForm.assignments.map(a => ({
@@ -1069,6 +1073,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       chal_starter_code: detRes?.challenge?.starter_code ?? "",
       chal_time_limit: detRes?.challenge?.time_limit_ms ?? 1000,
       chal_memory_limit: detRes?.challenge?.memory_limit_mb ?? 256,
+      chal_strict_mode: detRes?.challenge?.strict_mode ?? false,
 
       // Assignments
       assignments: (detRes?.assignments || []).map((a: any) => ({
@@ -1433,15 +1438,19 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                           </select>
                         </div>
                         <div>
-                          <label className="block font-semibold text-[#475569] mb-1">Starter Code Outline</label>
-                          <textarea
-                            value={chalStarter}
-                            onChange={(e) => setChalStarter(e.target.value)}
-                            rows={2}
-                            className="w-full bg-slate-50 border border-[#E2E8F0] rounded-lg p-2.5 text-xs font-mono focus:outline-none resize-none"
-                            placeholder="function twoSum(nums, target) { }"
+                          <label className="block font-semibold text-[#475569] mb-1">Time Limit (ms)</label>
+                          <input
+                            type="number"
+                            value={chalTime}
+                            onChange={(e) => setChalTime(Number(e.target.value))}
+                            className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none"
                           />
                         </div>
+                      </div>
+                      <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-2.5 rounded-lg text-[10px] text-[#0f172a] leading-relaxed">
+                        <strong className="text-[#2563EB]">Next step:</strong> save this base problem first — the per-language
+                        starter code editor, lockdown toggle, examples, and visible/hidden test cases all open up immediately
+                        after saving, since they attach to the challenge record this creates.
                       </div>
                     </div>
                   )}
@@ -1624,6 +1633,28 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
               {/* Challenge Examples & Test Cases */}
               {createdChallengeId && activityType === "programming" && (
                 <div className="space-y-6">
+                  <div className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-sm">
+                    <ChallengeEditor
+                      challengeId={createdChallengeId}
+                      strictMode={chalStrictMode}
+                      onStrictModeChange={setChalStrictMode}
+                    />
+                  </div>
+
+                  {examplesList.length > 0 && (
+                    <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-2">
+                      <h5 className="font-bold text-xs text-[#0F172A]">Examples Added ({examplesList.length})</h5>
+                      {examplesList.map((ex, index) => (
+                        <div key={ex.id || index} className="p-2.5 bg-slate-50 border border-[#E2E8F0] rounded-lg flex justify-between items-start gap-3 text-[10px] font-mono">
+                          <div>Ex {ex.example_number}: Input: {ex.input_example} &rarr; Output: {ex.output_example}</div>
+                          <button type="button" onClick={() => handleDeleteExample(ex.id)} className="p-1 bg-red-50 border border-red-100 hover:bg-red-100 text-[#DC2626] rounded shrink-0">
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <form onSubmit={handleAddExample} className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-sm space-y-4">
                     <h4 className="font-bold text-xs uppercase text-[#0F172A] border-b border-[#E2E8F0] pb-2 flex items-center gap-1.5">
                       <Eye size={16} className="text-[#2563EB]" /> Add Visible Examples
@@ -1668,9 +1699,28 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                     </button>
                   </form>
 
+                  {testCasesList.length > 0 && (
+                    <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-2">
+                      <h5 className="font-bold text-xs text-[#0F172A]">Test Cases Added ({testCasesList.length})</h5>
+                      {testCasesList.map((tc, index) => (
+                        <div key={tc.id || index} className="p-2.5 bg-slate-50 border border-[#E2E8F0] rounded-lg flex justify-between items-start gap-3 text-[10px] font-mono">
+                          <div>
+                            Test {index + 1}: Input: {tc.input_data} &rarr; Expected: {tc.expected_output}
+                            <span className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-bold ${tc.is_hidden ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                              {tc.is_hidden ? "HIDDEN" : "VISIBLE"}
+                            </span>
+                          </div>
+                          <button type="button" onClick={() => handleDeleteTestCase(tc.id)} className="p-1 bg-red-50 border border-red-100 hover:bg-red-100 text-[#DC2626] rounded shrink-0">
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <form onSubmit={handleAddTestCase} className="bg-white border border-[#E2E8F0] p-6 rounded-xl shadow-sm space-y-4">
                     <h4 className="font-bold text-xs uppercase text-[#0F172A] border-b border-[#E2E8F0] pb-2 flex items-center gap-1.5">
-                      <Layers size={16} className="text-[#2563EB]" /> Add Hidden Test Cases
+                      <Layers size={16} className="text-[#2563EB]" /> Add Test Case
                     </h4>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1694,6 +1744,17 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                           className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none"
                         />
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="admin_create_tc_is_hidden"
+                        checked={newTcHidden}
+                        onChange={(e) => setNewTcHidden(e.target.checked)}
+                        className="rounded text-[#2563EB] focus:ring-[#2563EB] border-[#E2E8F0]"
+                      />
+                      <label htmlFor="admin_create_tc_is_hidden" className="font-semibold text-xs text-[#475569]">Hidden Test Case (not shown to students, used for grading only)</label>
                     </div>
 
                     <button type="submit" className="bg-[#2563EB] text-white px-4 py-1.5 rounded-lg font-bold cursor-pointer">
@@ -2424,14 +2485,22 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="block font-bold text-[#475569] uppercase text-[9px]">Starter Code</label>
+                          <label className="block font-bold text-[#475569] uppercase text-[9px]">Legacy Starter Code (fallback, language-agnostic)</label>
                           <textarea
-                            rows={5}
+                            rows={3}
                             value={editForm.chal_starter_code}
                             onChange={(e) => setEditForm({ ...editForm, chal_starter_code: e.target.value })}
                             className="w-full bg-slate-900 text-slate-100 border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
                           />
                         </div>
+                        {createdChallengeId && (
+                          <ChallengeEditor
+                            challengeId={createdChallengeId}
+                            initialStarterCode={activityDetails?.starterCodeByLanguage}
+                            strictMode={editForm.chal_strict_mode}
+                            onStrictModeChange={(value) => setEditForm({ ...editForm, chal_strict_mode: value })}
+                          />
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div className="space-y-1">
                             <label className="block font-bold text-[#475569] uppercase text-[9px]">Difficulty</label>

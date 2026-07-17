@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "worker": "ts-node src/services/worker.ts",
+    "worker": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" -r tsconfig-paths/register src/services/worker.ts",
+    "sandbox-engine": "npm --prefix sandbox-engine run dev",
     "test": "vitest run"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }

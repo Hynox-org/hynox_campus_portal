@@ -1888,55 +1888,6 @@ export default function StudentConsole({
                   </div>
                 )}
 
-                {/* Coding Challenges Snapshot */}
-                {assignedChallengesCount > 0 && (
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
-                    <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
-                      <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-2">
-                        <Code className="text-[#2563EB]" size={14} /> Coding Challenges
-                      </h3>
-                      <Link href="/student/programming" className="text-[10px] text-[#2563EB] font-bold hover:underline flex items-center gap-0.5">
-                        Open Workspace <ArrowRight size={10} />
-                      </Link>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                      <div className="bg-slate-50/50 rounded-xl p-3">
-                        <p className="text-base font-bold text-[#0F172A]">{assignedChallengesCount}</p>
-                        <p className="text-[9px] text-[#64748B] font-semibold uppercase tracking-wider mt-0.5">Assigned</p>
-                      </div>
-                      <div className="bg-slate-50/50 rounded-xl p-3">
-                        <p className="text-base font-bold text-[#10B981]">{completedChallengesCount}</p>
-                        <p className="text-[9px] text-[#64748B] font-semibold uppercase tracking-wider mt-0.5">Completed</p>
-                      </div>
-                      <div className="bg-slate-50/50 rounded-xl p-3">
-                        <p className="text-base font-bold text-[#0F172A]">{averageChallengeScore}</p>
-                        <p className="text-[9px] text-[#64748B] font-semibold uppercase tracking-wider mt-0.5">Avg Score</p>
-                      </div>
-                    </div>
-
-                    {recentSubmissions.length > 0 && (
-                      <div className="space-y-1.5 pt-1">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#64748B]">Recent Submissions</p>
-                        <div className="divide-y divide-[#E2E8F0]">
-                          {recentSubmissions.map((sub: any) => {
-                            const isDone = sub.progress?.status_code === "completed" || sub.progress?.status_code === "reviewed";
-                            return (
-                              <div key={sub.id} className="py-2 flex items-center justify-between gap-2 text-[10px]">
-                                <span className="font-semibold text-[#0F172A] truncate min-w-0 flex-1">{sub.title}</span>
-                                <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[8px] border shrink-0 ${
-                                  isDone ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
-                                }`}>
-                                  {sub.progress?.status_code || "in progress"}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Right Column: Pending tasks, attendance & performance */}

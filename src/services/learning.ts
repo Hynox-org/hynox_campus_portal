@@ -1031,12 +1031,119 @@ export async function getProgrammingChallengeDetails(activityId: string, student
     .eq("student_id", studentId)
     .order("submitted_at", { ascending: false });
 
+  const { data: starterTemplates } = await supabase
+    .schema("learning")
+    .from("challenge_starter_templates")
+    .select("language, starter_code")
+    .eq("challenge_id", challenge.id);
+
+  const starterCodeByLanguage: Record<string, string> = {};
+  for (const tpl of starterTemplates || []) {
+    starterCodeByLanguage[tpl.language] = tpl.starter_code;
+  }
+
   return {
     challenge,
     progress,
     examples: examples || [],
-    submissions: submissions || []
+    submissions: submissions || [],
+    starterCodeByLanguage
   };
+}
+
+export async function upsertChallengeStarterTemplate(input: {
+  challengeId: string;
+  language: string;
+  starterCode: string;
+}) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .schema("learning")
+    .from("challenge_starter_templates")
+    .upsert(
+      {
+        challenge_id: input.challengeId,
+        language: input.language,
+        starter_code: input.starterCode,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: "challenge_id,language" }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateChallengeStrictMode(challengeId: string, strictMode: boolean) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .schema("learning")
+    .from("programming_challenges")
+    .update({ strict_mode: strictMode, updated_at: new Date().toISOString() })
+    .eq("id", challengeId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getChallengeStarterTemplates(challengeId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .schema("learning")
+    .from("challenge_starter_templates")
+    .select("*")
+    .eq("challenge_id", challengeId);
+  if (error) throw error;
+  return data || [];
+}
+
+// Forfeits an in-progress challenge attempt when the student leaves the
+// locked-down IDE environment (tab switch, fullscreen exit, etc). Targets
+// student_activity_progress rather than challenge_submissions, since a
+// submission row doesn't exist until the student clicks Submit — mirrors
+// forfeitQuizAttempt above, adapted for that difference.
+export async function forfeitChallengeSubmission(progressId: string, studentId: string, reason: string) {
+  const supabase = await createClient();
+
+  const { data: progress, error: progError } = await supabase
+    .schema("learning")
+    .from("student_activity_progress")
+    .select("*")
+    .eq("id", progressId)
+    .eq("student_id", studentId)
+    .single();
+
+  if (progError) throw progError;
+
+  // Idempotent: a second forfeit call for an already-closed attempt is a no-op.
+  if (progress.forfeited || progress.status_code === "completed") {
+    return progress;
+  }
+
+  const { data: updatedProgress } = await supabase
+    .schema("learning")
+    .from("student_activity_progress")
+    .update({
+      status_code: "failed",
+      score: 0,
+      completed_at: null,
+      forfeited: true,
+      forfeit_reason: reason,
+      violation_count: (progress.violation_count || 0) + 1,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", progressId)
+    .select()
+    .single();
+
+  if (progress.activity_id) {
+    await syncCourseProgressByActivity(studentId, progress.activity_id);
+  }
+
+  return updatedProgress;
 }
 
 export async function getVisibleTestCases(challengeId: string) {
@@ -1259,6 +1366,7 @@ export async function createActivityAndSubclass(input: {
   chal_starter_code?: string;
   chal_time_limit?: number;
   chal_memory_limit?: number;
+  chal_strict_mode?: boolean;
 }) {
   const supabase = await createClient();
 
@@ -1332,7 +1440,8 @@ export async function createActivityAndSubclass(input: {
         constraints_text: input.chal_constraints || null,
         starter_code: input.chal_starter_code || null,
         time_limit_ms: input.chal_time_limit || 1000,
-        memory_limit_mb: input.chal_memory_limit || 256
+        memory_limit_mb: input.chal_memory_limit || 256,
+        strict_mode: input.chal_strict_mode ?? false
       });
     if (subError) throw subError;
   }
@@ -1540,6 +1649,7 @@ export async function updateActivityAndSubclass(id: string, input: {
   chal_starter_code?: string;
   chal_time_limit?: number;
   chal_memory_limit?: number;
+  chal_strict_mode?: boolean;
 
   assignments?: Array<{
     id: string;
@@ -1677,6 +1787,7 @@ export async function updateActivityAndSubclass(id: string, input: {
         starter_code: input.chal_starter_code || null,
         time_limit_ms: input.chal_time_limit || 1000,
         memory_limit_mb: input.chal_memory_limit || 256,
+        strict_mode: input.chal_strict_mode ?? false,
         updated_at: new Date().toISOString()
       })
       .eq("activity_id", id);
