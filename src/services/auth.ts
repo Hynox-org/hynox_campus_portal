@@ -81,12 +81,10 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
 
   if (userError || !user) {
     // If auth user exists but is not pre-provisioned in core.users, fallback to public role
-    // Phase 8 Rule: Ensure akshaykumar07.m@gmail.com is always super_admin
-    const isSuperAdminEmail = authUser.email === "akshaykumar07.m@gmail.com";
     return {
       authUser,
       user: null,
-      primaryRole: isSuperAdminEmail ? "super_admin" : "public",
+      primaryRole: "public",
       tenantId: null,
       institution: null,
     };
@@ -115,11 +113,6 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
         primaryRole = role.name;
       }
     });
-  }
-
-  // Phase 8 Rule: Ensure akshaykumar07.m@gmail.com is always super_admin
-  if (authUser.email === "akshaykumar07.m@gmail.com") {
-    primaryRole = "super_admin";
   }
 
   // Fetch tenant/institution details if tenant_id is linked

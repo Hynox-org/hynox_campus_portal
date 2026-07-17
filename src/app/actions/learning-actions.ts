@@ -42,6 +42,15 @@ export async function submitQuizAnswersAction(
   }
 }
 
+export async function forfeitQuizAttemptAction(attemptId: string, reason: string) {
+  try {
+    const attempt = await service.forfeitQuizAttempt(attemptId, reason);
+    return { attempt };
+  } catch (error: any) {
+    return { error: error.message || "Failed to forfeit quiz attempt." };
+  }
+}
+
 export async function getProjectDetailsAction(activityId: string, studentId: string) {
   try {
     const data = await service.getProjectDetails(activityId, studentId);

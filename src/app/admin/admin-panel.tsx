@@ -2788,6 +2788,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                         onChange={(val) => setInviteInstitutionFilter(val)}
                         placeholder="All Institutions"
                         className="min-w-[140px]"
+                        required
                       />
                     </div>
 

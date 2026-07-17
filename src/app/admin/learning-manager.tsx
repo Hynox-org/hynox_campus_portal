@@ -116,6 +116,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     quiz_shuffle_questions: boolean;
     quiz_shuffle_options: boolean;
     quiz_show_results_immediately: boolean;
+    quiz_strict_mode: boolean;
 
     // Project fields
     project_overview: string;
@@ -155,6 +156,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     quiz_shuffle_questions: false,
     quiz_shuffle_options: false,
     quiz_show_results_immediately: true,
+    quiz_strict_mode: false,
     project_overview: "",
     project_requirements: "",
     project_deliverables: "",
@@ -187,6 +189,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   const [quizShuffleQ, setQuizShuffleQ] = useState(false);
   const [quizShuffleO, setQuizShuffleO] = useState(false);
   const [quizShowResults, setQuizShowResults] = useState(true);
+  const [quizStrictMode, setQuizStrictMode] = useState(false);
 
   // Subclass forms: Project
   const [projOverview, setProjOverview] = useState("");
@@ -593,6 +596,11 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   };
 
   const handleConfirmPublish = async () => {
+    if (activityType === "quiz" && quizStrictMode && !quizTimeLimit) {
+      showError("Strict/Proctored Mode requires a time limit to be set.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -614,6 +622,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
         quiz_shuffle_questions: quizShuffleQ,
         quiz_shuffle_options: quizShuffleO,
         quiz_show_results_immediately: true,
+        quiz_strict_mode: quizStrictMode,
 
         project_overview: projOverview,
         project_requirements: projRequirements,
@@ -890,6 +899,11 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       return;
     }
 
+    if (selectedActivity.activity_type_code === "quiz" && editForm.quiz_strict_mode && !editForm.quiz_time_limit) {
+      showError("Strict/Proctored Mode requires a time limit to be set.");
+      return;
+    }
+
     setLoading(true);
 
     // Validate each assignment date range in the frontend
@@ -954,6 +968,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       quiz_shuffle_questions: editForm.quiz_shuffle_questions,
       quiz_shuffle_options: editForm.quiz_shuffle_options,
       quiz_show_results_immediately: true,
+      quiz_strict_mode: editForm.quiz_strict_mode,
 
       // Project
       project_overview: editForm.project_overview,
@@ -1035,6 +1050,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
       quiz_shuffle_questions: detRes?.quiz?.shuffle_questions ?? false,
       quiz_shuffle_options: detRes?.quiz?.shuffle_options ?? false,
       quiz_show_results_immediately: detRes?.quiz?.show_results_immediately ?? true,
+      quiz_strict_mode: detRes?.quiz?.strict_mode ?? false,
 
       // Project
       project_overview: detRes?.project?.project_overview ?? "",
@@ -1321,6 +1337,21 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                           />
                           <label htmlFor="quizShuffleO" className="font-semibold text-[#475569]">Shuffle Options</label>
                         </div>
+                      </div>
+                      <div className="pt-2 border-t border-[#E2E8F0]">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={quizStrictMode}
+                            onChange={(e) => setQuizStrictMode(e.target.checked)}
+                            id="quizStrictMode"
+                            className="rounded border-[#E2E8F0] text-[#DC2626]"
+                          />
+                          <label htmlFor="quizStrictMode" className="font-semibold text-[#475569]">Enable Strict/Proctored Mode (fullscreen required, tab-switch = forfeited attempt)</label>
+                        </div>
+                        {quizStrictMode && !quizTimeLimit && (
+                          <p className="text-[10px] text-[#DC2626] font-semibold mt-1.5 ml-6">Strict Mode requires a Time Limit to be set above.</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -2112,6 +2143,19 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                             />
                             <label htmlFor="edit_quiz_shuffle_options" className="font-semibold text-xs text-[#0F172A]">Shuffle Options</label>
                           </div>
+                          <div className="flex items-center gap-2 pt-2 border-t border-[#E2E8F0]">
+                            <input
+                              type="checkbox"
+                              id="edit_quiz_strict_mode"
+                              checked={editForm.quiz_strict_mode}
+                              onChange={(e) => setEditForm({ ...editForm, quiz_strict_mode: e.target.checked })}
+                              className="rounded text-[#DC2626] focus:ring-[#DC2626] border-[#E2E8F0]"
+                            />
+                            <label htmlFor="edit_quiz_strict_mode" className="font-semibold text-xs text-[#0F172A]">Enable Strict/Proctored Mode (fullscreen required, tab-switch = forfeited attempt)</label>
+                          </div>
+                          {editForm.quiz_strict_mode && !editForm.quiz_time_limit && (
+                            <p className="text-[10px] text-[#DC2626] font-semibold ml-6">Strict Mode requires a Time Limit to be set above.</p>
+                          )}
                         </div>
 
                         {/* Manage questions during edit */}

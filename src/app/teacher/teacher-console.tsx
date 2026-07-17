@@ -389,6 +389,7 @@ export default function TeacherConsole({
   const [quizMaxAttempts, setQuizMaxAttempts] = useState(1);
   const [quizShuffleQ, setQuizShuffleQ] = useState(false);
   const [quizShuffleO, setQuizShuffleO] = useState(false);
+  const [quizStrictMode, setQuizStrictMode] = useState(false);
 
   // Project details
   const [projOverview, setProjOverview] = useState("");
@@ -428,6 +429,7 @@ export default function TeacherConsole({
     quiz_shuffle_questions: false,
     quiz_shuffle_options: false,
     quiz_show_results_immediately: true,
+    quiz_strict_mode: false,
     project_overview: "",
     project_requirements: "",
     project_deliverables: "",
@@ -741,6 +743,10 @@ export default function TeacherConsole({
       showError("Please select a Course and target Lesson.");
       return;
     }
+    if (activityType === "quiz" && quizStrictMode && !quizTimeLimit) {
+      showError("Strict/Proctored Mode requires a time limit to be set.");
+      return;
+    }
 
     startTransition(async () => {
       const res = await createActivityAndSubclassAction({
@@ -760,6 +766,7 @@ export default function TeacherConsole({
         quiz_max_attempts: quizMaxAttempts,
         quiz_shuffle_questions: quizShuffleQ,
         quiz_shuffle_options: quizShuffleO,
+        quiz_strict_mode: quizStrictMode,
 
         project_overview: projOverview,
         project_requirements: projRequirements,
@@ -905,6 +912,7 @@ export default function TeacherConsole({
       quiz_shuffle_questions: detRes?.quiz?.shuffle_questions ?? false,
       quiz_shuffle_options: detRes?.quiz?.shuffle_options ?? false,
       quiz_show_results_immediately: detRes?.quiz?.show_results_immediately ?? true,
+      quiz_strict_mode: detRes?.quiz?.strict_mode ?? false,
 
       // Project
       project_overview: detRes?.project?.project_overview ?? "",
@@ -950,6 +958,10 @@ export default function TeacherConsole({
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedActivity) return;
+    if (selectedActivity.activity_type_code === "quiz" && editForm.quiz_strict_mode && !editForm.quiz_time_limit) {
+      showError("Strict/Proctored Mode requires a time limit to be set.");
+      return;
+    }
 
     startTransition(async () => {
       const res = await updateActivityAndSubclassAction(selectedActivity.id, {
@@ -967,6 +979,7 @@ export default function TeacherConsole({
         quiz_shuffle_questions: editForm.quiz_shuffle_questions,
         quiz_shuffle_options: editForm.quiz_shuffle_options,
         quiz_show_results_immediately: editForm.quiz_show_results_immediately,
+        quiz_strict_mode: editForm.quiz_strict_mode,
 
         // Project
         project_overview: editForm.project_overview,
@@ -3741,6 +3754,15 @@ export default function TeacherConsole({
                             <input type="checkbox" checked={quizShuffleO} onChange={(e) => setQuizShuffleO(e.target.checked)} />
                             Shuffle Options
                           </label>
+                        </div>
+                        <div className="pt-2 border-t border-[#E2E8F0]">
+                          <label className="flex items-center gap-1.5 text-xs">
+                            <input type="checkbox" checked={quizStrictMode} onChange={(e) => setQuizStrictMode(e.target.checked)} />
+                            Enable Strict/Proctored Mode (fullscreen required, tab-switch = forfeited attempt)
+                          </label>
+                          {quizStrictMode && !quizTimeLimit && (
+                            <p className="text-[10px] text-[#DC2626] font-semibold mt-1">Strict Mode requires a Time Limit to be set above.</p>
+                          )}
                         </div>
                       </div>
                     )}

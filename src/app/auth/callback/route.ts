@@ -89,10 +89,7 @@ export async function GET(request: Request) {
       // 2. Resolve primary role
       let role = "public";
       
-      // Phase 8 / Requirement 8 check: akshaykumar07.m@gmail.com is always super_admin
-      if (user.email === "akshaykumar07.m@gmail.com") {
-        role = "super_admin";
-      } else if (dbUser) {
+      if (dbUser) {
         const { data: userRoles } = await supabase
           .schema("core")
           .from("user_roles")

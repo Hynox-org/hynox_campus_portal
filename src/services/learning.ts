@@ -133,9 +133,19 @@ export async function getActiveQuizAttempt(quizId: string, studentId: string) {
   const { data: quiz } = await supabase
     .schema("learning")
     .from("quizzes")
-    .select("time_limit_minutes")
+    .select("time_limit_minutes, strict_mode")
     .eq("id", quizId)
     .single();
+
+  // Strict-mode attempts are never resumed: reaching this point with an
+  // unfinished strict attempt means the student already left the quiz
+  // environment (tab closed before the beacon fired, browser killed, etc.)
+  // without going through the normal forfeit path. Close it out as
+  // forfeited rather than letting them silently pick back up.
+  if (quiz?.strict_mode) {
+    await forfeitQuizAttempt(attempt.id, "left_quiz_environment");
+    return null;
+  }
 
   if (quiz && quiz.time_limit_minutes) {
     const elapsedSeconds = Math.floor((new Date().getTime() - new Date(attempt.started_at).getTime()) / 1000);
@@ -148,6 +158,91 @@ export async function getActiveQuizAttempt(quizId: string, studentId: string) {
   }
 
   return attempt;
+}
+
+export async function forfeitQuizAttempt(attemptId: string, reason: string) {
+  const supabase = await createClient();
+
+  const { data: attempt, error: attError } = await supabase
+    .schema("learning")
+    .from("quiz_attempts")
+    .select("*")
+    .eq("id", attemptId)
+    .single();
+
+  if (attError) throw attError;
+
+  // Idempotent: a second forfeit/submit call for an already-closed attempt
+  // just returns what's already there instead of erroring or double-zeroing.
+  if (attempt.submitted_at) {
+    return attempt;
+  }
+
+  const { data: quiz } = await supabase
+    .schema("learning")
+    .from("quizzes")
+    .select("activity_id")
+    .eq("id", attempt.quiz_id)
+    .single();
+
+  const { data: questions } = await supabase
+    .schema("learning")
+    .from("quiz_questions")
+    .select("id, points")
+    .eq("quiz_id", attempt.quiz_id);
+
+  const totalMaxScore = (questions || []).reduce((sum, q) => sum + Number(q.points ?? 1), 0);
+
+  const answersToInsert = (questions || []).map(q => ({
+    attempt_id: attemptId,
+    question_id: q.id,
+    selected_option_id: null,
+    answer_text: null,
+    is_correct: false,
+    points_awarded: 0
+  }));
+
+  if (answersToInsert.length > 0) {
+    const { error: insError } = await supabase
+      .schema("learning")
+      .from("quiz_answers")
+      .insert(answersToInsert);
+    if (insError) throw insError;
+  }
+
+  const { data: updatedAttempt } = await supabase
+    .schema("learning")
+    .from("quiz_attempts")
+    .update({
+      submitted_at: new Date().toISOString(),
+      score: 0,
+      max_score: totalMaxScore,
+      passed: false,
+      forfeited: true,
+      forfeit_reason: reason,
+      time_spent_seconds: Math.floor((new Date().getTime() - new Date(attempt.started_at).getTime()) / 1000)
+    })
+    .eq("id", attemptId)
+    .select()
+    .single();
+
+  await supabase
+    .schema("learning")
+    .from("student_activity_progress")
+    .update({
+      status_code: "failed",
+      score: 0,
+      max_score: totalMaxScore,
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", attempt.student_activity_progress_id);
+
+  if (quiz?.activity_id) {
+    await syncCourseProgressByActivity(attempt.student_id, quiz.activity_id);
+  }
+
+  return updatedAttempt;
 }
 
 export async function getQuizSessionDetails(attemptId: string) {
@@ -325,6 +420,24 @@ export async function startQuizAttempt(quizId: string, studentId: string, progre
     throw new Error("Maximum attempts limit reached for this quiz.");
   }
 
+  // A student who has already passed doesn't need (or get) another attempt,
+  // even if attempts remain under max_attempts.
+  const { data: passedAttempt } = await supabase
+    .schema("learning")
+    .from("quiz_attempts")
+    .select("id")
+    .eq("quiz_id", quizId)
+    .eq("student_id", studentId)
+    .eq("passed", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (passedAttempt) {
+    throw new Error("You have already passed this quiz. No further attempts are needed.");
+  }
+
+  const nextAttemptNumber = (count || 0) + 1;
+
   // Create progress record if it doesn't exist
   let actualProgressId = progressId;
   if (!progressId || progressId === "new") {
@@ -347,6 +460,7 @@ export async function startQuizAttempt(quizId: string, studentId: string, progre
             activity_id: quizObj.activity_id,
             activity_assignment_id: assign.id,
             status_code: "started",
+            attempt_number: nextAttemptNumber,
             started_at: new Date().toISOString()
           }, { onConflict: "student_id,activity_assignment_id" })
           .select("id")
@@ -361,6 +475,7 @@ export async function startQuizAttempt(quizId: string, studentId: string, progre
       .from("student_activity_progress")
       .update({
         status_code: "started",
+        attempt_number: nextAttemptNumber,
         started_at: new Date().toISOString()
       })
       .eq("id", progressId);
@@ -373,7 +488,7 @@ export async function startQuizAttempt(quizId: string, studentId: string, progre
       quiz_id: quizId,
       student_id: studentId,
       student_activity_progress_id: actualProgressId,
-      attempt_number: (count || 0) + 1,
+      attempt_number: nextAttemptNumber,
       started_at: new Date().toISOString()
     })
     .select()
@@ -589,6 +704,36 @@ export async function submitProject(
 ) {
   const supabase = await createClient();
 
+  // A submission is locked from resubmission the moment it exists, until a
+  // teacher explicitly rejects it or requests revision — prevents students
+  // from overwriting a submission mid-review, and gives "awaiting review"
+  // an enforced meaning rather than just a UI hint.
+  const { data: existingSubmission } = await supabase
+    .schema("learning")
+    .from("project_submissions")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("student_id", studentId)
+    .maybeSingle();
+
+  if (existingSubmission) {
+    const { data: existingReview } = await supabase
+      .schema("learning")
+      .from("project_reviews")
+      .select("review_status")
+      .eq("submission_id", existingSubmission.id)
+      .maybeSingle();
+
+    const canResubmit = existingReview?.review_status === "rejected" || existingReview?.review_status === "revision_requested";
+    if (!canResubmit) {
+      throw new Error(
+        existingReview?.review_status === "approved"
+          ? "This project has already been approved. No resubmission is needed."
+          : "Your submission is awaiting mentor review. You can resubmit once it has been reviewed."
+      );
+    }
+  }
+
   let actualProgressId = progressId;
   if (!progressId || progressId === "new") {
     const { data: proj } = await supabase
@@ -651,6 +796,27 @@ export async function submitProject(
     .single();
 
   if (error) throw error;
+
+  // A resubmission overwrites the same submission row (unique on
+  // project_id+student_id), so any prior review tied to the old content is
+  // now stale — clear it so the student doesn't keep seeing an old
+  // approved/rejected verdict and score for work they've since changed.
+  await supabase
+    .schema("learning")
+    .from("project_reviews")
+    .delete()
+    .eq("submission_id", submission.id);
+
+  await supabase
+    .schema("learning")
+    .from("student_activity_progress")
+    .update({
+      score: null,
+      reviewed_at: null,
+      reviewed_by: null,
+      feedback: null
+    })
+    .eq("id", actualProgressId);
 
   const { data: proj } = await supabase
     .schema("learning")
@@ -1076,7 +1242,8 @@ export async function createActivityAndSubclass(input: {
   quiz_shuffle_questions?: boolean;
   quiz_shuffle_options?: boolean;
   quiz_show_results_immediately?: boolean;
-  
+  quiz_strict_mode?: boolean;
+
   project_overview?: string;
   project_requirements?: string;
   project_deliverables?: string;
@@ -1094,6 +1261,10 @@ export async function createActivityAndSubclass(input: {
   chal_memory_limit?: number;
 }) {
   const supabase = await createClient();
+
+  if (input.quiz_strict_mode && !input.quiz_time_limit) {
+    throw new Error("Strict/Proctored Mode requires a time limit to be set.");
+  }
 
   // 1. Insert Base Activity
   const { data: activity, error: actError } = await supabase
@@ -1129,7 +1300,8 @@ export async function createActivityAndSubclass(input: {
         max_attempts: input.quiz_max_attempts ?? 1,
         shuffle_questions: input.quiz_shuffle_questions ?? false,
         shuffle_options: input.quiz_shuffle_options ?? false,
-        show_results_immediately: input.quiz_show_results_immediately ?? true
+        show_results_immediately: input.quiz_show_results_immediately ?? true,
+        strict_mode: input.quiz_strict_mode ?? false
       });
     if (subError) throw subError;
   } else if (input.activity_type_code === "project") {
@@ -1351,7 +1523,8 @@ export async function updateActivityAndSubclass(id: string, input: {
   quiz_shuffle_questions?: boolean;
   quiz_shuffle_options?: boolean;
   quiz_show_results_immediately?: boolean;
-  
+  quiz_strict_mode?: boolean;
+
   project_overview?: string;
   project_requirements?: string;
   project_deliverables?: string;
@@ -1377,6 +1550,10 @@ export async function updateActivityAndSubclass(id: string, input: {
   }>;
 }) {
   const supabase = await createClient();
+
+  if (input.activity_type_code === "quiz" && input.quiz_strict_mode && !input.quiz_time_limit) {
+    throw new Error("Strict/Proctored Mode requires a time limit to be set.");
+  }
 
   // Validate and update assignments if any
   if (input.assignments && input.assignments.length > 0) {
@@ -1466,6 +1643,7 @@ export async function updateActivityAndSubclass(id: string, input: {
         shuffle_questions: input.quiz_shuffle_questions ?? false,
         shuffle_options: input.quiz_shuffle_options ?? false,
         show_results_immediately: input.quiz_show_results_immediately ?? true,
+        strict_mode: input.quiz_strict_mode ?? false,
         updated_at: new Date().toISOString()
       })
       .eq("activity_id", id);

@@ -925,16 +925,18 @@ export async function syncCourseProgress(userId: string, courseId: string) {
 
           totalActivitiesCount = quizIds.length + projectIds.length + challengeIds.length;
 
-          // Quiz completions
+          // Quiz completions — only a passed attempt counts, matching the
+          // "already passed, no more attempts needed" retake rule; a
+          // submitted-but-failed attempt does not count toward completion.
           if (quizIds.length > 0) {
             const { data: quizAttempts } = await supabase
               .schema("learning")
               .from("quiz_attempts")
-              .select("quiz_id, score, is_completed")
+              .select("quiz_id, passed")
               .eq("student_id", userId)
               .in("quiz_id", quizIds);
-            
-            const completedQuizIds = new Set(quizAttempts?.filter(a => a.score !== null || a.is_completed).map(a => a.quiz_id));
+
+            const completedQuizIds = new Set(quizAttempts?.filter(a => a.passed === true).map(a => a.quiz_id));
             completedActivitiesCount += completedQuizIds.size;
           }
 
@@ -961,27 +963,22 @@ export async function syncCourseProgress(userId: string, courseId: string) {
             }
           }
 
-          // Challenge completions (result status is success/passed)
+          // Challenge completions — pass/fail lives on
+          // challenge_submissions.submission_status_code ("accepted" is the
+          // only passing value); challenge_submission_results has no status
+          // column at all, so it can't be used to determine this.
           if (challengeIds.length > 0) {
             const { data: challengeSubmissions } = await supabase
               .schema("learning")
               .from("challenge_submissions")
-              .select("id, challenge_id")
+              .select("challenge_id, submission_status_code")
               .eq("student_id", userId)
               .in("challenge_id", challengeIds);
-            
-            if (challengeSubmissions && challengeSubmissions.length > 0) {
-              const subIds = challengeSubmissions.map(s => s.id);
-              const { data: results } = await supabase
-                .schema("learning")
-                .from("challenge_submission_results")
-                .select("submission_id, status")
-                .in("submission_id", subIds);
-              
-              const passedSubIds = new Set(results?.filter(r => r.status === "success" || r.status === "passed").map(r => r.submission_id));
-              const completedChallengeIds = new Set(challengeSubmissions.filter(s => passedSubIds.has(s.id)).map(s => s.challenge_id));
-              completedActivitiesCount += completedChallengeIds.size;
-            }
+
+            const completedChallengeIds = new Set(
+              challengeSubmissions?.filter(s => s.submission_status_code === "accepted").map(s => s.challenge_id)
+            );
+            completedActivitiesCount += completedChallengeIds.size;
           }
         }
       }

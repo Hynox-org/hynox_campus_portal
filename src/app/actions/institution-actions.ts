@@ -23,6 +23,7 @@ import {
 } from "@/services/onboarding";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export async function createNewInstitutionAction(formData: FormData) {
   const name = formData.get("name") as string;
@@ -446,7 +447,7 @@ export async function deleteUserAction(userId: string) {
     const { data: user } = await supabase
       .schema("core")
       .from("users")
-      .select("id, email")
+      .select("id, email, auth_user_id")
       .eq("id", userId)
       .maybeSingle();
 
@@ -476,6 +477,19 @@ export async function deleteUserAction(userId: string) {
       .eq("id", userId);
 
     if (deleteUserErr) throw deleteUserErr;
+
+    // 5. Delete the underlying auth provider identity so the person can't
+    // sign back in and silently reclaim their old roles/history.
+    if (user.auth_user_id) {
+      const adminClient = createAdminClient();
+      const { error: deleteAuthErr } = await adminClient.auth.admin.deleteUser(
+        user.auth_user_id
+      );
+
+      if (deleteAuthErr && deleteAuthErr.status !== 404) {
+        throw deleteAuthErr;
+      }
+    }
 
     revalidatePath("/admin");
     revalidatePath("/institution");

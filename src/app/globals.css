@@ -96,3 +96,46 @@ body {
   animation: slideOver 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Quiz pass/fail result badge */
+@keyframes hc-badgePopIn {
+  0% { opacity: 0; transform: scale(0.3) rotate(-12deg); }
+  60% { opacity: 1; transform: scale(1.12) rotate(4deg); }
+  80% { transform: scale(0.96) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes hc-badgeShake {
+  0% { opacity: 0; transform: scale(0.7) translateX(0); }
+  40% { opacity: 1; transform: scale(1) translateX(-8px); }
+  55% { transform: scale(1) translateX(6px); }
+  70% { transform: scale(1) translateX(-4px); }
+  85% { transform: scale(1) translateX(2px); }
+  100% { opacity: 1; transform: scale(1) translateX(0); }
+}
+
+@keyframes hc-ringPulse {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+@keyframes hc-confettiBurst {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translate(var(--hc-confetti-x), var(--hc-confetti-y)) rotate(var(--hc-confetti-r)) scale(0.4); opacity: 0; }
+}
+
+.animate-hc-badgePopIn {
+  animation: hc-badgePopIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-hc-badgeShake {
+  animation: hc-badgeShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+}
+
+.animate-hc-ringPulse {
+  animation: hc-ringPulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.animate-hc-confetti {
+  animation: hc-confettiBurst 0.9s ease-out forwards;
+}
+

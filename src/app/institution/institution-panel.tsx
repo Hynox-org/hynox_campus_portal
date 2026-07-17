@@ -1,30 +1,27 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { 
-  Building, 
-  Users, 
-  ChevronRight, 
-  Search, 
-  Activity, 
-  BookOpen, 
-  CheckCircle, 
-  Clock, 
-  X, 
-  ExternalLink, 
-  TrendingUp, 
-  RefreshCw,
+import {
+  Building,
+  Users,
+  Search,
+  CheckCircle,
+  Clock,
+  X,
+  ExternalLink,
+  TrendingUp,
   Award,
   ChevronDown
 } from "lucide-react";
 import { getStudentDeliveryDataAction, listStudentLessonProgressAction } from "@/app/actions/delivery-actions";
 import { listLessonsForCourseAction } from "@/app/actions/academic-actions";
 import { getCohortAttendanceReportAction } from "@/app/actions/attendance-actions";
-import { AlertTriangle, Calendar } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
 import { useAcademicPrefetchData } from "@/hooks/use-academics";
 import { DashboardLoader } from "@/components/dashboard-loader";
+import AnalyticsTab from "./analytics-tab";
 
 interface InstitutionPanelProps {
   adminEmail: string;
@@ -40,15 +37,15 @@ export default function InstitutionPanel({
   primaryRole
 }: InstitutionPanelProps) {
   // Navigation states
-  const [activeTab, setActiveTab] = useState<"overview" | "roster">(() => {
+  const [activeTab, setActiveTab] = useState<"roster" | "analytics">(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab && ["overview", "roster"].includes(tab)) {
+      if (tab && ["roster", "analytics"].includes(tab)) {
         return tab as any;
       }
     }
-    return "overview";
+    return "analytics";
   });
 
   useEffect(() => {
@@ -136,10 +133,6 @@ export default function InstitutionPanel({
     return !rosterSearch || studentName.includes(search) || studentEmail.includes(search);
   });
 
-  // Calculate stats for overview
-  const totalEnrolled = enrollments.length;
-  const totalCohorts = cohorts.length;
-  
   // Fetch real progress data for selected student
   useEffect(() => {
     if (selectedStudent) {
@@ -178,19 +171,6 @@ export default function InstitutionPanel({
       });
     }
   }, [expandedCourseId, drawerLessonsCache]);
-
-  // Calculate average progress deterministically for all enrolled students (fallback if progress_percentage not set)
-  const studentAverageProgress = enrollments.length > 0 
-    ? Math.round(
-        enrollments.reduce((acc, curr) => {
-          return acc + (curr.progress_percentage || 0);
-        }, 0) / enrollments.length
-      )
-    : 0;
-
-  const quizCompletionRate = activities.filter(a => a.activity_type_code === "quiz").length > 0
-    ? Math.round((quizAttempts.length / (enrollments.length * activities.filter(a => a.activity_type_code === "quiz").length || 1)) * 100)
-    : 0;
 
   const renderStudentDetailDrawer = () => {
     if (!selectedStudent) return null;
@@ -642,18 +622,6 @@ export default function InstitutionPanel({
         </div>
 
         <button
-          onClick={() => setActiveTab("overview")}
-          className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer shrink-0 ${
-            activeTab === "overview"
-              ? "bg-[#2563EB]/10 border-[#2563EB]/20 text-[#2563EB] shadow-sm"
-              : "bg-white border-[#E2E8F0] hover:bg-slate-50 text-[#475569] hover:text-[#0F172A]"
-          }`}
-        >
-          <Activity size={16} />
-          Dashboard Overview
-        </button>
-
-        <button
           onClick={() => setActiveTab("roster")}
           className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer shrink-0 ${
             activeTab === "roster"
@@ -664,162 +632,23 @@ export default function InstitutionPanel({
           <Users size={16} />
           Student Roster & Progress
         </button>
+
+        <button
+          onClick={() => setActiveTab("analytics")}
+          className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer shrink-0 ${
+            activeTab === "analytics"
+              ? "bg-[#2563EB]/10 border-[#2563EB]/20 text-[#2563EB] shadow-sm"
+              : "bg-white border-[#E2E8F0] hover:bg-slate-50 text-[#475569] hover:text-[#0F172A]"
+          }`}
+        >
+          <TrendingUp size={16} />
+          Performance Analytics
+        </button>
       </div>
 
       {/* Main Content Area */}
       <div className="md:col-span-3 flex flex-col gap-6">
         
-        {/* OVERVIEW DASHBOARD */}
-        {activeTab === "overview" && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* Metric Blocks */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Total Cohorts</span>
-                <div className="text-2xl font-black text-[#0F172A] mt-1">{totalCohorts}</div>
-                <div className="text-[9px] text-[#475569] mt-2">Active groups under campus</div>
-              </div>
-
-              <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Enrolled Students</span>
-                <div className="text-2xl font-black text-[#0F172A] mt-1">{totalEnrolled}</div>
-                <div className="text-[9px] text-[#475569] mt-2">Active academic candidates</div>
-              </div>
-
-              <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Overall Avg Progress</span>
-                <div className="text-2xl font-black text-[#2563EB] mt-1">{studentAverageProgress}%</div>
-                <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full mt-2 overflow-hidden">
-                  <div className="bg-[#2563EB] h-full" style={{ width: `${studentAverageProgress}%` }}></div>
-                </div>
-              </div>
-
-              <div className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm">
-                <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Quiz completion rate</span>
-                <div className="text-2xl font-black text-[#16A34A] mt-1">{quizCompletionRate}%</div>
-                <div className="text-[9px] text-[#475569] mt-2">Of total assigned quizzes</div>
-              </div>
-            </div>
-
-            {/* Program list */}
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm space-y-4">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569]">Campus Academic Curriculums</h3>
-                <p className="text-[11px] text-[#475569] mt-0.5">Educational programs mapped to this institution.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {programs.map(prog => (
-                  <div key={prog.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-white/50 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <BookOpen size={16} className="text-[#2563EB]" />
-                        <h4 className="font-bold text-xs text-[#0F172A]">{prog.title}</h4>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${
-                        (prog.status as any)?.code === "active"
-                          ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                          : (prog.status as any)?.code === "suspended"
-                          ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
-                          : "bg-[#64748B]/10 text-[#64748B] border-[#64748B]/20"
-                      }`}>
-                        {(prog.status as any)?.label || "Active"}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-[#475569] line-clamp-2">{prog.description || "No description provided."}</p>
-                    <div className="flex items-center gap-2 pt-2 text-[9px] font-bold">
-                      <span className="bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/25 px-2 py-0.5 rounded-md uppercase">
-                        {prog.visibility_type || "Public"}
-                      </span>
-                      <span className="text-[#475569]">• Mapped to Campus</span>
-                    </div>
-                  </div>
-                ))}
-                {programs.length === 0 && (
-                  <div className="col-span-2 text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
-                    No program curricula mapped to this campus yet.
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Campus Attendance Monitor */}
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm space-y-4">
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                  <Calendar size={14} className="text-[#2563EB]" /> Campus Attendance Analytics
-                </h3>
-                <p className="text-[11px] text-[#475569] mt-0.5">Average attendance performance and student warnings per cohort batch.</p>
-              </div>
-
-              {loadingReports ? (
-                <div className="text-center py-8 font-bold text-[#475569] animate-pulse">Syncing attendance data...</div>
-              ) : cohorts.length === 0 ? (
-                <div className="text-center py-6 text-[#475569] text-xs">No cohorts registered to track attendance.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {cohorts.map(c => {
-                    const report = cohortReports[c.id];
-                    if (!report) {
-                      return (
-                        <div key={c.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-slate-50/50 flex items-center justify-center text-slate-400">
-                          Calculating statistics...
-                        </div>
-                      );
-                    }
-
-                    // Compute cohort average
-                    const stats = report.studentStats || [];
-                    const cohortAvg = stats.length > 0
-                      ? Math.round(stats.reduce((acc: number, s: any) => acc + s.percentage, 0) / stats.length * 10) / 10
-                      : 100;
-                    
-                    // Enrolled students under 70% threshold
-                    const flagged = stats.filter((s: any) => s.percentage < 70);
-
-                    return (
-                      <div key={c.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-slate-50/50 space-y-4">
-                        <div className="flex justify-between items-start gap-2 border-b border-[#E2E8F0] pb-2.5">
-                          <div>
-                            <h4 className="font-bold text-xs text-[#0F172A]">{c.name}</h4>
-                            <span className="text-[9px] text-[#475569] font-mono">{c.code}</span>
-                          </div>
-                          <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black border ${
-                            cohortAvg >= 70
-                              ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                              : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
-                          }`}>
-                            Avg: {cohortAvg}%
-                          </span>
-                        </div>
-
-                        {/* Warnings list */}
-                        <div className="space-y-1.5">
-                          <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wider block">Attendance Warnings ({flagged.length})</span>
-                          {flagged.length === 0 ? (
-                            <span className="text-[10px] text-emerald-600 font-semibold block">All students in good standing!</span>
-                          ) : (
-                            <div className="space-y-1 max-h-[120px] overflow-y-auto pr-1">
-                              {flagged.map((s: any) => (
-                                <div key={s.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-[#E2E8F0] text-[10px]">
-                                  <span className="font-bold text-[#0F172A]">{s.name}</span>
-                                  <span className="text-[#DC2626] font-bold bg-[#DC2626]/10 px-1.5 py-0.5 rounded border border-[#DC2626]/20">
-                                    {s.percentage}%
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* ROSTER TABLE */}
         {activeTab === "roster" && (
           <div className="bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm space-y-5 animate-fadeIn">
@@ -930,6 +759,19 @@ export default function InstitutionPanel({
               </div>
             )}
           </div>
+        )}
+
+        {/* PERFORMANCE ANALYTICS */}
+        {activeTab === "analytics" && (
+          <AnalyticsTab
+            cohorts={cohorts}
+            enrollments={enrollments}
+            activities={activities}
+            quizAttempts={quizAttempts}
+            projectSubmissions={projectSubmissions}
+            challengeSubmissions={challengeSubmissions}
+            cohortReports={cohortReports}
+          />
         )}
 
       </div>

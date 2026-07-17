@@ -25,57 +25,52 @@ export async function proxy(request: NextRequest) {
   // User is authenticated, resolve their role
   let role = "public";
   
-  // Phase 8 Rule: Ensure akshaykumar07.m@gmail.com is always super_admin
-  if (user.email === "akshaykumar07.m@gmail.com") {
-    role = "super_admin";
-  } else {
-    // Resolve user from core.users and core.user_roles dynamically
-    let { data: dbUser } = await supabase
+  // Resolve user from core.users and core.user_roles dynamically
+  let { data: dbUser } = await supabase
+    .schema("core")
+    .from("users")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (!dbUser && user.email) {
+    // Fallback to query by email in case the auth link isn't established yet
+    const { data: emailUser } = await supabase
       .schema("core")
       .from("users")
       .select("id")
-      .eq("auth_user_id", user.id)
+      .eq("email", user.email)
       .is("deleted_at", null)
       .maybeSingle();
 
-    if (!dbUser && user.email) {
-      // Fallback to query by email in case the auth link isn't established yet
-      const { data: emailUser } = await supabase
-        .schema("core")
-        .from("users")
-        .select("id")
-        .eq("email", user.email)
-        .is("deleted_at", null)
-        .maybeSingle();
-
-      if (emailUser) {
-        dbUser = emailUser;
-      }
+    if (emailUser) {
+      dbUser = emailUser;
     }
+  }
 
-    if (dbUser) {
-      const { data: userRoles } = await supabase
-        .schema("core")
-        .from("user_roles")
-        .select(`
-          role_id,
-          roles:role_id (
-            name,
-            priority
-          )
-        `)
-        .eq("user_id", dbUser.id);
+  if (dbUser) {
+    const { data: userRoles } = await supabase
+      .schema("core")
+      .from("user_roles")
+      .select(`
+        role_id,
+        roles:role_id (
+          name,
+          priority
+        )
+      `)
+      .eq("user_id", dbUser.id);
 
-      if (userRoles && userRoles.length > 0) {
-        let maxPriority = -1;
-        userRoles.forEach((ur: any) => {
-          const r = ur.roles as any;
-          if (r && r.priority > maxPriority) {
-            maxPriority = r.priority;
-            role = r.name;
-          }
-        });
-      }
+    if (userRoles && userRoles.length > 0) {
+      let maxPriority = -1;
+      userRoles.forEach((ur: any) => {
+        const r = ur.roles as any;
+        if (r && r.priority > maxPriority) {
+          maxPriority = r.priority;
+          role = r.name;
+        }
+      });
     }
   }
 

@@ -24,7 +24,8 @@ import {
   getChallengeSubmissionResultsAction,
   getActiveQuizAttemptAction,
   getQuizSessionDetailsAction,
-  ensureLessonProjectActivityAction
+  ensureLessonProjectActivityAction,
+  forfeitQuizAttemptAction
 } from "@/app/actions/learning-actions";
 import { getStudentAttendanceLogsAction } from "@/app/actions/attendance-actions";
 import Link from "next/link";
@@ -58,13 +59,16 @@ import {
   History,
   Code,
   Menu,
-  X
+  X,
+  ShieldAlert,
+  Maximize2
 } from "lucide-react";
 
 import { useStudentDeliveryData } from "@/hooks/use-delivery";
 import { useAcademicPrefetchData } from "@/hooks/use-academics";
 import { DashboardLoader } from "@/components/dashboard-loader";
 import { useToast } from "@/components/toast";
+import { QuizResultBadge } from "@/components/quiz-result-badge";
 
 interface StudentConsoleProps {
   studentEmail: string;
@@ -289,6 +293,19 @@ export default function StudentConsole({
   }, [selectedAnswers]);
   const isSubmittingQuizRef = useRef(false);
 
+  // Strict/proctored mode lockdown state
+  const [quizViolationWarning, setQuizViolationWarning] = useState<{ deadline: number } | null>(null);
+  const [, setViolationTick] = useState(0);
+  const quizViolationCountRef = useRef(0);
+  // Flips off the instant an attempt ends (submit/forfeit), so lockdown
+  // listeners that fire during our own cleanup (e.g. exitFullscreen after a
+  // normal submit) don't register a false violation.
+  const attemptActiveRef = useRef(false);
+  const activeAttemptRef = useRef<any>(null);
+  useEffect(() => {
+    activeAttemptRef.current = activeAttempt;
+  }, [activeAttempt]);
+
   // Active project state
   const [selectedProjectActivity, setSelectedProjectActivity] = useState<any | null>(null);
   const [projectDetails, setProjectDetails] = useState<any | null>(null);
@@ -344,8 +361,11 @@ export default function StudentConsole({
     loadAttendance();
   }, [selectedCohort, studentId]);
 
-  // Load activities on mount or tab change
-  const loadActivities = async () => {
+  // Load activities on mount or tab change. Returns the freshly fetched list
+  // so callers (e.g. after a quiz submit) can re-sync any stale snapshot of
+  // an individual activity (like selectedQuizActivity) instead of leaving it
+  // pointed at pre-attempt data until the next full re-entry.
+  const loadActivities = async (): Promise<any[]> => {
     const cachedActivities = get(`student-activities-${studentId}`);
     if (cachedActivities) {
       setActivities(cachedActivities);
@@ -357,10 +377,13 @@ export default function StudentConsole({
     if (res.activities) {
       set(`student-activities-${studentId}`, res.activities);
       setActivities(res.activities);
+      setLoadingActivities(false);
+      return res.activities;
     } else if (res.error) {
       showError(res.error);
     }
     setLoadingActivities(false);
+    return cachedActivities || [];
   };
 
   useEffect(() => {
@@ -438,8 +461,9 @@ export default function StudentConsole({
       set(`student-delivery-data-${studentId}`, res);
       applyData(res);
     }
-    await loadActivities();
+    const updatedActivities = await loadActivities();
     await loadLessonProgress();
+    return updatedActivities;
   };
 
   const loadLessonProgress = async () => {
@@ -466,6 +490,9 @@ export default function StudentConsole({
     setQuizQuestions([]);
     setActiveAttempt(null);
     setQuizSubmittedResult(null);
+    setQuizViolationWarning(null);
+    attemptActiveRef.current = false;
+    quizViolationCountRef.current = 0;
     setSelectedProjectActivity(null);
     setProjectDetails(null);
     setProjectSubmission(null);
@@ -695,6 +722,15 @@ export default function StudentConsole({
     );
   };
 
+  // A project submission is locked from resubmission the moment it exists,
+  // until a teacher rejects it or requests revision — mirrors the server-side
+  // gate in submitProject() so the form can't be edited into a state the
+  // backend will just reject anyway.
+  const isProjectResubmitLocked = (submission: any, review: any) => {
+    if (!submission) return false;
+    return !(review?.review_status === "rejected" || review?.review_status === "revision_requested");
+  };
+
   // Quiz interactive flows
   const handleEnterQuiz = async (activity: any) => {
     setSelectedQuizActivity(activity);
@@ -736,6 +772,20 @@ export default function StudentConsole({
 
   const handleStartQuiz = async () => {
     if (!quizDetails) return;
+
+    // Fullscreen must be requested synchronously within this click-triggered
+    // handler (before any state that would burn an attempt) so the browser's
+    // user-gesture requirement is preserved and a permission failure doesn't
+    // cost the student an attempt.
+    if (quizDetails.strict_mode) {
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch {
+        showError("Your browser blocked fullscreen mode. Please allow fullscreen and try again.");
+        return;
+      }
+    }
+
     setActionLoading(true);
     try {
       const attemptNum = (selectedQuizActivity.progress?.attempt_number || 0) + 1;
@@ -750,15 +800,40 @@ export default function StudentConsole({
           setActiveAttempt(res.attempt);
         }
         setSelectedAnswers({});
+
+        if (quizDetails.strict_mode) {
+          quizViolationCountRef.current = 0;
+          attemptActiveRef.current = true;
+          // Trap a history entry so the very next Back press can be caught
+          // by the popstate listener instead of navigating away.
+          window.history.pushState(null, "", window.location.href);
+        }
+
         showSuccess("Quiz attempt started. Good luck!");
       } else if (res.error) {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
         showError(res.error);
       }
     } catch (err: any) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
       showError(err.message || "Failed to start quiz.");
     } finally {
       setActionLoading(false);
     }
+  };
+
+  // Re-points selectedQuizActivity at the freshly refetched copy of itself so
+  // the "Attempts Done" / status display reflects the attempt that was just
+  // submitted/forfeited, instead of the stale snapshot captured when the
+  // student originally clicked "Enter Quiz".
+  const resyncSelectedQuizActivity = (freshActivities: any[] | undefined) => {
+    if (!freshActivities || !selectedQuizActivity) return;
+    const updated = freshActivities.find((a: any) => a.id === selectedQuizActivity.id);
+    if (updated) setSelectedQuizActivity(updated);
   };
 
   const handleOptionSelect = (questionId: string, optionId: string, questionType?: string) => {
@@ -799,10 +874,15 @@ export default function StudentConsole({
 
       const res = await submitQuizAnswersAction(activeAttempt.id, payload);
       if (res.attempt) {
+        attemptActiveRef.current = false;
+        setQuizViolationWarning(null);
         setQuizSubmittedResult(res.attempt);
         setActiveAttempt(null);
+        if (document.fullscreenElement) {
+          try { await document.exitFullscreen(); } catch {}
+        }
         showSuccess("Quiz submitted successfully!");
-        await refreshStudentData();
+        resyncSelectedQuizActivity(await refreshStudentData());
       } else if (res.error) {
         showError(res.error);
       }
@@ -813,6 +893,121 @@ export default function StudentConsole({
       isSubmittingQuizRef.current = false;
     }
   };
+
+  // Ends a strict-mode attempt with a zero score because the student left
+  // the quiz environment (fullscreen exit / tab switch / back navigation)
+  // either after the one-warning grace period expired, or on a second
+  // violation after the warning was already used.
+  const forfeitAttempt = async (reason: string) => {
+    if (!activeAttemptRef.current || isSubmittingQuizRef.current) return;
+    isSubmittingQuizRef.current = true;
+    attemptActiveRef.current = false;
+    setQuizViolationWarning(null);
+    setActionLoading(true);
+    try {
+      const res = await forfeitQuizAttemptAction(activeAttemptRef.current.id, reason);
+      if (res.attempt) {
+        setQuizSubmittedResult(res.attempt);
+        setActiveAttempt(null);
+        if (document.fullscreenElement) {
+          try { await document.exitFullscreen(); } catch {}
+        }
+        showError("Attempt forfeited — you left the quiz environment.");
+        resyncSelectedQuizActivity(await refreshStudentData());
+      } else if (res.error) {
+        showError(res.error);
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to forfeit quiz attempt.");
+    } finally {
+      setActionLoading(false);
+      isSubmittingQuizRef.current = false;
+    }
+  };
+
+  const registerViolation = (reason: string) => {
+    if (!attemptActiveRef.current || isSubmittingQuizRef.current) return;
+    if (quizViolationCountRef.current === 0) {
+      quizViolationCountRef.current = 1;
+      setQuizViolationWarning({ deadline: Date.now() + 15000 });
+    } else {
+      forfeitAttempt(reason);
+    }
+  };
+
+  // Grace-period countdown: once a warning is shown, either the student
+  // returns to fullscreen + a visible tab before the deadline (dismiss, no
+  // reset — the one warning stays used), or the deadline passes and the
+  // attempt is forfeited.
+  useEffect(() => {
+    if (!quizViolationWarning) return;
+
+    const check = () => {
+      const cleared = typeof document !== "undefined" && !!document.fullscreenElement && !document.hidden;
+      if (cleared) {
+        setQuizViolationWarning(null);
+        return;
+      }
+      if (Date.now() >= quizViolationWarning.deadline) {
+        forfeitAttempt("grace_period_expired");
+        return;
+      }
+      setViolationTick(t => t + 1);
+    };
+
+    check();
+    const interval = setInterval(check, 500);
+    return () => clearInterval(interval);
+  }, [quizViolationWarning]);
+
+  // Lockdown listeners for strict-mode attempts: fullscreen exit, tab
+  // switch, and back-navigation are all violations; tab close fires a
+  // best-effort beacon so the attempt closes out promptly server-side too.
+  useEffect(() => {
+    if (!activeAttempt || !quizDetails?.strict_mode) return;
+
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        registerViolation("fullscreen_exit");
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        registerViolation("tab_switch");
+      }
+    };
+    const onPopState = () => {
+      window.history.pushState(null, "", window.location.href);
+      registerViolation("back_navigation");
+    };
+    const onPageHide = () => {
+      if (attemptActiveRef.current && activeAttemptRef.current) {
+        const blob = new Blob(
+          [JSON.stringify({ attemptId: activeAttemptRef.current.id, reason: "tab_closed" })],
+          { type: "application/json" }
+        );
+        navigator.sendBeacon("/api/quiz-forfeit", blob);
+      }
+    };
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [activeAttempt, quizDetails]);
 
   // Countdown Timer logic for quizzes
   useEffect(() => {
@@ -847,12 +1042,17 @@ export default function StudentConsole({
           }))
         );
         submitQuizAnswersAction(activeAttempt.id, payload)
-          .then((res) => {
+          .then(async (res) => {
             if (res.attempt) {
+              attemptActiveRef.current = false;
+              setQuizViolationWarning(null);
               setQuizSubmittedResult(res.attempt);
               setActiveAttempt(null);
+              if (document.fullscreenElement) {
+                try { await document.exitFullscreen(); } catch {}
+              }
               showSuccess("Time limit reached. Quiz automatically submitted.");
-              refreshStudentData();
+              resyncSelectedQuizActivity(await refreshStudentData());
             } else if (res.error) {
               showError(res.error);
               setActiveAttempt(null);
@@ -962,7 +1162,11 @@ export default function StudentConsole({
 
       if (res.submission) {
         setLessonProjectSubmission(res.submission);
-        
+        // A resubmission clears any prior review server-side (see
+        // submitProject) — drop the stale one from local state too so an
+        // old approved/rejected verdict doesn't linger on screen.
+        setLessonProjectReview(null);
+
         // Auto-complete the lesson progress in syllabus
         if (selectedCourse) {
           await completeLessonProgressAction(studentId, activeLesson.id, selectedCourse.id);
@@ -1024,6 +1228,10 @@ export default function StudentConsole({
       );
       if (res.submission) {
         setProjectSubmission(res.submission);
+        // A resubmission clears any prior review server-side (see
+        // submitProject) — drop the stale one from local state too so an
+        // old approved/rejected verdict doesn't linger on screen.
+        setProjectReview(null);
         showSuccess("Project submitted successfully for mentor review!");
         await refreshStudentData();
       } else if (res.error) {
@@ -1158,6 +1366,31 @@ export default function StudentConsole({
   return (
     <>
       <DashboardLoader loading={loadingStudentDelivery} message="Setting up your Student Hub..." />
+      {quizViolationWarning && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 border-4 border-[#DC2626]">
+            <ShieldAlert size={48} className="text-[#DC2626] mx-auto animate-pulse" />
+            <div>
+              <h3 className="font-bold text-sm text-[#DC2626] uppercase tracking-wide">Quiz Environment Violation Detected</h3>
+              <p className="text-[#475569] text-xs mt-2 leading-relaxed">
+                You left fullscreen mode or switched away from the quiz. Return within{" "}
+                <span className="font-mono font-bold text-[#DC2626]">
+                  {Math.max(0, Math.ceil((quizViolationWarning.deadline - Date.now()) / 1000))}s
+                </span>{" "}
+                or your attempt will be forfeited with a score of 0. This is your only warning.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                document.documentElement.requestFullscreen().catch(() => {});
+              }}
+              className="bg-[#DC2626] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold hover:bg-[#DC2626]/90 transition-all text-xs flex items-center gap-1.5 justify-center w-full"
+            >
+              <Maximize2 size={13} /> Return to Fullscreen &amp; Continue
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col gap-6 w-full max-w-full overflow-x-hidden" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
       {/* Global Program Selector Bar */}
       <div className="bg-white border border-[#E2E8F0] p-4 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -2090,61 +2323,99 @@ export default function StudentConsole({
                                 </div>
                               )}
 
-                              <div className="space-y-3 text-xs">
-                                <div className="flex flex-col gap-1.5">
-                                  <label htmlFor="lesson-github-url" className="font-bold text-[#0f172a]">GitHub Repository URL</label>
-                                  <input
-                                    id="lesson-github-url"
-                                    type="text"
-                                    value={lessonGithubUrl}
-                                    onChange={(e) => setLessonGithubUrl(e.target.value)}
-                                    placeholder="https://github.com/username/repository"
-                                    className="bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#2563EB] transition-all"
-                                  />
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                  <label htmlFor="lesson-submission-notes" className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
-                                  <textarea
-                                    id="lesson-submission-notes"
-                                    value={lessonSubmissionNotes}
-                                    onChange={(e) => setLessonSubmissionNotes(e.target.value)}
-                                    placeholder="Write details or instructions for running the codebase here..."
-                                    rows={3}
-                                    className="bg-white border border-[#E2E8F0] rounded-lg p-3 w-full text-xs outline-none focus:border-[#2563EB] transition-all"
-                                  />
-                                </div>
-
-                                <button
-                                  onClick={handleLessonSubmitProjectUrl}
-                                  disabled={actionLoading}
-                                  className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs disabled:opacity-50"
-                                >
-                                  Submit Assignment
-                                </button>
-                              </div>
-
-                              {lessonProjectReview && (
-                                <div className="border border-[#F59E0B]/20 bg-[#F59E0B]/5 rounded-xl p-4 space-y-2">
-                                  <h4 className="font-bold text-[10px] text-[#F59E0B] uppercase tracking-wide">Mentor Review</h4>
-                                  <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
-                                    <div>
-                                      <span className="text-[9px] text-[#64748B] block">Status</span>
-                                      <span className="capitalize">{lessonProjectReview.review_status}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] text-[#64748B] block">Score</span>
-                                      <span>{lessonProjectReview.score !== null ? `${lessonProjectReview.score} / ${lessonProjectDetails.max_score}` : "Not Graded"}</span>
-                                    </div>
-                                  </div>
-                                  {lessonProjectReview.feedback && (
-                                    <div className="bg-white p-3 rounded-lg border border-[#e2e8f0] text-[#475569]">
-                                      <span className="text-[9px] font-bold text-[#0f172a] block mb-1">Mentor Feedback</span>
-                                      <p className="italic">{lessonProjectReview.feedback}</p>
-                                    </div>
-                                  )}
+                              {lessonProjectSubmission && !lessonProjectReview && (
+                                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                                  <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                                  </span>
+                                  <span>Your assignment has been submitted and is awaiting mentor review. Resubmission is locked until it's reviewed.</span>
                                 </div>
                               )}
+
+                              {lessonProjectReview?.review_status === "approved" && (
+                                <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                                  <CheckCircle2 size={13} />
+                                  <span>This assignment has been approved — no resubmission needed.</span>
+                                </div>
+                              )}
+
+                              {lessonProjectReview?.review_status === "revision_requested" && (
+                                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                                  <AlertTriangle size={13} />
+                                  <span>Your mentor requested revisions — see feedback below, then resubmit.</span>
+                                </div>
+                              )}
+
+                              {(() => {
+                                const locked = isProjectResubmitLocked(lessonProjectSubmission, lessonProjectReview);
+                                return (
+                                  <div className="space-y-3 text-xs">
+                                    <div className="flex flex-col gap-1.5">
+                                      <label htmlFor="lesson-github-url" className="font-bold text-[#0f172a]">GitHub Repository URL</label>
+                                      <input
+                                        id="lesson-github-url"
+                                        type="text"
+                                        value={lessonGithubUrl}
+                                        onChange={(e) => setLessonGithubUrl(e.target.value)}
+                                        disabled={locked}
+                                        placeholder="https://github.com/username/repository"
+                                        className="bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#2563EB] transition-all disabled:bg-slate-50 disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+                                      />
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5">
+                                      <label htmlFor="lesson-submission-notes" className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
+                                      <textarea
+                                        id="lesson-submission-notes"
+                                        value={lessonSubmissionNotes}
+                                        onChange={(e) => setLessonSubmissionNotes(e.target.value)}
+                                        disabled={locked}
+                                        placeholder="Write details or instructions for running the codebase here..."
+                                        rows={3}
+                                        className="bg-white border border-[#E2E8F0] rounded-lg p-3 w-full text-xs outline-none focus:border-[#2563EB] transition-all disabled:bg-slate-50 disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+                                      />
+                                    </div>
+
+                                    <button
+                                      onClick={handleLessonSubmitProjectUrl}
+                                      disabled={actionLoading || locked}
+                                      className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {locked ? "Submission Locked" : "Submit Assignment"}
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+
+                              {lessonProjectReview && (() => {
+                                const reviewColor = lessonProjectReview.review_status === "approved"
+                                  ? "#16A34A"
+                                  : lessonProjectReview.review_status === "rejected"
+                                  ? "#DC2626"
+                                  : "#F59E0B";
+                                return (
+                                  <div className="border rounded-xl p-4 space-y-2" style={{ borderColor: `${reviewColor}33`, backgroundColor: `${reviewColor}0D` }}>
+                                    <h4 className="font-bold text-[10px] uppercase tracking-wide" style={{ color: reviewColor }}>Mentor Review</h4>
+                                    <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
+                                      <div>
+                                        <span className="text-[9px] text-[#64748B] block">Status</span>
+                                        <span className="capitalize">{lessonProjectReview.review_status.replace(/_/g, " ")}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-[#64748B] block">Score</span>
+                                        <span>{lessonProjectReview.score !== null ? `${lessonProjectReview.score} / ${lessonProjectDetails.max_score}` : "Not Graded"}</span>
+                                      </div>
+                                    </div>
+                                    {lessonProjectReview.feedback && (
+                                      <div className="bg-white p-3 rounded-lg border border-[#e2e8f0] text-[#475569]">
+                                        <span className="text-[9px] font-bold text-[#0f172a] block mb-1">Mentor Feedback</span>
+                                        <p className="italic">{lessonProjectReview.feedback}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           ) : (
                             <div className="bg-slate-50/50 border border-dashed border-[#E2E8F0] rounded-xl p-6 text-center text-[#64748B] font-medium text-xs">
@@ -2379,19 +2650,32 @@ export default function StudentConsole({
                                 <AlertTriangle size={15} className="text-red-600" />
                                 <span>The due date for this quiz has passed. You cannot start a new attempt.</span>
                               </div>
+                            ) : selectedQuizActivity.progress?.status_code === "completed" ? (
+                              <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
+                                <CheckCircle2 size={15} />
+                                <span>You've already passed this quiz — no further attempts are needed.</span>
+                              </div>
                             ) : (selectedQuizActivity.progress?.attempt_number || 0) >= quizDetails.max_attempts ? (
                               <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
                                 <AlertTriangle size={15} />
                                 <span>You have reached the maximum allowed attempts limit for this quiz. Retakes are locked.</span>
                               </div>
                             ) : (
-                              <button
-                                onClick={handleStartQuiz}
-                                disabled={actionLoading}
-                                className="bg-[#2563EB] text-white px-5 py-2.5 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-all text-xs flex items-center gap-1.5 disabled:opacity-50 font-sans"
-                              >
-                                <Play size={13} fill="white" /> Start Quiz Attempt
-                              </button>
+                              <div className="space-y-3">
+                                {quizDetails.strict_mode && (
+                                  <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-lg p-3.5 text-xs font-semibold flex items-start gap-2">
+                                    <ShieldAlert size={16} className="shrink-0 mt-0.5" />
+                                    <span>This is a proctored quiz. It will open in fullscreen. Leaving fullscreen, switching tabs, or navigating back ends your attempt with a score of 0 — you get one warning.</span>
+                                  </div>
+                                )}
+                                <button
+                                  onClick={handleStartQuiz}
+                                  disabled={actionLoading}
+                                  className="bg-[#2563EB] text-white px-5 py-2.5 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-all text-xs flex items-center gap-1.5 disabled:opacity-50 font-sans"
+                                >
+                                  <Play size={13} fill="white" /> Start Quiz Attempt
+                                </button>
+                              </div>
                             )}
                           </div>
                         );
@@ -2458,14 +2742,70 @@ export default function StudentConsole({
                         </button>
                       </div>
                     )}
-                    {quizSubmittedResult && (
-                      <div className="border border-[#16A34A]/20 bg-[#16A34A]/5 rounded-xl p-6 space-y-5 text-center">
-                        <Award size={48} className="text-[#16A34A] mx-auto" />
+                    {quizSubmittedResult && quizSubmittedResult.forfeited ? (
+                      <div className="border border-[#DC2626]/20 bg-[#DC2626]/5 rounded-xl p-6 space-y-5 text-center">
+                        <ShieldAlert size={48} className="text-[#DC2626] mx-auto" />
                         <div>
-                          <h4 className="font-bold text-sm text-[#0F172A]">Quiz Submitted Successfully!</h4>
+                          <h4 className="font-bold text-sm text-[#DC2626]">Attempt Forfeited — Score: 0</h4>
                           <p className="text-[#475569] text-xs mt-1">
-                            {quizDetails.show_results_immediately 
-                              ? "Your grading calculations have completed." 
+                            {({
+                              fullscreen_exit: "You exited fullscreen mode during a proctored quiz.",
+                              tab_switch: "You switched away from the quiz tab during a proctored quiz.",
+                              back_navigation: "You attempted to navigate back during a proctored quiz.",
+                              grace_period_expired: "You did not return to the quiz environment within the warning period.",
+                              left_quiz_environment: "You left the quiz environment without submitting.",
+                              tab_closed: "The quiz tab was closed before submitting."
+                            } as Record<string, string>)[quizSubmittedResult.forfeit_reason] || "This attempt was ended for leaving the quiz environment."}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto text-xs pt-2">
+                          <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
+                            <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wider">Score</span>
+                            <span className="font-bold text-xs text-[#DC2626]">{quizSubmittedResult.score} / {quizSubmittedResult.max_score}</span>
+                          </div>
+                          <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
+                            <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Passed</span>
+                            <span className="font-bold text-xs uppercase text-[#DC2626]">No</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setQuizSubmittedResult(null);
+                            setSelectedQuizActivity(null);
+                          }}
+                          className="bg-white border border-[#E2E8F0] text-[#0F172A] px-4 py-2 rounded-lg font-bold hover:bg-slate-50 transition-all text-xs"
+                        >
+                          Return to Quiz List
+                        </button>
+                      </div>
+                    ) : quizSubmittedResult && (
+                      <div className={`border rounded-xl p-6 space-y-5 text-center ${
+                        quizDetails.show_results_immediately
+                          ? quizSubmittedResult.passed
+                            ? "border-[#16A34A]/20 bg-[#16A34A]/5"
+                            : "border-[#DC2626]/20 bg-[#DC2626]/5"
+                          : "border-[#16A34A]/20 bg-[#16A34A]/5"
+                      }`}>
+                        {quizDetails.show_results_immediately ? (
+                          <QuizResultBadge passed={!!quizSubmittedResult.passed} />
+                        ) : (
+                          <Award size={48} className="text-[#16A34A] mx-auto" />
+                        )}
+                        <div>
+                          <h4 className={`font-bold text-sm ${
+                            quizDetails.show_results_immediately
+                              ? quizSubmittedResult.passed ? "text-[#16A34A]" : "text-[#DC2626]"
+                              : "text-[#0F172A]"
+                          }`}>
+                            {quizDetails.show_results_immediately
+                              ? quizSubmittedResult.passed
+                                ? "Congratulations — You Passed!"
+                                : "Quiz Submitted — Not Passed"
+                              : "Quiz Submitted Successfully!"}
+                          </h4>
+                          <p className="text-[#475569] text-xs mt-1">
+                            {quizDetails.show_results_immediately
+                              ? "Your grading calculations have completed."
                               : "Your answers have been recorded. Grades will be released by the instructor."}
                           </p>
                         </div>
@@ -2633,63 +2973,101 @@ export default function StudentConsole({
                         </div>
                       )}
 
-                      <div className="space-y-3 text-xs">
-                        <div className="flex flex-col gap-1.5">
-                          <label htmlFor="project-github-url" className="font-bold text-[#0f172a]">GitHub Repository URL</label>
-                          <input
-                            id="project-github-url"
-                            type="text"
-                            value={githubUrl}
-                            onChange={(e) => setGithubUrl(e.target.value)}
-                            placeholder="https://github.com/username/repository"
-                            className="bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#2563EB] transition-all"
-                          />
+                      {projectSubmission && !projectReview && (
+                        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                          </span>
+                          <span>Your project has been submitted and is awaiting mentor review. Resubmission is locked until it's reviewed.</span>
                         </div>
+                      )}
 
-                        <div className="flex flex-col gap-1.5">
-                          <label htmlFor="project-submission-notes" className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
-                          <textarea
-                            id="project-submission-notes"
-                            value={submissionNotes}
-                            onChange={(e) => setSubmissionNotes(e.target.value)}
-                            placeholder="Write details or instructions for running the codebase here..."
-                            rows={3}
-                            className="bg-white border border-[#E2E8F0] rounded-lg p-3 w-full text-xs outline-none focus:border-[#2563EB] transition-all"
-                          />
+                      {projectReview?.review_status === "approved" && (
+                        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                          <CheckCircle2 size={13} />
+                          <span>This project has been approved — no resubmission needed.</span>
                         </div>
+                      )}
 
-                        <button
-                          onClick={handleSubmitProjectUrl}
-                          disabled={actionLoading}
-                          className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs disabled:opacity-50"
-                        >
-                          Submit Project Repository
-                        </button>
-                      </div>
+                      {projectReview?.review_status === "revision_requested" && (
+                        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                          <AlertTriangle size={13} />
+                          <span>Your mentor requested revisions — see feedback below, then resubmit.</span>
+                        </div>
+                      )}
+
+                      {(() => {
+                        const locked = isProjectResubmitLocked(projectSubmission, projectReview);
+                        return (
+                          <div className="space-y-3 text-xs">
+                            <div className="flex flex-col gap-1.5">
+                              <label htmlFor="project-github-url" className="font-bold text-[#0f172a]">GitHub Repository URL</label>
+                              <input
+                                id="project-github-url"
+                                type="text"
+                                value={githubUrl}
+                                onChange={(e) => setGithubUrl(e.target.value)}
+                                disabled={locked}
+                                placeholder="https://github.com/username/repository"
+                                className="bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#2563EB] transition-all disabled:bg-slate-50 disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                              <label htmlFor="project-submission-notes" className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
+                              <textarea
+                                id="project-submission-notes"
+                                value={submissionNotes}
+                                onChange={(e) => setSubmissionNotes(e.target.value)}
+                                disabled={locked}
+                                placeholder="Write details or instructions for running the codebase here..."
+                                rows={3}
+                                className="bg-white border border-[#E2E8F0] rounded-lg p-3 w-full text-xs outline-none focus:border-[#2563EB] transition-all disabled:bg-slate-50 disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+                              />
+                            </div>
+
+                            <button
+                              onClick={handleSubmitProjectUrl}
+                              disabled={actionLoading || locked}
+                              className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {locked ? "Submission Locked" : "Submit Project Repository"}
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Mentor review block */}
-                    {projectReview && (
-                      <div className="border border-[#F59E0B]/20 bg-[#F59E0B]/5 rounded-xl p-5 space-y-3">
-                        <h4 className="font-bold text-xs text-[#F59E0B] uppercase tracking-wide">Mentor Review Output</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
-                          <div>
-                            <span className="text-[9px] text-[#475569] block">Review Status</span>
-                            <span className="capitalize">{projectReview.review_status}</span>
+                    {projectReview && (() => {
+                      const reviewColor = projectReview.review_status === "approved"
+                        ? "#16A34A"
+                        : projectReview.review_status === "rejected"
+                        ? "#DC2626"
+                        : "#F59E0B";
+                      return (
+                        <div className="border rounded-xl p-5 space-y-3" style={{ borderColor: `${reviewColor}33`, backgroundColor: `${reviewColor}0D` }}>
+                          <h4 className="font-bold text-xs uppercase tracking-wide" style={{ color: reviewColor }}>Mentor Review Output</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
+                            <div>
+                              <span className="text-[9px] text-[#475569] block">Review Status</span>
+                              <span className="capitalize">{projectReview.review_status.replace(/_/g, " ")}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-[#475569] block">Score Awarded</span>
+                              <span>{projectReview.score !== null ? `${projectReview.score} / ${projectDetails.max_score}` : "Not Graded"}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-[9px] text-[#475569] block">Score Awarded</span>
-                            <span>{projectReview.score !== null ? `${projectReview.score} / ${projectDetails.max_score}` : "Not Graded"}</span>
-                          </div>
+                          {projectReview.feedback && (
+                            <div className="bg-white p-3 rounded-lg border border-[#e2e8f0] text-[#475569] mt-2">
+                              <span className="text-[9px] font-bold text-[#0f172a] block mb-1">Mentor Feedback</span>
+                              <p className="italic">{projectReview.feedback}</p>
+                            </div>
+                          )}
                         </div>
-                        {projectReview.feedback && (
-                          <div className="bg-white p-3 rounded-lg border border-[#e2e8f0] text-[#475569] mt-2">
-                            <span className="text-[9px] font-bold text-[#0f172a] block mb-1">Mentor Feedback</span>
-                            <p className="italic">{projectReview.feedback}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
               </div>
