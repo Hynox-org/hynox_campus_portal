@@ -261,6 +261,17 @@ export async function getQuizSessionDetailsAction(attemptId: string) {
   }
 }
 
+export async function approveQuizRetakeAction(attemptId: string) {
+  try {
+    const res = await service.approveQuizRetake(attemptId);
+    revalidatePath("/teacher");
+    revalidatePath("/student");
+    return res;
+  } catch (error: any) {
+    return { error: error.message || "Failed to approve quiz retake." };
+  }
+}
+
 export async function listProjectSubmissionsAction(tenantId: string) {
   try {
     const submissions = await service.listProjectSubmissions(tenantId);

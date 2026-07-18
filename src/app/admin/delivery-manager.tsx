@@ -452,16 +452,18 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         <div className="space-y-4">
           <div className="flex flex-wrap justify-between items-center gap-2">
             <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider">Active Cohorts</h4>
-            <button
-              onClick={() => {
-                setEditingCohort(null);
-                setCohortForm({ name: "", code: "", start_date: "", end_date: "", status_code: "active", program_id: programs[0]?.id || "" });
-                setCohortModalOpen(true);
-              }}
-              className="bg-[#6E79F4] text-white px-3 py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-all flex items-center gap-1 shrink-0"
-            >
-              <Plus size={13} /> Create Cohort
-            </button>
+            {!isTeacherMode && (
+              <button
+                onClick={() => {
+                  setEditingCohort(null);
+                  setCohortForm({ name: "", code: "", start_date: "", end_date: "", status_code: "active", program_id: programs[0]?.id || "" });
+                  setCohortModalOpen(true);
+                }}
+                className="bg-[#6E79F4] text-white px-3 py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-all flex items-center gap-1 shrink-0"
+              >
+                <Plus size={13} /> Create Cohort
+              </button>
+            )}
           </div>
 
           <div className="bg-[#131418] border border-[#23252C] rounded-xl overflow-hidden shadow-sm">
@@ -474,7 +476,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                     <th className="px-6 py-3">Program</th>
                     <th className="px-6 py-3">Status</th>
                     <th className="px-6 py-3">Timeline</th>
-                    <th className="px-6 py-3 text-right">Actions</th>
+                    {!isTeacherMode && <th className="px-6 py-3 text-right">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#23252C]">
@@ -494,19 +496,21 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                         <td className="px-6 py-3.5 text-[#C2C6D1] font-mono">
                           {cohort.start_date ? cohort.start_date.substring(0, 10) : "N/A"} to {cohort.end_date ? cohort.end_date.substring(0, 10) : "N/A"}
                         </td>
-                        <td className="px-6 py-3.5 text-right flex items-center justify-end gap-2.5">
-                          <button onClick={() => handleEditCohortClick(cohort)} className="text-[#6E79F4] hover:text-[#6E79F4]/80" title="Edit">
-                            <Edit size={14} />
-                          </button>
-                          <button onClick={() => handleDeleteCohort(cohort.id)} className="text-[#F0555D] hover:text-[#F0555D]/80" title="Delete">
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
+                        {!isTeacherMode && (
+                          <td className="px-6 py-3.5 text-right flex items-center justify-end gap-2.5">
+                            <button onClick={() => handleEditCohortClick(cohort)} className="text-[#6E79F4] hover:text-[#6E79F4]/80" title="Edit">
+                              <Edit size={14} />
+                            </button>
+                            <button onClick={() => handleDeleteCohort(cohort.id)} className="text-[#F0555D] hover:text-[#F0555D]/80" title="Delete">
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-[#C2C6D1] font-semibold bg-[#16171D]/10">
+                      <td colSpan={isTeacherMode ? 5 : 6} className="px-6 py-8 text-center text-[#C2C6D1] font-semibold bg-[#16171D]/10">
                         No cohorts defined under this campus yet.
                       </td>
                     </tr>
@@ -686,7 +690,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           userRole="super_admin"
         />
       )}
-      {cohortModalOpen && (
+      {cohortModalOpen && !isTeacherMode && (
         <>
           {/* Backdrop overlay */}
           <div

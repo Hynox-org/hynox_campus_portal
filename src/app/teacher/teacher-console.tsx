@@ -41,7 +41,11 @@ import {
   Eye,
   File,
   FolderCode,
-  Settings
+  Settings,
+  GraduationCap,
+  CheckCircle2,
+  ChevronDown,
+  Loader2
 } from "lucide-react";
 import { 
   reviewProjectSubmissionAction,
@@ -64,7 +68,8 @@ import {
   listCohortProjectSubmissionsAction,
   listCohortChallengeSubmissionsAction,
   listCohortActivitiesAction,
-  listCohortQuizAttemptsAction
+  listCohortQuizAttemptsAction,
+  approveQuizRetakeAction
 } from "@/app/actions/learning-actions";
 import {
   listTenantCoursesAction,
@@ -91,6 +96,8 @@ import {
   listCohortCourseAssignmentsAction
 } from "@/app/actions/delivery-actions";
 import DeliveryManager from "@/app/admin/delivery-manager";
+import AppShell from "@/components/app-shell";
+import { CustomSelect } from "@/components/custom-select";
 
 function formatDatetimeLocal(isoString?: string) {
   if (!isoString) return "";
@@ -123,6 +130,8 @@ interface TeacherConsoleProps {
   initialCohortId: string;
   initialCohorts: any[];
   assignedInstitutions: any[];
+  teacherEmail: string;
+  teacherName: string;
 }
 
 export default function TeacherConsole({
@@ -131,6 +140,8 @@ export default function TeacherConsole({
   initialCohortId,
   initialCohorts,
   assignedInstitutions,
+  teacherEmail,
+  teacherName,
 }: TeacherConsoleProps) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
@@ -143,16 +154,18 @@ export default function TeacherConsole({
   const acadCourses = academicPrefetch?.courses ?? EMPTY_LIST;
   const acadLessons = academicPrefetch?.lessons ?? EMPTY_LIST;
 
-  const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "syllabus" | "delivery" | "auditor" | "attendance">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "syllabus" | "delivery" | "quiz-auditor" | "attendance">("overview");
   const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum">("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isCohortDropdownOpen, setIsCohortDropdownOpen] = useState(false);
+  const [openingStudentId, setOpeningStudentId] = useState<string | null>(null);
 
   // Sync state with URL params after hydration on client
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      const validTabs = ["overview", "roster", "projects", "challenges", "activities-manager", "syllabus", "delivery", "auditor", "attendance"];
+      const validTabs = ["overview", "roster", "projects", "challenges", "activities-manager", "syllabus", "delivery", "quiz-auditor", "attendance"];
       if (tab && validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -175,6 +188,27 @@ export default function TeacherConsole({
   const [auditorFilter, setAuditorFilter] = useState<"all" | "quiz" | "project" | "programming">("all");
   const [quizAttemptSession, setQuizAttemptSession] = useState<any>(null);
   const [loadingQuizSession, setLoadingQuizSession] = useState(false);
+
+  // Search & Date filters for Auditors
+  const [quizSearch, setQuizSearch] = useState("");
+  const [quizDateFilter, setQuizDateFilter] = useState("all");
+  const [isQuizDateDropdownOpen, setIsQuizDateDropdownOpen] = useState(false);
+
+  const [projectSearch, setProjectSearch] = useState("");
+  const [projectDateFilter, setProjectDateFilter] = useState("all");
+  const [isProjectDateDropdownOpen, setIsProjectDateDropdownOpen] = useState(false);
+
+  const [challengeSearch, setChallengeSearch] = useState("");
+  const [challengeDateFilter, setChallengeDateFilter] = useState("all");
+  const [isChallengeDateDropdownOpen, setIsChallengeDateDropdownOpen] = useState(false);
+
+  const dateFilterLabels: Record<string, string> = {
+    all: "All Time",
+    today: "Today",
+    yesterday: "Yesterday",
+    "day-before": "Day Before Yesterday",
+    "last-7-days": "Last 7 Days"
+  };
 
   useEffect(() => {
     if (selectedQuizAttempt) {
@@ -210,6 +244,13 @@ export default function TeacherConsole({
   const challengeSubmissions = learningData?.challengeSubmissions || [];
   const quizAttempts = learningData?.quizAttempts || [];
   const assignments = deliveryData?.assignments || [];
+
+  const cohortOptions = cohorts.map(c => ({
+    id: c.id,
+    name: `${c.name} (${c.code}) - ${c.institution?.name || "Global"}`
+  }));
+
+  const selectedCohort = cohorts.find(c => c.id === selectedCohortId);
 
   // Guard: restore from URL only once – prevents background React Query refetches
   // from overriding the user's in-session selections.
@@ -651,28 +692,9 @@ export default function TeacherConsole({
   }, [syllabusLessonId, syllabusLessons]);
 
   // Fetch real progress data for selected student
+  // Clear cached progress when the drawer closes
   useEffect(() => {
-    if (selectedStudent) {
-      const studentId = selectedStudent.user_id;
-      
-      // Load programs/courses progress
-      getStudentDeliveryDataAction(studentId).then(res => {
-        if (res.success && res.programs) {
-          setActiveStudentProgress(res.programs);
-        } else {
-          setActiveStudentProgress([]);
-        }
-      });
-
-      // Load individual lesson completions
-      listStudentLessonProgressAction(studentId).then(res => {
-        if (res.success && res.progressList) {
-          setActiveStudentLessonsProgress(res.progressList);
-        } else {
-          setActiveStudentLessonsProgress([]);
-        }
-      });
-    } else {
+    if (!selectedStudent) {
       setActiveStudentProgress([]);
       setActiveStudentLessonsProgress([]);
     }
@@ -702,14 +724,65 @@ export default function TeacherConsole({
   const filteredEnrollments = enrollments.filter(e => filteredCohortIds.includes(e.cohort_id));
   const activeStudentsCount = filteredEnrollments.filter(e => e.status_code === "active").length;
   
-  const filteredProjectSubmissions = projectSubmissions.filter(sub => 
+  const matchesDateFilter = (dateVal: string | Date, filter: string) => {
+    if (filter === "all") return true;
+    if (!dateVal) return false;
+    const date = new Date(dateVal);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - compareDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (filter === "today") return diffDays === 0;
+    if (filter === "yesterday") return diffDays === 1;
+    if (filter === "day-before") return diffDays === 2;
+    if (filter === "last-7-days") return diffDays >= 0 && diffDays <= 7;
+    return true;
+  };
+
+  const baseProjectSubmissions = projectSubmissions.filter(sub => 
     filteredEnrollments.some(e => e.user_id === sub.student_id)
   );
-  const pendingProjectCount = filteredProjectSubmissions.filter(p => !p.review || p.review.review_status === "pending").length;
+
+  const filteredProjectSubmissions = React.useMemo(() => {
+    return baseProjectSubmissions.filter(sub => {
+      const studentName = (sub.student?.full_name || sub.student?.email || "").toLowerCase();
+      if (projectSearch && !studentName.includes(projectSearch.toLowerCase())) return false;
+      if (!matchesDateFilter(sub.submitted_at, projectDateFilter)) return false;
+      return true;
+    });
+  }, [baseProjectSubmissions, projectSearch, projectDateFilter]);
+
+  const pendingProjectCount = baseProjectSubmissions.filter(p => !p.review || p.review.review_status === "pending").length;
   
-  const filteredChallengeSubmissions = challengeSubmissions.filter(sub => 
+  const baseChallengeSubmissions = challengeSubmissions.filter(sub => 
     filteredEnrollments.some(e => e.user_id === sub.student_id)
   );
+
+  const filteredChallengeSubmissions = React.useMemo(() => {
+    return baseChallengeSubmissions.filter(sub => {
+      const studentName = (sub.student?.full_name || sub.student?.email || "").toLowerCase();
+      if (challengeSearch && !studentName.includes(challengeSearch.toLowerCase())) return false;
+      if (!matchesDateFilter(sub.submitted_at, challengeDateFilter)) return false;
+      return true;
+    });
+  }, [baseChallengeSubmissions, challengeSearch, challengeDateFilter]);
+
+  const filteredQuizAttemptsList = React.useMemo(() => {
+    return quizAttempts.filter(att => {
+      const isStudentInCohort = filteredEnrollments.some(e => e.user_id === att.student_id);
+      if (!isStudentInCohort) return false;
+      const studentName = (att.student?.full_name || att.student?.email || "").toLowerCase();
+      if (quizSearch && !studentName.includes(quizSearch.toLowerCase())) return false;
+      const submissionDate = att.submitted_at || att.started_at;
+      if (!matchesDateFilter(submissionDate, quizDateFilter)) return false;
+      return true;
+    });
+  }, [quizAttempts, filteredEnrollments, quizSearch, quizDateFilter]);
 
   const currentCohortEnrollments = filteredEnrollments.filter(e => e.cohort_id === selectedCohortId);
 
@@ -1505,7 +1578,7 @@ export default function TeacherConsole({
                           <select
                             value={editForm.chal_difficulty}
                             onChange={(e) => setEditForm({ ...editForm, chal_difficulty: e.target.value })}
-                            className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-semibold"
+                            className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
                           >
                             <option value="easy">Easy</option>
                             <option value="medium">Medium</option>
@@ -1789,6 +1862,31 @@ export default function TeacherConsole({
     );
   };
 
+  const openStudentDrawer = async (enr: any) => {
+    if (openingStudentId) return;
+    setOpeningStudentId(enr.id);
+    setStudentDetailTab("overview");
+    try {
+      const [progRes, lessonsRes, syllabusEntries] = await Promise.all([
+        getStudentDeliveryDataAction(enr.user_id),
+        listStudentLessonProgressAction(enr.user_id),
+        Promise.all(
+          tenantCourses.map(async (c: any) => {
+            if (drawerLessonsCache[c.id]) return [c.id, drawerLessonsCache[c.id]] as const;
+            const res = await listLessonsForCourseAction(c.id);
+            return [c.id, res.success && res.lessons ? res.lessons : []] as const;
+          })
+        ),
+      ]);
+      setActiveStudentProgress(progRes.success && progRes.programs ? progRes.programs : []);
+      setActiveStudentLessonsProgress(lessonsRes.success && lessonsRes.progressList ? lessonsRes.progressList : []);
+      setDrawerLessonsCache(prev => ({ ...prev, ...Object.fromEntries(syllabusEntries) }));
+      setSelectedStudent(enr);
+    } finally {
+      setOpeningStudentId(null);
+    }
+  };
+
   const renderStudentDetailDrawer = () => {
     if (!selectedStudent) return null;
 
@@ -1813,7 +1911,11 @@ export default function TeacherConsole({
     const studentQuizAttemptsList = quizAttempts.filter(att => att.student_id === selectedStudent.user_id);
 
     const studentQuizAttempts = quizzes.map(q => {
-      const attempt = studentQuizAttemptsList.find(att => att.activity_id === q.id);
+      const attempts = studentQuizAttemptsList.filter(att => att.activity_id === q.id);
+      const sortedAttempts = [...attempts].sort((a, b) => new Date(b.submitted_at || b.created_at || b.updated_at || 0).getTime() - new Date(a.submitted_at || a.created_at || a.updated_at || 0).getTime());
+      const passedAttempt = sortedAttempts.find(att => att.score >= (q.passing_score || 0));
+      const attempt = passedAttempt || sortedAttempts[0];
+
       return {
         id: q.id,
         title: q.title,
@@ -1821,8 +1923,8 @@ export default function TeacherConsole({
         passed: attempt ? (attempt.score >= (q.passing_score || 0)) : false,
         score: attempt ? attempt.score : 0,
         maxScore: q.max_score || 100,
-        submittedAt: attempt ? new Date(attempt.created_at || attempt.updated_at).toLocaleDateString() : "",
-        questions: (attempt as any)?.questions || []
+        submittedAt: attempt ? new Date(attempt.submitted_at || attempt.created_at || attempt.updated_at || 0).toLocaleDateString() : "",
+        attemptsCount: attempts.length
       };
     });
 
@@ -1844,7 +1946,7 @@ export default function TeacherConsole({
     });
 
     return (
-      <div className="fixed inset-0 bg-[#6E79F4]/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex justify-end animate-fadeIn">
         {/* Backdrop click closer */}
         <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedStudent(null)} />
         
@@ -2041,107 +2143,41 @@ export default function TeacherConsole({
               <div className="space-y-6 animate-fadeIn">
                 {studentQuizAttempts.length === 0 ? (
                   <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
-                    No quizzes assigned for this program.
+                    No quizzes found on the platform.
                   </div>
                 ) : (
                   studentQuizAttempts.map(attempt => {
-                    const isExpanded = expandedQuizId === attempt.id;
                     return (
-                      <div key={attempt.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden">
-                        {/* Collapsible Header */}
-                        <div 
-                          onClick={() => setExpandedQuizId(isExpanded ? null : attempt.id)}
-                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-[#16171D]/80 transition-colors select-none"
-                        >
+                      <div key={attempt.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden text-xs">
+                        <div className="p-5 flex justify-between items-center gap-4 hover:bg-[#16171D]/80 transition-colors select-none">
                           <div className="flex items-center gap-2.5">
-                            <svg 
-                              className={`w-4 h-4 text-[#C2C6D1] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
-                              fill="none" 
-                              stroke="currentColor" 
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                            </svg>
                             <div>
-                              <h4 className="text-xs font-bold text-[#EDEFF5] hover:text-[#6E79F4] transition-colors">{attempt.title}</h4>
-                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Attempted on {attempt.submittedAt}</p>
+                              <h4 className="text-xs font-bold text-[#EDEFF5]">{attempt.title}</h4>
+                              {attempt.attempted && (
+                                <p className="text-[9px] text-[#C2C6D1] mt-0.5">
+                                  {attempt.attemptsCount > 1 ? `${attempt.attemptsCount} attempts • ` : ""}
+                                  Last attempt on {attempt.submittedAt}
+                                </p>
+                              )}
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex items-center gap-3 shrink-0 font-bold">
                             {attempt.attempted ? (
-                              <>
-                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase ${
-                                  attempt.passed 
-                                    ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20" 
-                                    : "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20"
-                                }`}>
-                                  {attempt.passed ? "Passed" : "Failed"}
+                              attempt.passed ? (
+                                <span className="px-2.5 py-1 rounded bg-[#2FBF71]/10 text-[#2FBF71] border border-[#2FBF71]/20 font-bold text-[10px]">
+                                  Passed with {attempt.score} marks
                                 </span>
-                                <div className="text-xs font-black text-[#EDEFF5]">{attempt.score} / {attempt.maxScore} pts</div>
-                              </>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded bg-red-500/10 text-red-500 border border-red-500/20 font-bold text-[10px]">
+                                  Failed with {attempt.score} marks
+                                </span>
+                              )
                             ) : (
-                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#1A1C22] text-[#A3A9B6] border uppercase">
-                                Unattempted
-                              </span>
+                              <span className="px-2 py-0.5 rounded text-[8px] uppercase bg-[#1A1C22] text-[#A3A9B6]">Not Attempted</span>
                             )}
                           </div>
                         </div>
-
-                        {/* Collapsible Details Content */}
-                        {isExpanded && attempt.attempted && (
-                          <div className="p-5 border-t border-[#23252C] space-y-4 bg-[#16171D]/30">
-                            <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block">Auditing Submitted Answers:</span>
-                            <div className="space-y-3">
-                              {attempt.questions.map((q: any, qIdx: number) => {
-                                const isCorrect = q.selectedIndex === q.correctIndex;
-                                return (
-                                  <div key={qIdx} className="p-3.5 bg-[#131418] border border-[#23252C] rounded-xl text-xs space-y-2">
-                                    <div className="font-semibold text-[#EDEFF5] flex justify-between gap-4">
-                                      <span>Q{qIdx + 1}: {q.text}</span>
-                                      <span className={`font-black shrink-0 ${isCorrect ? "text-[#2FBF71]" : "text-[#F0555D]"}`}>
-                                        {isCorrect ? `+${q.points} pts` : "0 pts"}
-                                      </span>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-1 gap-1.5 pt-1.5">
-                                      {q.options.map((opt: any, oIdx: number) => {
-                                        const isSelected = q.selectedIndex === oIdx;
-                                        const isAnsCorrect = q.correctIndex === oIdx;
-                                        
-                                        return (
-                                          <div 
-                                            key={oIdx} 
-                                            className={`p-2 rounded-lg border flex items-center gap-2 text-[11px] ${
-                                              isAnsCorrect 
-                                                ? "bg-[#2FBF71]/10 border-[#2FBF71]/30 text-[#2FBF71] font-bold" 
-                                                : isSelected 
-                                                ? "bg-[#F0555D]/10 border-[#F0555D]/30 text-[#F0555D] font-semibold" 
-                                                : "bg-[#131418] border-[#23252C] text-[#C2C6D1]"
-                                            }`}
-                                          >
-                                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[8px] font-black shrink-0 ${
-                                              isAnsCorrect 
-                                                ? "bg-[#2FBF71] border-transparent text-white" 
-                                                : isSelected 
-                                                ? "bg-[#F0555D] border-transparent text-white" 
-                                                : "border-[#2E313A]"
-                                              }`}>
-                                              {oIdx === 0 ? "A" : oIdx === 1 ? "B" : oIdx === 2 ? "C" : "D"}
-                                            </div>
-                                            <span>{(opt as any).option_text || opt}</span>
-                                            {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#2FBF71]/20 px-1.5 py-0.5 rounded text-[#2FBF71]">Correct Option</span>}
-                                            {isSelected && !isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#F0555D]/20 px-1.5 py-0.5 rounded text-[#F0555D]">Submitted Answer</span>}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     );
                   })
@@ -2399,6 +2435,46 @@ export default function TeacherConsole({
               </div>
             </div>
 
+            {/* Session Forfeit / Violation warning info */}
+            {selectedQuizAttempt.forfeited && (
+              <div className="bg-[#F0555D]/5 border border-[#F0555D]/20 rounded-xl p-5 space-y-3">
+                <div className="flex items-center gap-2 text-[#F0555D]">
+                  <ShieldAlert size={18} />
+                  <h4 className="font-bold text-xs uppercase tracking-wide">Environment Violation Detected</h4>
+                </div>
+                <p className="text-[11px] text-[#C2C6D1] leading-relaxed">
+                  This attempt was automatically closed and forfeited (scored 0 pts) because the student left the secure quiz environment. 
+                  <br />
+                  <span className="font-semibold text-[#EDEFF5] mt-1 block">
+                    Reason logged: <code className="text-[#F0555D] bg-[#F0555D]/10 px-1.5 py-0.5 rounded font-mono text-[10px] capitalize">{selectedQuizAttempt.forfeit_reason?.replace(/_/g, " ") || "Abnormal Exit / Rule Violation"}</code>
+                  </span>
+                </p>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={async () => {
+                      if (!confirm("Are you sure you want to approve this student for a retake? This will refund their attempt and allow them to take the quiz again.")) return;
+                      startTransition(async () => {
+                        const res = await approveQuizRetakeAction(selectedQuizAttempt.id);
+                        if (res && !("error" in res)) {
+                          queryClient.invalidateQueries({ queryKey: ["learning-prefetch", tenantId] });
+                          showSuccess("Retake approved! The student can now restart the test attempt.");
+                          setSelectedQuizAttempt(null);
+                        } else {
+                          showError(res.error || "Failed to approve retake.");
+                        }
+                      });
+                    }}
+                    className="bg-[#6E79F4] hover:bg-[#5A66F0] disabled:bg-[#2E313A] text-white font-bold text-[10px] uppercase tracking-wider px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <CheckCircle2 size={12} />
+                    Approve Retake / Reset Attempt
+                  </button>
+                </div>
+              </div>
+            )}
+
             <hr className="border-[#23252C]" />
 
             <div>
@@ -2478,7 +2554,9 @@ export default function TeacherConsole({
   };
 
   const renderProjectAuditorDrawer = () => {
-    if (!selectedProjectSub || activeTab !== "auditor") return null;
+    if (!selectedProjectSub) return null;
+
+    const isAlreadyApproved = selectedProjectSub.review?.review_status === "approved";
 
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
@@ -2563,62 +2641,112 @@ export default function TeacherConsole({
               <hr className="border-[#23252C]" />
 
               <div className="space-y-4">
-                <h4 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider">Evaluation & Grading</h4>
+                <h4 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider">Evaluation & Grading Actions</h4>
                 
-                <div>
-                  <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
-                    Assign Status
-                  </label>
-                  <select
-                    value={reviewStatus}
-                    onChange={(e) => setReviewStatus(e.target.value)}
-                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6E79F4] w-full"
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    disabled={isAlreadyApproved}
+                    onClick={() => {
+                      setReviewStatus("revision_requested");
+                      setScore(0);
+                    }}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      reviewStatus === "revision_requested"
+                        ? "border-[#F5B04A] bg-[#F5B04A]/5 shadow-sm"
+                        : "border-[#23252C] hover:border-[#F5B04A]/30 bg-transparent"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
-                    <option value="approved">Approved & Completed</option>
-                    <option value="revision_requested">Revision Requested</option>
-                    <option value="rejected">Rejected / Failed</option>
-                  </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-[#EDEFF5]">Send for Rework</span>
+                      <span className="w-2 h-2 rounded-full bg-[#F5B04A]" />
+                    </div>
+                    <p className="text-[10px] text-[#C2C6D1]">Request the student to revise and resubmit their repository link.</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isAlreadyApproved}
+                    onClick={() => {
+                      setReviewStatus("approved");
+                      setScore(selectedProjectSub.review?.score ?? selectedProjectSub.max_score ?? 100);
+                    }}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      reviewStatus === "approved"
+                        ? "border-[#2FBF71] bg-[#2FBF71]/5 shadow-sm"
+                        : "border-[#23252C] hover:border-[#2FBF71]/30 bg-transparent"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-[#EDEFF5]">Grade & Approve</span>
+                      <span className="w-2 h-2 rounded-full bg-[#2FBF71]" />
+                    </div>
+                    <p className="text-[10px] text-[#C2C6D1]">Approve the submission and assign grade marks to the student.</p>
+                  </button>
                 </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">
-                      Assigned Score
-                    </label>
-                    <span className="text-[10px] font-bold text-[#C2C6D1]">
-                      Max Score: {selectedProjectSub.max_score}
-                    </span>
+                {reviewStatus === "approved" && (
+                  <div className="space-y-3 bg-[#131418] border border-[#23252C] p-4 rounded-xl animate-fadeIn">
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Full Marks</span>
+                        <span className="font-mono font-bold text-[#EDEFF5]">{selectedProjectSub.max_score} pts</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Passing Marks</span>
+                        <span className="font-mono font-bold text-[#F5B04A]">{selectedProjectSub.passing_score ?? Math.round(selectedProjectSub.max_score * 0.5)} pts</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">
+                          Assigned Score
+                        </label>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                          score >= (selectedProjectSub.passing_score ?? Math.round(selectedProjectSub.max_score * 0.5))
+                            ? "bg-[#2FBF71]/10 text-[#2FBF71]"
+                            : "bg-[#F0555D]/10 text-[#F0555D]"
+                        }`}>
+                          {score >= (selectedProjectSub.passing_score ?? Math.round(selectedProjectSub.max_score * 0.5)) ? "PASSED" : "FAILED"}
+                        </span>
+                      </div>
+                      <input 
+                        type="number"
+                        max={selectedProjectSub.max_score}
+                        min={0}
+                        value={score}
+                        disabled={isAlreadyApproved}
+                        onChange={(e) => setScore(Number(e.target.value))}
+                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full font-mono text-[#EDEFF5] disabled:opacity-50 disabled:cursor-not-allowed"
+                        required
+                      />
+                    </div>
                   </div>
-                  <input 
-                    type="number"
-                    max={selectedProjectSub.max_score}
-                    min={0}
-                    value={score}
-                    onChange={(e) => setScore(Number(e.target.value))}
-                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
-                  />
-                </div>
+                )}
 
                 <div>
                   <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
-                    Feedback Comments
+                    {reviewStatus === "revision_requested" ? "Rework Instructions / Feedback Remarks *" : "Evaluation Feedback Remarks"}
                   </label>
                   <textarea 
                     rows={4}
                     value={feedback}
+                    disabled={isAlreadyApproved}
                     onChange={(e) => setFeedback(e.target.value)}
-                    placeholder="Add review feedback for the student..."
-                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full resize-none"
+                    required={reviewStatus === "revision_requested"}
+                    placeholder={reviewStatus === "revision_requested" ? "Please detail the instructions for rework..." : "Add review feedback for the student..."}
+                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
 
               <button 
                 type="submit"
-                disabled={isPending}
-                className="w-full bg-[#6E79F4] hover:bg-[#5A66F0] disabled:bg-[#2E313A] text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                disabled={isPending || isAlreadyApproved}
+                className="w-full bg-[#6E79F4] hover:bg-[#5A66F0] disabled:bg-[#2E313A] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
               >
-                {isPending ? "Submitting..." : "Submit Review Grade"}
+                {isPending ? "Submitting..." : isAlreadyApproved ? "Submission Already Approved (Locked)" : "Submit Review Grade"}
               </button>
             </form>
           </div>
@@ -2638,7 +2766,7 @@ export default function TeacherConsole({
   };
 
   const renderChallengeAuditorDrawer = () => {
-    if (!selectedChallengeSub || activeTab !== "auditor") return null;
+    if (!selectedChallengeSub) return null;
 
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
@@ -2743,317 +2871,135 @@ export default function TeacherConsole({
 
   return (
     <>
-      <DashboardLoader loading={loadingDelivery || loadingLearning || loadingPrograms} message="Setting up your Instructor environment..." />
-      <div className="space-y-6" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
-      
-      {/* Top Banner & Multi-Tenant Campus Selector */}
-      <div className="bg-[#131418] border border-[#23252C] p-6 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-[#16171D] rounded-xl text-[#EDEFF5] border border-[#23252C] transition-all cursor-pointer mr-1"
-            title="Toggle Sidebar"
-          >
-            <Menu size={16} />
-          </button>
-          <div>
-            <h2 className="text-base font-bold text-[#EDEFF5]">Instructor Cohort Dashboard</h2>
-            <p className="text-xs text-[#C2C6D1]">Select your active assigned cohort to view student roster, attendance, assigned course syllabus, and grade activities.</p>
-          </div>
-        </div>
+      <AppShell
+      portalLabel="Instructor"
+      pageTitle={
+        activeParentTab === "overview"
+          ? "Instructor Dashboard"
+          : activeParentTab === "students"
+          ? (activeTab === "roster" ? "Student Directory" : activeTab === "delivery" ? "Groups & Delivery" : "Attendance Tracker")
+          : activeParentTab === "assessments"
+          ? (activeTab === "quiz-auditor" ? "Quiz Auditor" : activeTab === "projects" ? "Projects Auditor" : "Coding Auditor")
+          : (activeTab === "activities-manager" ? "Activities Builder" : "Course Syllabus")
+      }
+      items={[
+        { id: "overview", label: "Overview Space", icon: Layers },
+        { 
+          id: "students", 
+          label: "Student Hub", 
+          icon: Users,
+          children: [
+            { id: "roster", label: "Student Directory" },
+            { id: "delivery", label: "Groups & Delivery" },
+            { id: "attendance", label: "Attendance Tracker" },
+          ]
+        },
+        { 
+          id: "assessments", 
+          label: "Auditing & Grading", 
+          icon: CheckSquare,
+          children: [
+            { id: "quiz-auditor", label: "Quiz Auditor" },
+            { id: "projects", label: "Projects Auditor" },
+            { id: "challenges", label: "Coding Auditor" },
+          ]
+        },
+        { 
+          id: "curriculum", 
+          label: "Curriculum Space", 
+          icon: BookOpen,
+          children: [
+            { id: "activities-manager", label: "Activities Builder" },
+            { id: "syllabus", label: "Course Syllabus" },
+          ]
+        }
+      ]}
+      activeId={activeParentTab}
+      activeChildId={activeTab}
+      onSelect={(parentId, childId) => {
+        setActiveParentTab(parentId as any);
+        if (childId) {
+          setActiveTab(childId as any);
+        } else {
+          // Defaults when parent is clicked
+          if (parentId === "overview") {
+            setActiveTab("overview");
+          } else if (parentId === "students") {
+            setActiveTab("roster");
+          } else if (parentId === "assessments") {
+            setActiveTab("quiz-auditor");
+          } else if (parentId === "curriculum") {
+            setActiveTab("activities-manager");
+          }
+        }
+      }}
+      userName={teacherEmail}
+      userMeta={teacherName}
+      headerActions={
+        cohorts.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setIsCohortDropdownOpen(!isCohortDropdownOpen)}
+              className="flex items-center gap-2 bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl hover:border-[#6E79F4]/40 hover:bg-[#6E79F4]/5 transition-all text-[11px] font-bold text-[#EDEFF5] cursor-pointer max-w-[220px] sm:max-w-[320px]"
+            >
+              <GraduationCap size={14} className="text-[#6E79F4] shrink-0" />
+              <span className="truncate">
+                {selectedCohort ? `${selectedCohort.name} (${selectedCohort.code})` : "Select Group"}
+              </span>
+              <ChevronDown size={13} className="text-[#A3A9B6] shrink-0" />
+            </button>
 
-        {cohorts.length === 0 ? (
-          <div className="flex items-center gap-2 bg-[#F0555D]/10 border border-[#F0555D]/20 px-4 py-2 rounded-xl text-xs text-[#F0555D] font-bold">
-            <ShieldAlert size={16} />
-            No cohorts assigned yet
-          </div>
-        ) : (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-            {/* Group Select */}
-            <div className="flex flex-col gap-1 w-full sm:w-80">
-              <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider">Select Group</span>
-              <select
-                value={selectedCohortId}
-                onChange={(e) => setSelectedCohortId(e.target.value)}
-                className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs font-bold text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] shadow-sm w-full"
-              >
-                {cohorts.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.code}) - {c.institution?.name || "Global"}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-8 min-h-[calc(100vh-8rem)]">
-        {isSelectedInstDisabled ? (
-          <div className="flex-1 bg-[#131418] border border-[#23252C] p-8 rounded-2xl shadow-sm max-w-2xl mx-auto text-center space-y-6 mt-10 h-fit">
-            <div className="mx-auto w-16 h-16 bg-[#F0555D]/10 text-[#F0555D] rounded-full flex items-center justify-center border border-[#F0555D]/20">
-              <ShieldAlert size={32} />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold text-[#EDEFF5]">Institution Access Suspended</h2>
-              <p className="text-sm text-[#C2C6D1]">
-                The institution <strong className="text-[#EDEFF5]">{currentSelectedInst?.name}</strong> is currently deactivated or suspended.
-              </p>
-              <p className="text-xs text-[#C2C6D1] leading-relaxed">
-                All teacher dashboard controls and curriculum management tools have been locked for this campus. If you work with other institutions, please select another active institution from the dropdown menu above.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Mobile Sidebar Drawer Backdrop */}
-            {isSidebarOpen && (
-              <div 
-                className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-                onClick={() => setIsSidebarOpen(false)}
-              />
-            )}
-
-            {/* Sidebars container - Collapsible drawer on mobile, inline on desktop */}
-            <div className={`
-              fixed inset-y-0 left-0 z-50 bg-[#131418] lg:bg-transparent p-4 lg:p-0 border-r border-[#23252C] lg:border-none flex gap-4 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:h-auto
-              ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:flex lg:translate-x-0"}
-            `}>
-              {/* PRIMARY SIDEBAR (Icon-only, narrow, Supabase-style) */}
-              <div className="w-14 shrink-0 flex flex-col items-center gap-4 py-2 border-r border-[#23252C] pr-4">
-                <button
-                  onClick={() => {
-                    setActiveParentTab("overview");
-                    setActiveTab("overview");
-                  }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                    activeParentTab === "overview"
-                      ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                      : "bg-[#131418] border-[#23252C] hover:bg-[#0B0C0F] text-[#C2C6D1] hover:text-[#EDEFF5]"
-                  }`}
-                  title="Overview Space"
-                >
-                  <Layers size={18} />
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setActiveParentTab("students");
-                    setActiveTab("roster");
-                  }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                    activeParentTab === "students"
-                      ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                      : "bg-[#131418] border-[#23252C] hover:bg-[#0B0C0F] text-[#C2C6D1] hover:text-[#EDEFF5]"
-                  }`}
-                  title="Student Roster"
-                >
-                  <Users size={18} />
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setActiveParentTab("assessments");
-                    setActiveTab("projects");
-                  }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                    activeParentTab === "assessments"
-                      ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                      : "bg-[#131418] border-[#23252C] hover:bg-[#0B0C0F] text-[#C2C6D1] hover:text-[#EDEFF5]"
-                  }`}
-                  title="Assessments & Grading"
-                >
-                  <CheckSquare size={18} />
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setActiveParentTab("curriculum");
-                    setActiveTab("activities-manager");
-                  }}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                    activeParentTab === "curriculum"
-                      ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                      : "bg-[#131418] border-[#23252C] hover:bg-[#0B0C0F] text-[#C2C6D1] hover:text-[#EDEFF5]"
-                  }`}
-                  title="Curriculum & Syllabus"
-                >
-                  <BookOpen size={18} />
-                </button>
-              </div>
-
-              {/* SECONDARY SIDEBAR (Sub-options list) */}
-              <div className={`
-                w-52 shrink-0 flex flex-col gap-2 border-r border-[#23252C] pr-4 lg:border-r
-                ${isSidebarOpen ? "flex" : "hidden lg:flex"}
-              `}>
-                <h4 className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider px-2 mb-2">
-                  {activeParentTab === "overview" && "Overview Space"}
-                  {activeParentTab === "students" && "Student Hub"}
-                  {activeParentTab === "assessments" && "Auditing & Grading"}
-                  {activeParentTab === "curriculum" && "Curriculum Space"}
-                </h4>
-                
-                {activeParentTab === "overview" && (
-                  <button
-                    onClick={() => {
-                      setActiveTab("overview");
-                      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                        setIsSidebarOpen(false);
-                      }
-                    }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                      activeTab === "overview"
-                        ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                        : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
-                    }`}
-                  >
-                    Dashboard Overview
-                  </button>
-                )}
-                {activeParentTab === "students" && (
-                  <>
+            {isCohortDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-[#131418] border border-[#23252C] rounded-xl shadow-card z-50 py-1.5 animate-fadeIn">
+                <div className="px-4 py-1.5 border-b border-[#23252C] text-[9px] font-bold text-[#A3A9B6] uppercase tracking-wider">
+                  Switch Active Group / Cohort
+                </div>
+                <div className="max-h-60 overflow-y-auto">
+                  {cohorts.map((coh) => (
                     <button
+                      key={coh.id}
                       onClick={() => {
-                        setActiveTab("roster");
-                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                          setIsSidebarOpen(false);
-                        }
+                        setSelectedCohortId(coh.id);
+                        setIsCohortDropdownOpen(false);
                       }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                        activeTab === "roster"
-                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
+                      className={`w-full text-left px-4 py-2.5 hover:bg-[#16171D] transition-all flex flex-col gap-0.5 text-xs cursor-pointer ${
+                        selectedCohortId === coh.id ? "bg-[#6E79F4]/5 text-[#6E79F4] font-bold" : "text-[#C2C6D1]"
                       }`}
                     >
-                      Student Directory
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab("delivery");
-                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                          setIsSidebarOpen(false);
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                        activeTab === "delivery"
-                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
-                      }`}
-                    >
-                      Groups & Delivery
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab("attendance" as any);
-                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                          setIsSidebarOpen(false);
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                        activeTab === "attendance"
-                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
-                      }`}
-                    >
-                      Attendance Tracker
-                    </button>
-                  </>
-                )}
-
-                {activeParentTab === "assessments" && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setActiveTab("auditor");
-                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                          setIsSidebarOpen(false);
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                        activeTab === "auditor"
-                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
-                      }`}
-                    >
-                      Submissions Auditor
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab("projects");
-                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                          setIsSidebarOpen(false);
-                        }
-                      }}
-                      className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                        activeTab === "projects"
-                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
-                      }`}
-                    >
-                      <span>Project Validator</span>
-                      {pendingProjectCount > 0 && (
-                        <span className="bg-[#F0555D] text-white px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
-                          {pendingProjectCount}
-                        </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold truncate min-w-0 flex-1">{coh.name} ({coh.code})</span>
+                        {selectedCohortId === coh.id && <CheckCircle2 size={13} className="text-[#6E79F4] shrink-0" />}
+                      </div>
+                      {coh.institution?.name && (
+                        <span className="text-[9px] text-[#A3A9B6] truncate font-medium">Campus: {coh.institution.name}</span>
                       )}
                     </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab("challenges");
-                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                          setIsSidebarOpen(false);
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                        activeTab === "challenges"
-                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
-                      }`}
-                    >
-                      Challenge Auditor
-                    </button>
-                  </>
-                )}
-
-                {activeParentTab === "curriculum" && (
-                  <>
-                    <button
-                      onClick={() => {
-                        setActiveTab("activities-manager");
-                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                          setIsSidebarOpen(false);
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                        activeTab === "activities-manager"
-                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
-                      }`}
-                    >
-                      Activities Builder
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveTab("syllabus");
-                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                          setIsSidebarOpen(false);
-                        }
-                      }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                        activeTab === "syllabus"
-                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
-                      }`}
-                    >
-                      Course Syllabus
-                    </button>
-                  </>
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
-
-        {/* Main Content Area */}
+            )}
+          </div>
+        )
+      }
+    >
+      <DashboardLoader loading={loadingDelivery || loadingLearning || loadingPrograms} message="Setting up your Instructor environment..." />
+      
+      {isSelectedInstDisabled ? (
+        <div className="bg-[#131418] border border-[#23252C] p-8 rounded-2xl shadow-sm max-w-2xl mx-auto text-center space-y-6 mt-10 h-fit">
+          <div className="mx-auto w-16 h-16 bg-[#F0555D]/10 text-[#F0555D] rounded-full flex items-center justify-center border border-[#F0555D]/20">
+            <ShieldAlert size={32} />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-[#EDEFF5]">Institution Access Suspended</h2>
+            <p className="text-sm text-[#C2C6D1]">
+              The institution <strong className="text-[#EDEFF5]">{currentSelectedInst?.name}</strong> is currently deactivated or suspended.
+            </p>
+            <p className="text-xs text-[#C2C6D1] leading-relaxed">
+              All teacher dashboard controls and curriculum management tools have been locked for this campus. If you work with other institutions, please select another active institution from the dropdown menu above.
+            </p>
+          </div>
+        </div>
+      ) : (
         <main className="flex-1 min-w-0 space-y-6">
           {isSelectedProgDisabled ? (
             <div className="bg-[#131418] border border-[#23252C] p-8 rounded-2xl shadow-sm max-w-2xl mx-auto text-center space-y-6 mt-10">
@@ -3103,94 +3049,106 @@ export default function TeacherConsole({
             </div>
           )}
 
-          {/* TAB: UNIFIED SUBMISSIONS AUDITOR */}
-          {activeTab === "auditor" && (
+          {/* TAB: QUIZ AUDITOR */}
+          {activeTab === "quiz-auditor" && (
             <div className="space-y-6 animate-fadeIn">
               <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[#23252C]">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-[#23252C]">
                   <div>
-                    <h3 className="text-sm font-bold text-[#EDEFF5]">Unified Submissions Auditor</h3>
-                    <p className="text-[10px] text-[#C2C6D1]">Audit, evaluate, and grade all student quiz attempts, project uploads, and code runs in real time.</p>
+                    <h3 className="text-sm font-bold text-[#EDEFF5]">Student Quiz Auditor</h3>
+                    <p className="text-[10px] text-[#C2C6D1]">Audit, evaluate, and verify all student quiz submission answers and marks in real time.</p>
                   </div>
                   
-                  {/* Category filter */}
-                  <div className="flex gap-2 items-center">
-                    <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider">Filter:</span>
-                    <select
-                      value={auditorFilter}
-                      onChange={e => setAuditorFilter(e.target.value as any)}
-                      className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6E79F4]"
-                    >
-                      <option value="all">All Submissions</option>
-                      <option value="quiz">Quizzes</option>
-                      <option value="project">Projects</option>
-                      <option value="programming">Coding Challenges</option>
-                    </select>
+                  {/* Filters */}
+                  <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div className="relative flex-1 md:w-60">
+                      <Search className="absolute left-3 top-2.5 text-[#C2C6D1]" size={14} />
+                      <input
+                        type="text"
+                        placeholder="Search student name..."
+                        value={quizSearch}
+                        onChange={e => setQuizSearch(e.target.value)}
+                        className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg pl-9 pr-3 py-1.5 text-[11px] font-bold text-[#EDEFF5] placeholder-[#A3A9B6] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all"
+                      />
+                    </div>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsQuizDateDropdownOpen(!isQuizDateDropdownOpen)}
+                        className="flex items-center gap-2 bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/40 hover:bg-[#6E79F4]/5 px-3 py-2 rounded-xl transition-all text-[11px] font-bold text-[#EDEFF5] cursor-pointer"
+                      >
+                        <Calendar size={13} className="text-[#6E79F4] shrink-0" />
+                        <span>{dateFilterLabels[quizDateFilter]}</span>
+                        <ChevronDown size={12} className="text-[#A3A9B6] shrink-0" />
+                      </button>
+
+                      {isQuizDateDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-48 bg-[#131418] border border-[#23252C] rounded-xl shadow-card z-50 py-1 animate-fadeIn">
+                          {Object.entries(dateFilterLabels).map(([val, label]) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => {
+                                setQuizDateFilter(val);
+                                setIsQuizDateDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 hover:bg-[#16171D] transition-all flex items-center justify-between text-xs cursor-pointer ${
+                                quizDateFilter === val ? "bg-[#6E79F4]/5 text-[#6E79F4] font-bold" : "text-[#C2C6D1]"
+                              }`}
+                            >
+                              <span>{label}</span>
+                              {quizDateFilter === val && <CheckCircle2 size={12} className="text-[#6E79F4]" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {combinedSubmissions.length === 0 ? (
+                {filteredQuizAttemptsList.length === 0 ? (
                   <div className="text-center py-12 text-xs text-[#C2C6D1] border border-dashed border-[#23252C] rounded-xl mt-4">
-                    No submissions found matching the criteria.
+                    No quiz submissions found matching the criteria.
                   </div>
                 ) : (
                   <div className="divide-y divide-[#23252C] mt-2">
-                    {combinedSubmissions.map(item => (
-                      <div 
-                        key={`${item.type}-${item.id}`}
-                        onClick={() => {
-                          if (item.type === "quiz") {
-                            setSelectedQuizAttempt(item.original);
-                          } else if (item.type === "project") {
-                            setSelectedProjectSub(item.original);
-                          } else if (item.type === "programming") {
-                            setSelectedChallengeSub(item.original);
-                          }
-                        }}
-                        className="py-3.5 flex justify-between items-center gap-4 hover:bg-[#16171D]/50 px-2 rounded-xl transition-all cursor-pointer select-none"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider border shrink-0 ${
-                              item.type === "quiz" 
-                                ? "bg-cyan-50 border-cyan-100 text-cyan-700" 
-                                : item.type === "project" 
-                                ? "bg-amber-50 border-amber-100 text-amber-700" 
-                                : "bg-purple-50 border-purple-100 text-purple-700"
-                            }`}>
-                              {item.type === "programming" ? "code challenge" : item.type}
-                            </span>
-                            <h4 className="text-xs font-bold text-[#EDEFF5] truncate">{item.title}</h4>
+                    {filteredQuizAttemptsList.map(att => {
+                      const isPassed = att.score >= (att.passing_score || 0) || (att.score >= (att.max_score * 0.5));
+                      return (
+                        <div 
+                          key={att.id}
+                          onClick={() => setSelectedQuizAttempt(att)}
+                          className="py-3.5 flex justify-between items-center gap-4 hover:bg-[#16171D]/50 px-2 rounded-xl transition-all cursor-pointer select-none"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider border border-cyan-500/25 bg-cyan-500/10 text-cyan-500 shrink-0">
+                                Quiz
+                              </span>
+                              <h4 className="text-xs font-bold text-[#EDEFF5] truncate">{att.quiz_title}</h4>
+                            </div>
+                            
+                            <p className="text-[10px] text-[#C2C6D1] mt-1">
+                              Submitted by <strong className="text-[#EDEFF5]">{att.student?.full_name || att.student?.email || "Unknown Student"}</strong> • {new Date(att.submitted_at || att.started_at).toLocaleString()}
+                            </p>
                           </div>
-                          
-                          <p className="text-[10px] text-[#C2C6D1] mt-1">
-                            Submitted by <strong className="text-[#EDEFF5]">{item.studentName}</strong> • {new Date(item.submittedAt).toLocaleString()}
-                          </p>
-                        </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                          {item.score !== undefined ? (
+                          <div className="flex items-center gap-3 shrink-0">
                             <span className="text-xs font-bold text-[#EDEFF5]">
-                              {item.score} <span className="text-[10px] text-[#C2C6D1] font-normal">/ {item.maxScore} pts</span>
+                              {att.score} <span className="text-[10px] text-[#C2C6D1] font-normal">/ {att.max_score} pts</span>
                             </span>
-                          ) : (
-                            <span className="text-[10px] font-semibold text-[#C2C6D1] bg-[#1A1C22] px-2 py-0.5 rounded border">
-                              Not graded
-                            </span>
-                          )}
 
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase border ${
-                            item.status === "approved" || item.status === "accepted" || item.status === "completed" || item.status === "submitted"
-                              ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20"
-                              : item.status === "pending" || item.status === "running" || item.status === "review_pending"
-                              ? "bg-[#F5B04A]/10 text-[#F5B04A] border-[#F5B04A]/20"
-                              : "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20"
-                          }`}>
-                            {item.status.replace(/_/g, " ")}
-                          </span>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase ${
+                              isPassed 
+                                ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20" 
+                                : "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20"
+                            }`}>
+                              {isPassed ? "Passed" : "Failed"}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -3338,15 +3296,14 @@ export default function TeacherConsole({
                             {filteredRoster.map((enr: any) => (
                               <tr 
                                 key={enr.id} 
-                                onClick={() => {
-                                  setSelectedStudent(enr);
-                                  setStudentDetailTab("overview");
-                                }}
-                                className="hover:bg-[#0B0C0F] cursor-pointer transition-colors"
+                                onClick={() => openStudentDrawer(enr)}
+                                className={`hover:bg-[#16171D]/50 cursor-pointer transition-colors ${openingStudentId === enr.id ? "opacity-70" : ""}`}
                               >
-                                <td className="py-3 font-bold text-[#EDEFF5] flex items-center gap-2">
+                                <td className="py-3.5 font-bold text-[#EDEFF5] flex items-center gap-2">
                                   <div className="w-7 h-7 rounded-full bg-[#6E79F4]/10 text-[#6E79F4] flex items-center justify-center font-bold text-[10px] uppercase border border-[#6E79F4]/25 shadow-sm">
-                                    {(enr.student?.full_name || enr.student?.email || "I").substring(0, 2)}
+                                    {openingStudentId === enr.id
+                                      ? <Loader2 size={12} className="animate-spin" />
+                                      : (enr.student?.full_name || enr.student?.email || "I").substring(0, 2)}
                                   </div>
                                   <span className="hover:text-[#6E79F4] transition-colors">{enr.student?.full_name || "Invited Candidate"}</span>
                                 </td>
@@ -3385,277 +3342,219 @@ export default function TeacherConsole({
 
           {/* TAB 3: PROJECT VALIDATOR */}
           {activeTab === "projects" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-              <div className="lg:col-span-2 bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit">
-                <h3 className="text-sm font-bold text-[#EDEFF5] mb-4">Student Project Submissions</h3>
+            <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit animate-fadeIn">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[#23252C] mb-4">
+                <h3 className="text-sm font-bold text-[#EDEFF5]">Student Project Submissions</h3>
                 
-                {filteredProjectSubmissions.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
-                    No project submissions found.
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-48">
+                    <Search className="absolute left-3 top-2.5 text-[#C2C6D1]" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Search student..."
+                      value={projectSearch}
+                      onChange={e => setProjectSearch(e.target.value)}
+                      className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg pl-9 pr-3 py-1.5 text-[11px] font-bold text-[#EDEFF5] placeholder-[#A3A9B6] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all"
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredProjectSubmissions.map(sub => {
-                      const hasReview = !!sub.review;
-                      const isSelected = selectedProjectSub?.id === sub.id;
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsProjectDateDropdownOpen(!isProjectDateDropdownOpen)}
+                      className="flex items-center gap-2 bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/40 hover:bg-[#6E79F4]/5 px-3 py-2 rounded-xl transition-all text-[11px] font-bold text-[#EDEFF5] cursor-pointer"
+                    >
+                      <Calendar size={13} className="text-[#6E79F4] shrink-0" />
+                      <span>{dateFilterLabels[projectDateFilter]}</span>
+                      <ChevronDown size={12} className="text-[#A3A9B6] shrink-0" />
+                    </button>
 
-                      return (
-                        <div 
-                          key={sub.id}
-                          onClick={() => setSelectedProjectSub(sub)}
-                          className={`p-4 border rounded-xl cursor-pointer transition-all ${
-                            isSelected 
-                              ? "border-[#6E79F4] bg-[#6E79F4]/5 shadow-sm" 
-                              : "border-[#23252C] hover:border-[#9BA1AE]/50"
-                          }`}
-                        >
-                          <div className="flex justify-between items-start gap-4">
-                            <div>
-                              <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.project_title}</h4>
-                              <p className="text-[10px] text-[#C2C6D1] mt-0.5">
-                                By <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong>
-                              </p>
-                            </div>
-                            
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                              !hasReview || sub.review.review_status === "pending"
-                                ? "bg-[#F5B04A]/10 text-[#F5B04A]"
-                                : sub.review.review_status === "approved"
-                                ? "bg-[#2FBF71]/10 text-[#2FBF71]"
-                                : "bg-[#F0555D]/10 text-[#F0555D]"
-                            }`}>
-                              {!hasReview ? "Pending Review" : sub.review.review_status}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
-                            <span className="flex items-center gap-1">
-                              <Clock size={12} />
-                              {new Date(sub.submitted_at).toLocaleDateString()}
-                            </span>
-                            <span className="flex items-center gap-1 font-semibold text-[#6E79F4]">
-                              <ExternalLink size={12} />
-                              GitHub Repo Link
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit">
-                {selectedProjectSub ? (
-                  <form onSubmit={handleReviewSubmit} className="space-y-4">
-                    <h3 className="text-sm font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C]">
-                      Grade: {selectedProjectSub.project_title}
-                    </h3>
-
-                    <div>
-                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
-                        Submitted GitHub URL
-                      </label>
-                      <a 
-                        href={selectedProjectSub.github_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-[#6E79F4] font-semibold break-all hover:underline flex items-center gap-1"
-                      >
-                        {selectedProjectSub.github_url}
-                        <ExternalLink size={12} />
-                      </a>
-                    </div>
-
-                    {selectedProjectSub.submission_notes && (
-                      <div>
-                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
-                          Student Submission Notes
-                        </label>
-                        <p className="text-xs bg-[#0B0C0F] border border-[#23252C] rounded-xl p-3 text-[#EDEFF5]">
-                          {selectedProjectSub.submission_notes}
-                        </p>
+                    {isProjectDateDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-[#131418] border border-[#23252C] rounded-xl shadow-card z-50 py-1 animate-fadeIn">
+                        {Object.entries(dateFilterLabels).map(([val, label]) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => {
+                              setProjectDateFilter(val);
+                              setIsProjectDateDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-[#16171D] transition-all flex items-center justify-between text-xs cursor-pointer ${
+                              projectDateFilter === val ? "bg-[#6E79F4]/5 text-[#6E79F4] font-bold" : "text-[#C2C6D1]"
+                            }`}
+                          >
+                            <span>{label}</span>
+                            {projectDateFilter === val && <CheckCircle2 size={12} className="text-[#6E79F4]" />}
+                          </button>
+                        ))}
                       </div>
                     )}
-
-                    <hr className="border-[#23252C]" />
-
-                    <div>
-                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
-                        Assign Status
-                      </label>
-                      <select
-                        value={reviewStatus}
-                        onChange={(e) => setReviewStatus(e.target.value)}
-                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6E79F4] w-full"
-                      >
-                        <option value="approved">Approved & Completed</option>
-                        <option value="revision_requested">Revision Requested</option>
-                        <option value="rejected">Rejected / Failed</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">
-                          Assigned Score
-                        </label>
-                        <span className="text-[10px] font-bold text-[#C2C6D1]">
-                          Max Score: {selectedProjectSub.max_score}
-                        </span>
-                      </div>
-                      <input 
-                        type="number"
-                        max={selectedProjectSub.max_score}
-                        min={0}
-                        value={score}
-                        onChange={(e) => setScore(Number(e.target.value))}
-                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
-                        Feedback Comments
-                      </label>
-                      <textarea 
-                        rows={4}
-                        value={feedback}
-                        onChange={(e) => setFeedback(e.target.value)}
-                        placeholder="Add review feedback for the student..."
-                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full resize-none"
-                      />
-                    </div>
-
-                    <button 
-                      type="submit"
-                      disabled={isPending}
-                      className="w-full bg-[#6E79F4] hover:bg-[#5A66F0] disabled:bg-[#2E313A] text-white font-bold text-xs py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
-                    >
-                      {isPending ? "Submitting..." : "Submit Review Grade"}
-                    </button>
-                  </form>
-                ) : (
-                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl">
-                    <AlertCircle className="mx-auto mb-2 text-[#C2C6D1]/40" size={32} />
-                    <p className="text-xs font-semibold text-[#C2C6D1]">Select submission from list to begin grading</p>
                   </div>
-                )}
+                </div>
               </div>
+              
+              {filteredProjectSubmissions.length === 0 ? (
+                <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
+                  No project submissions found.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredProjectSubmissions.map(sub => {
+                    const hasReview = !!sub.review;
+                    const isSelected = selectedProjectSub?.id === sub.id;
+
+                    return (
+                      <div 
+                        key={sub.id}
+                        onClick={() => setSelectedProjectSub(sub)}
+                        className={`p-4 border rounded-xl cursor-pointer transition-all ${
+                          isSelected 
+                            ? "border-[#6E79F4] bg-[#6E79F4]/5 shadow-sm" 
+                            : "border-[#23252C] hover:border-[#9BA1AE]/50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.project_title}</h4>
+                            <p className="text-[10px] text-[#C2C6D1] mt-0.5">
+                              By <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong>
+                            </p>
+                          </div>
+                          
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                            !hasReview || sub.review.review_status === "pending"
+                              ? "bg-[#F5B04A]/10 text-[#F5B04A]"
+                              : sub.review.review_status === "approved"
+                              ? "bg-[#2FBF71]/10 text-[#2FBF71]"
+                              : "bg-[#F0555D]/10 text-[#F0555D]"
+                          }`}>
+                            {!hasReview ? "Pending Review" : sub.review.review_status}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} />
+                            {new Date(sub.submitted_at).toLocaleDateString()}
+                          </span>
+                          <span className="flex items-center gap-1 font-semibold text-[#6E79F4]">
+                            <ExternalLink size={12} />
+                            GitHub Repo Link
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
           {/* TAB 4: CHALLENGE AUDITOR */}
           {activeTab === "challenges" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-              <div className="lg:col-span-2 bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit">
-                <h3 className="text-sm font-bold text-[#EDEFF5] mb-4">Student Coding Submissions</h3>
+            <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit animate-fadeIn">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[#23252C] mb-4">
+                <h3 className="text-sm font-bold text-[#EDEFF5]">Student Coding Submissions</h3>
                 
-                {filteredChallengeSubmissions.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
-                    No coding challenge submissions logged yet.
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-48">
+                    <Search className="absolute left-3 top-2.5 text-[#C2C6D1]" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Search student..."
+                      value={challengeSearch}
+                      onChange={e => setChallengeSearch(e.target.value)}
+                      className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg pl-9 pr-3 py-1.5 text-[11px] font-bold text-[#EDEFF5] placeholder-[#A3A9B6] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all"
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredChallengeSubmissions.map(sub => {
-                      const isSelected = selectedChallengeSub?.id === sub.id;
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsChallengeDateDropdownOpen(!isChallengeDateDropdownOpen)}
+                      className="flex items-center gap-2 bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/40 hover:bg-[#6E79F4]/5 px-3 py-2 rounded-xl transition-all text-[11px] font-bold text-[#EDEFF5] cursor-pointer"
+                    >
+                      <Calendar size={13} className="text-[#6E79F4] shrink-0" />
+                      <span>{dateFilterLabels[challengeDateFilter]}</span>
+                      <ChevronDown size={12} className="text-[#A3A9B6] shrink-0" />
+                    </button>
 
-                      return (
-                        <div 
-                          key={sub.id}
-                          onClick={() => setSelectedChallengeSub(sub)}
-                          className={`p-4 border rounded-xl cursor-pointer transition-all ${
-                            isSelected 
-                              ? "border-[#6E79F4] bg-[#6E79F4]/5 shadow-sm" 
-                              : "border-[#23252C] hover:border-[#9BA1AE]/50"
-                          }`}
-                        >
-                          <div className="flex justify-between items-start gap-4">
-                            <div>
-                              <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.challenge_title}</h4>
-                              <p className="text-[10px] text-[#C2C6D1] mt-0.5">
-                                Submitted by <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong>
-                              </p>
-                            </div>
-                            
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 uppercase ${
-                              sub.submission_status_code === "accepted"
-                                ? "bg-[#2FBF71]/10 text-[#2FBF71]"
-                                : sub.submission_status_code === "pending" || sub.submission_status_code === "running"
-                                ? "bg-[#F5B04A]/10 text-[#F5B04A]"
-                                : "bg-[#F0555D]/10 text-[#F0555D]"
-                            }`}>
-                              {sub.submission_status_code.replace(/_/g, " ")}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
-                            <span className="flex items-center gap-1 font-bold text-[#EDEFF5] bg-[#23252C]/40 px-1.5 py-0.5 rounded">
-                              {sub.language}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock size={12} />
-                              {new Date(sub.submitted_at).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit">
-                {selectedChallengeSub ? (
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C]">
-                      Audit Subscribed Code
-                    </h3>
-
-                    <div>
-                      <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wide block">Challenge Name</span>
-                      <span className="text-xs font-bold">{selectedChallengeSub.challenge_title}</span>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wide block">Language Runtime</span>
-                      <span className="text-xs font-semibold uppercase">{selectedChallengeSub.language}</span>
-                    </div>
-
-                    <hr className="border-[#23252C]" />
-
-                    <div>
-                      <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-1">Submitted Code Snippet</span>
-                      <pre className="p-3 bg-[#6E79F4] text-white text-[10px] font-mono rounded-xl overflow-x-auto max-h-60">
-                        <code>{selectedChallengeSub.source_code}</code>
-                      </pre>
-                    </div>
-
-                    {selectedChallengeSub.result && (
-                      <div className="bg-[#0B0C0F] border border-[#23252C] rounded-xl p-4 space-y-2 text-[10px]">
-                        <span className="font-bold text-[#EDEFF5] block uppercase tracking-wide">Judge Execution Results</span>
-                        <div className="flex justify-between">
-                          <span className="text-[#C2C6D1]">Passed Test Cases:</span>
-                          <strong className="text-[#2FBF71]">{selectedChallengeSub.result.passed_test_cases} / {selectedChallengeSub.result.total_test_cases}</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[#C2C6D1]">Execution Time:</span>
-                          <strong>{selectedChallengeSub.result.execution_time_ms} ms</strong>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[#C2C6D1]">Assigned Grade Score:</span>
-                          <strong className="text-[#6E79F4]">{selectedChallengeSub.result.score} pts</strong>
-                        </div>
+                    {isChallengeDateDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-[#131418] border border-[#23252C] rounded-xl shadow-card z-50 py-1 animate-fadeIn">
+                        {Object.entries(dateFilterLabels).map(([val, label]) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => {
+                              setChallengeDateFilter(val);
+                              setIsChallengeDateDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-[#16171D] transition-all flex items-center justify-between text-xs cursor-pointer ${
+                              challengeDateFilter === val ? "bg-[#6E79F4]/5 text-[#6E79F4] font-bold" : "text-[#C2C6D1]"
+                            }`}
+                          >
+                            <span>{label}</span>
+                            {challengeDateFilter === val && <CheckCircle2 size={12} className="text-[#6E79F4]" />}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl">
-                    <AlertCircle className="mx-auto mb-2 text-[#C2C6D1]/40" size={32} />
-                    <p className="text-xs font-semibold text-[#C2C6D1]">Select student submission to audit execution logs</p>
-                  </div>
-                )}
+                </div>
               </div>
+              
+              {filteredChallengeSubmissions.length === 0 ? (
+                <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
+                  No coding challenge submissions logged yet.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredChallengeSubmissions.map(sub => {
+                    const isSelected = selectedChallengeSub?.id === sub.id;
+
+                    return (
+                      <div 
+                        key={sub.id}
+                        onClick={() => setSelectedChallengeSub(sub)}
+                        className={`p-4 border rounded-xl cursor-pointer transition-all ${
+                          isSelected 
+                            ? "border-[#6E79F4] bg-[#6E79F4]/5 shadow-sm" 
+                            : "border-[#23252C] hover:border-[#9BA1AE]/50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.challenge_title}</h4>
+                            <p className="text-[10px] text-[#C2C6D1] mt-0.5">
+                              Submitted by <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong>
+                            </p>
+                          </div>
+                          
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 uppercase ${
+                            sub.submission_status_code === "accepted"
+                              ? "bg-[#2FBF71]/10 text-[#2FBF71]"
+                              : sub.submission_status_code === "pending" || sub.submission_status_code === "running"
+                              ? "bg-[#F5B04A]/10 text-[#F5B04A]"
+                              : "bg-[#F0555D]/10 text-[#F0555D]"
+                          }`}>
+                            {sub.submission_status_code.replace(/_/g, " ")}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
+                          <span className="flex items-center gap-1 font-bold text-[#EDEFF5] bg-[#23252C]/40 px-1.5 py-0.5 rounded">
+                            {sub.language}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} />
+                            {new Date(sub.submitted_at).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -3677,7 +3576,7 @@ export default function TeacherConsole({
                       <select
                         value={selectedCourseId}
                         onChange={(e) => setSelectedCourseId(e.target.value)}
-                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
+                        className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
                         required
                       >
                         <option value="">-- Choose Course --</option>
@@ -3701,7 +3600,7 @@ export default function TeacherConsole({
                         <select
                           value={activityType}
                           onChange={(e: any) => setActivityType(e.target.value)}
-                          className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
+                          className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
                         >
                           <option value="quiz">Quiz Assessment</option>
                           <option value="project">Project Repository Upload</option>
@@ -3937,7 +3836,7 @@ export default function TeacherConsole({
                             <select 
                               value={newQuestionType}
                               onChange={(e) => setNewQuestionType(e.target.value)}
-                              className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
+                              className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
                             >
                               <option value="single_choice">Single Choice</option>
                               <option value="multiple_choice">Multiple Choice</option>
@@ -4137,7 +4036,7 @@ export default function TeacherConsole({
                   <select
                     value={syllabusCourseId}
                     onChange={(e) => setSyllabusCourseId(e.target.value)}
-                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
+                    className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
                   >
                     <option value="">-- Choose Course --</option>
                     {filteredCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
@@ -4195,7 +4094,7 @@ export default function TeacherConsole({
                           }
                           setSyllabusLessonId("");
                         }}
-                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] flex-1"
+                        className="bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer flex-1"
                       >
                         <option value="">-- All Course Modules --</option>
                         {syllabusModules.map(m => <option key={m.id} value={m.id}>Mod {m.position}: {m.title}</option>)}
@@ -4560,7 +4459,7 @@ export default function TeacherConsole({
                               <select
                                 value={newLessonTypeId || defaultLessonTypeId}
                                 onChange={(e) => setNewLessonTypeId(e.target.value)}
-                                className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
+                                className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
                               >
                                 {lessonTypes.map((t: any) => (
                                   <option key={t.id} value={t.id}>{t.description || t.code}</option>
@@ -4681,7 +4580,7 @@ export default function TeacherConsole({
                                 <select 
                                   value={resType}
                                   onChange={(e) => setResType(e.target.value)}
-                                  className="bg-[#131418] border border-[#23252C] px-2.5 py-1.5 rounded-lg text-xs w-full"
+                                  className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
                                 >
                                   <option value="pdf">PDF Document</option>
                                   <option value="link">External Resource Link</option>
@@ -4737,9 +4636,8 @@ export default function TeacherConsole({
             </>
           )}
         </main>
-          </>
-        )}
-      </div>
+      )}
+    </AppShell>
 
       {/* STUDENT DETAIL SLIDE-OVER DRAWER */}
       {renderStudentDetailDrawer()}
@@ -4755,7 +4653,6 @@ export default function TeacherConsole({
 
       {/* ACTIVITY DETAIL SLIDE-OVER DRAWER */}
       {renderActivityConsoleDrawer()}
-    </div>
     </>
   );
 }

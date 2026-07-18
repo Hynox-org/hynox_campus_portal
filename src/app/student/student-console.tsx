@@ -708,17 +708,20 @@ export default function StudentConsole({
     const isDone = ["completed", "reviewed", "passed", "accepted"].includes(normalized);
     const isActive = ["started", "submitted", "in_progress", "pending", "running"].includes(normalized);
     const isFailed = ["rejected", "failed"].includes(normalized);
+    const isRevision = ["revision_requested", "revision", "rework"].includes(normalized);
     const style = isDone
-      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+      ? "bg-emerald-55/15 text-emerald-500 border-emerald-500/20"
+      : isRevision
+      ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
       : isFailed
-      ? "bg-red-50 text-red-700 border-red-100"
+      ? "bg-red-500/10 text-red-500 border-red-500/20"
       : isActive
-      ? "bg-amber-50 text-amber-700 border-amber-100"
+      ? "bg-amber-50/15 text-amber-500 border-amber-500/25"
       : "bg-[#16171D] text-[#C2C6D1] border-[#23252C]";
     const sizeClasses = size === "sm" ? "px-2 py-0.5 text-[9px]" : "px-1.5 py-0.5 text-[8px]";
     return (
       <span className={`rounded font-bold border uppercase tracking-wide ${sizeClasses} ${style}`}>
-        {normalized.replace(/_/g, " ")}
+        {normalized === "revision_requested" ? "revision required" : normalized.replace(/_/g, " ")}
       </span>
     );
   };

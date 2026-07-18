@@ -56,6 +56,22 @@ export async function getStudentAssignedActivities(studentId: string) {
 
   if (progError) throw progError;
 
+  // 4b. Fetch project submissions and reviews to check for revision requests
+  const { data: projects } = await supabase
+    .schema("learning")
+    .from("projects")
+    .select("id, activity_id")
+    .in("activity_id", activityIds);
+
+  const projectIds = projects?.map(p => p.id) || [];
+
+  const { data: submissions } = await supabase
+    .schema("learning")
+    .from("project_submissions")
+    .select("project_id, project_reviews(review_status)")
+    .eq("student_id", studentId)
+    .in("project_id", projectIds);
+
   // 5. Combine everything (map over assignments so each cohort-specific assignment gets its correct cohort_id)
   return assignments.map(assign => {
     const act = activities.find(a => a.id === assign.activity_id);
@@ -71,6 +87,20 @@ export async function getStudentAssignedActivities(studentId: string) {
         attempt_number: 0,
         completed_at: null
       };
+    }
+
+    // Check if this is a project activity with a revision requested review status
+    const relatedProj = projects?.find(p => p.activity_id === act.id);
+    if (relatedProj) {
+      const sub = submissions?.find(s => s.project_id === relatedProj.id);
+      const reviews = sub?.project_reviews as any;
+      const reviewStatus = Array.isArray(reviews) ? reviews[0]?.review_status : reviews?.review_status;
+      if (reviewStatus === "revision_requested") {
+        progress = {
+          ...progress,
+          status_code: "revision_requested"
+        };
+      }
     }
 
     return {
@@ -245,6 +275,56 @@ export async function forfeitQuizAttempt(attemptId: string, reason: string) {
   return updatedAttempt;
 }
 
+export async function approveQuizRetake(attemptId: string) {
+  const supabase = await createClient();
+
+  const { data: attempt, error: attError } = await supabase
+    .schema("learning")
+    .from("quiz_attempts")
+    .select("*")
+    .eq("id", attemptId)
+    .single();
+
+  if (attError || !attempt) throw new Error("Quiz attempt not found.");
+
+  const { data: quiz } = await supabase
+    .schema("learning")
+    .from("quizzes")
+    .select("activity_id")
+    .eq("id", attempt.quiz_id)
+    .single();
+
+  const { data: progress } = await supabase
+    .schema("learning")
+    .from("student_activity_progress")
+    .select("attempt_number")
+    .eq("id", attempt.student_activity_progress_id)
+    .single();
+
+  const currentAttempts = progress?.attempt_number || 0;
+  const newAttempts = Math.max(0, currentAttempts - 1);
+
+  const { error: progError } = await supabase
+    .schema("learning")
+    .from("student_activity_progress")
+    .update({
+      status_code: "started",
+      score: null,
+      completed_at: null,
+      attempt_number: newAttempts,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", attempt.student_activity_progress_id);
+
+  if (progError) throw progError;
+
+  if (quiz?.activity_id) {
+    await syncCourseProgressByActivity(attempt.student_id, quiz.activity_id);
+  }
+
+  return { success: true };
+}
+
 export async function getQuizSessionDetails(attemptId: string) {
   const supabase = await createClient();
 
@@ -285,7 +365,7 @@ export async function getQuizSessionDetails(attemptId: string) {
     const { data: optData, error: optError } = await supabase
       .schema("learning")
       .from("quiz_options")
-      .select("id, question_id, option_text, position")
+      .select("id, question_id, option_text, position, is_correct")
       .in("question_id", questionIds)
       .order("position", { ascending: true });
 
@@ -293,21 +373,42 @@ export async function getQuizSessionDetails(attemptId: string) {
     options = optData || [];
   }
 
+  // Fetch student answers
+  const { data: answersData } = await supabase
+    .schema("learning")
+    .from("quiz_answers")
+    .select("*")
+    .eq("attempt_id", attemptId);
+
   // Map options to questions
-  let quizQuestionsList = (questions || []).map(q => ({
-    ...q,
-    options: options.filter(o => o.question_id === q.id)
-  }));
+  let quizQuestionsList = (questions || []).map(q => {
+    const qOpts = options.filter(o => o.question_id === q.id);
+    const ans = answersData?.find(a => a.question_id === q.id);
+    return {
+      ...q,
+      options: qOpts,
+      correctIndex: qOpts.findIndex((o: any) => o.is_correct === true),
+      selectedIndex: qOpts.findIndex((o: any) => o.id === ans?.selected_option_id)
+    };
+  });
 
   // Apply shuffling if configuration permits (seeded by attemptId)
   if (quiz.shuffle_questions) {
     quizQuestionsList = shuffleArray(quizQuestionsList, attemptId);
   }
   if (quiz.shuffle_options) {
-    quizQuestionsList = quizQuestionsList.map(q => ({
-      ...q,
-      options: shuffleArray(q.options, attemptId + q.id)
-    }));
+    quizQuestionsList = quizQuestionsList.map(q => {
+      // Find correct option and selected option before shuffling to preserve correctIndex & selectedIndex mapping
+      const correctOpt = q.options[q.correctIndex] as any;
+      const selectedOpt = q.options[q.selectedIndex] as any;
+      const shuffledOpts = shuffleArray(q.options, attemptId + q.id);
+      return {
+        ...q,
+        options: shuffledOpts,
+        correctIndex: shuffledOpts.findIndex((o: any) => o.id === correctOpt?.id),
+        selectedIndex: shuffledOpts.findIndex((o: any) => o.id === selectedOpt?.id)
+      };
+    });
   }
 
   return {
