@@ -45,3 +45,7 @@ next-env.d.ts
 *.docx
 AGENTS.md
 CLAUDE.md
+.agents/
+.claude/
+.gemini/
+
