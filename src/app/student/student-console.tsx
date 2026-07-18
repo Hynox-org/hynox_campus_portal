@@ -1794,33 +1794,6 @@ export default function StudentConsole({
                           />
                         </div>
 
-                        {attendanceLogs.length > 0 && (
-                          <div className="space-y-1.5 pt-1">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#C2C6D1]">Recent Sessions</p>
-                            <div className="divide-y divide-[#23252C]">
-                              {[...attendanceLogs].reverse().slice(0, 5).map((log: any, idx: number) => {
-                                const statusStyle =
-                                  log.status === "present"
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                    : log.status === "late"
-                                    ? "bg-amber-50 text-amber-700 border-amber-100"
-                                    : log.status === "absent"
-                                    ? "bg-red-50 text-red-700 border-red-100"
-                                    : "bg-[#16171D] text-[#C2C6D1] border-[#23252C]";
-                                return (
-                                  <div key={`${log.date}-${idx}`} className="py-1.5 flex items-center justify-between text-[10px]">
-                                    <span className="text-[#C2C6D1] font-medium">
-                                      {new Date(log.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                                    </span>
-                                    <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[8px] border ${statusStyle}`}>
-                                      {log.status}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
                       </>
                     ) : (
                       <div className="text-center py-6 bg-[#16171D]/20 rounded-xl border border-dashed border-[#23252C] text-[10px] text-[#C2C6D1] font-medium">
