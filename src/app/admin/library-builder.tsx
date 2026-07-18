@@ -765,7 +765,7 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setCourseDrawerOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
@@ -908,7 +908,7 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setModuleDrawerOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
@@ -995,7 +995,7 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setLessonDrawerOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
@@ -1097,7 +1097,7 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setResourceDrawerOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}

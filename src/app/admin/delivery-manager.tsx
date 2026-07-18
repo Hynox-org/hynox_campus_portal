@@ -22,7 +22,6 @@ import { listProgramsAction, listCoursesAction, listLessonsForCourseAction } fro
 import { useQueryClient } from "@tanstack/react-query";
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
 import { usePrograms } from "@/hooks/use-academics";
-import AttendancePanel from "@/components/attendance-panel";
 import { useToast } from "@/components/toast";
 import { 
   Building, 
@@ -31,8 +30,7 @@ import {
   BookOpen, 
   Plus, 
   Trash2, 
-  Edit, 
-  Calendar, 
+  Edit,
   Check,
   FileText,
   TrendingUp,
@@ -43,6 +41,7 @@ import {
   X
 } from "lucide-react";
 import { SecondaryLoader } from "@/components/secondary-loader";
+import { CustomSelect } from "@/components/custom-select";
 
 interface DeliveryManagerProps {
   institutions: any[];
@@ -52,7 +51,7 @@ interface DeliveryManagerProps {
 
 export default function DeliveryManager({ institutions, initialTab, isTeacherMode = false }: DeliveryManagerProps) {
   const [selectedInstId, setSelectedInstId] = useState(institutions[0]?.id || "");
-  const [activeSubTab, setActiveSubTab] = useState<"cohorts" | "enrollments" | "assignments" | "attendance">(initialTab as any);
+  const [activeSubTab, setActiveSubTab] = useState<"cohorts" | "enrollments" | "assignments">(initialTab as any);
 
   useEffect(() => {
     setActiveSubTab(initialTab);
@@ -377,17 +376,13 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
             Manage student batches, enroll students, and assign courses to cohorts.
           </p>
         </div>
-        <select
+        <CustomSelect
+          options={institutions.map((inst) => ({ id: inst.id, name: inst.name, code: inst.institution_code }))}
           value={selectedInstId}
-          onChange={(e) => setSelectedInstId(e.target.value)}
-          className="bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-semibold max-w-xs"
-        >
-          {institutions.map((inst) => (
-            <option key={inst.id} value={inst.id}>
-              {inst.name} ({inst.institution_code})
-            </option>
-          ))}
-        </select>
+          onChange={setSelectedInstId}
+          required
+          className="sm:max-w-xs"
+        />
       </div>
 
       {/* Sub Tabs */}
@@ -429,17 +424,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
             Course Assignments ({assignments.length})
           </button>
         )}
-        <button
-          onClick={() => setActiveSubTab("attendance")}
-          className={`px-3 sm:px-5 py-2.5 font-bold border-b-2 transition-all flex items-center gap-1.5 shrink-0 ${
-            activeSubTab === "attendance"
-              ? "border-[#6E79F4] text-[#6E79F4]"
-              : "border-transparent text-[#C2C6D1] hover:text-[#EDEFF5]"
-          }`}
-        >
-          <Calendar size={14} />
-          Attendance Tracker
-        </button>
       </div>
 
       {/* Loading state */}
@@ -528,16 +512,13 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-[#16171D] p-4 border border-[#23252C] rounded-xl shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <label className="font-bold text-xs text-[#C2C6D1] uppercase tracking-wider whitespace-nowrap">Filter Cohort Batch:</label>
-              <select
+              <CustomSelect
+                options={cohorts.map(coh => ({ id: coh.id, name: coh.name, code: coh.code }))}
                 value={selectedCohortFilter}
-                onChange={(e) => setSelectedCohortFilter(e.target.value)}
-                className="bg-[#131418] border border-[#23252C] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-semibold w-full sm:min-w-[200px] sm:w-auto"
-              >
-                <option value="">-- All Cohorts --</option>
-                {cohorts.map(coh => (
-                  <option key={coh.id} value={coh.id}>{coh.name} ({coh.code})</option>
-                ))}
-              </select>
+                onChange={setSelectedCohortFilter}
+                placeholder="-- All Cohorts --"
+                className="sm:min-w-[200px] sm:w-auto"
+              />
             </div>
             
             <button
@@ -681,15 +662,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         </div>
       )}
 
-      {/* attendance tracker view */}
-      {!loading && activeSubTab === "attendance" && (
-        <AttendancePanel
-          cohorts={cohorts}
-          students={students}
-          enrollments={enrollments}
-          userRole="super_admin"
-        />
-      )}
       {cohortModalOpen && !isTeacherMode && (
         <>
           {/* Backdrop overlay */}
@@ -1181,7 +1153,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         });
 
         return (
-          <div className="fixed inset-0 bg-[#6E79F4]/40 backdrop-blur-sm z-[9998] flex justify-end animate-fadeIn" onClick={() => setSelectedStudent(null)}>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] flex justify-end animate-fadeIn" onClick={() => setSelectedStudent(null)}>
             <div className="relative w-full max-w-3xl bg-[#131418] h-full shadow-2xl flex flex-col z-[9999] animate-slideOver overflow-hidden" onClick={(e) => e.stopPropagation()}>
               
               {/* Drawer Header */}

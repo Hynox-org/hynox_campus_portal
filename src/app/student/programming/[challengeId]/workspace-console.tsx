@@ -496,11 +496,11 @@ export default function WorkspaceConsole({
       <div className="flex flex-col gap-6">
 
         {/* Workspace Navigation Header */}
-        <div className="bg-[#131418] border border-[#23252C] rounded-xl p-3 shadow-sm flex items-center justify-between">
-          <div className="flex gap-2">
+        <div className="bg-[#131418] border border-[#23252C] rounded-xl p-3 shadow-sm flex items-center gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar flex-1 min-w-0">
             <button
               onClick={() => setActiveTab("editor")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === "editor"
                   ? "bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/10"
                   : "hover:bg-[#16171D] text-[#C2C6D1]"
@@ -511,7 +511,7 @@ export default function WorkspaceConsole({
             </button>
             <button
               onClick={() => setActiveTab("results")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === "results"
                   ? "bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/10"
                   : "hover:bg-[#16171D] text-[#C2C6D1]"
@@ -522,7 +522,7 @@ export default function WorkspaceConsole({
             </button>
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === "history"
                   ? "bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/10"
                   : "hover:bg-[#16171D] text-[#C2C6D1]"
@@ -535,7 +535,7 @@ export default function WorkspaceConsole({
 
           <button
             onClick={toggleFullscreen}
-            className="p-1.5 hover:bg-[#16171D] border border-transparent hover:border-[#23252C] rounded-lg transition-all text-[#C2C6D1]"
+            className="shrink-0 p-1.5 hover:bg-[#16171D] border border-transparent hover:border-[#23252C] rounded-lg transition-all text-[#C2C6D1]"
           >
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
@@ -547,14 +547,14 @@ export default function WorkspaceConsole({
           {/* TAB 1: MONACO EDITOR */}
           {activeTab === "editor" && (
             <div className="flex flex-col flex-1">
-              <div className="p-4 border-b border-[#23252C] bg-[#16171D]/50 flex justify-between items-center">
+              <div className="p-3 sm:p-4 border-b border-[#23252C] bg-[#16171D]/50 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5] flex items-center gap-1">
                   <Code size={14} className="text-[#6E79F4]" /> Code Editor
                 </span>
                 <select
                   value={selectedLanguage}
                   onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1 text-[10px] font-semibold text-[#EDEFF5] outline-none shadow-sm focus:border-[#6E79F4]/30 transition-all"
+                  className="bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1 text-[10px] font-semibold text-[#EDEFF5] outline-none shadow-sm focus:border-[#6E79F4]/30 transition-all w-full sm:w-auto"
                 >
                   {LANGUAGE_OPTIONS.map((lang) => (
                     <option key={lang.value} value={lang.value}>{lang.label}</option>
@@ -562,16 +562,14 @@ export default function WorkspaceConsole({
                 </select>
               </div>
 
-              <div className="flex-1 bg-[#6E79F4]">
+              <div className="flex-1 bg-[#0B0C0F] min-w-0 overflow-hidden">
                 <Editor
                   height="340px"
                   language={selectedLanguage}
                   value={code}
                   onChange={handleCodeChange}
                   theme="hynox-dark"
-                  onMount={(editor, monaco) => {
-                    editorRef.current = editor;
-
+                  beforeMount={(monaco) => {
                     monaco.editor.defineTheme("hynox-dark", {
                       base: "vs-dark",
                       inherit: true,
@@ -584,17 +582,24 @@ export default function WorkspaceConsole({
                         { token: "type", foreground: "B392F0" }
                       ],
                       colors: {
-                        "editor.background": "#EDEFF5",
-                        "editor.foreground": "#0B0C0F",
+                        "editor.background": "#0B0C0F",
+                        "editor.foreground": "#EDEFF5",
                         "editorLineNumber.foreground": "#9BA1AE",
                         "editorLineNumber.activeForeground": "#6E79F4",
-                        "editor.lineHighlightBackground": "#1E293B",
+                        "editor.lineHighlightBackground": "#1A1C22",
                         "editor.selectionBackground": "#334155"
                       }
                     });
-
-                    monaco.editor.setTheme("hynox-dark");
                   }}
+                  onMount={(editor) => {
+                    editorRef.current = editor;
+                  }}
+                  loading={
+                    <div className="flex flex-col items-center justify-center gap-2 h-full w-full bg-[#0B0C0F] text-[#C2C6D1]">
+                      <Loader2 size={20} className="animate-spin text-[#6E79F4]" />
+                      <span className="text-[10px] font-semibold uppercase tracking-wider">Loading editor...</span>
+                    </div>
+                  }
                   options={{
                     minimap: { enabled: false },
                     fontSize: 11,
@@ -606,11 +611,11 @@ export default function WorkspaceConsole({
                 />
               </div>
 
-              <div className="p-4 border-t border-[#23252C] bg-[#16171D]/30 flex gap-3">
+              <div className="p-3 sm:p-4 border-t border-[#23252C] bg-[#16171D]/30 flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={handleRunCode}
                   disabled={runningCode || submitting}
-                  className="bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/25 hover:bg-[#6E79F4]/5 text-[#EDEFF5] hover:text-[#6E79F4] px-4 py-2 rounded-lg shadow-sm font-semibold text-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  className="bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/25 hover:bg-[#6E79F4]/5 text-[#EDEFF5] hover:text-[#6E79F4] px-4 py-2 rounded-lg shadow-sm font-semibold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   {runningCode ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
                   Run Code
@@ -619,7 +624,7 @@ export default function WorkspaceConsole({
                 <button
                   onClick={handleSubmitSolution}
                   disabled={runningCode || submitting}
-                  className="bg-[#6E79F4] text-white hover:bg-[#6E79F4]/95 px-4.5 py-2 rounded-lg shadow-sm font-bold text-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer ml-auto"
+                  className="bg-[#6E79F4] text-white hover:bg-[#6E79F4]/95 px-4.5 py-2 rounded-lg shadow-sm font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer sm:ml-auto"
                 >
                   {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                   Submit Solution

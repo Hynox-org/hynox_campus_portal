@@ -887,12 +887,15 @@ export async function syncCourseProgress(userId: string, courseId: string) {
 
       if (courseLessonIds.length > 0) {
         // Query activities that match both assigned activity IDs AND belong to this course's lessons!
+        // Only mandatory activities count toward course completion — optional
+        // ones are excluded from both the numerator and denominator.
         const { data: courseActivities } = await supabase
           .schema("learning")
           .from("activities")
           .select("id")
           .in("id", assignedActivityIds)
           .in("lesson_id", courseLessonIds)
+          .eq("is_mandatory", true)
           .is("deleted_at", null);
 
         const courseActivityIds = (courseActivities || []).map(a => a.id);

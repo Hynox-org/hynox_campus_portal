@@ -1,97 +1,134 @@
 "use server";
 
 import { getCurrentUser } from "@/services/auth";
-import { 
-  getAttendanceSession,
-  upsertAttendanceSession,
-  saveAttendanceRecords,
-  getCohortAttendanceReport,
-  getStudentAttendanceLogs,
-  verifyAttendanceMarkingPermission
+import {
+  getCohortAttendanceRegister,
+  setHoliday,
+  saveAttendanceForDate,
+  setAttendanceStatus,
+  getCohortAttendanceStats,
+  getStudentAttendanceSummary,
+  verifyAttendanceMarkingPermission,
+  AttendanceStatus,
 } from "@/services/attendance";
 import { revalidatePath } from "next/cache";
 
-export async function getAttendanceSessionAction(cohortId: string, dateStr: string) {
+// Server-side "today" in local time, matching the client's date-string format (YYYY-MM-DD).
+function serverTodayStr() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  const local = new Date(now.getTime() - offset * 60 * 1000);
+  return local.toISOString().substring(0, 10);
+}
+
+async function requirePermission(cohortId: string, dateStr?: string) {
+  const userDetails = await getCurrentUser();
+  if (!userDetails) {
+    return { error: "Unauthenticated. Please log in." } as const;
+  }
+
+  const hasPermission = await verifyAttendanceMarkingPermission(cohortId, userDetails.user.id, userDetails.primaryRole);
+  if (!hasPermission) {
+    return { error: "Access denied. Only assigned teachers or super admins can mark attendance." } as const;
+  }
+
+  // Teachers/trainers may only mark or change attendance for the present day.
+  // Once a day has passed, their entries are locked; Super Admins are exempt.
+  if (dateStr && userDetails.primaryRole !== "super_admin") {
+    if (dateStr !== serverTodayStr()) {
+      return { error: "Teachers can only mark attendance for the present day. Past and future dates are locked." } as const;
+    }
+  }
+
+  return { userDetails } as const;
+}
+
+export async function getAttendanceRegisterAction(cohortId: string) {
   try {
-    const session = await getAttendanceSession(cohortId, dateStr);
-    return { success: true, session };
+    const register = await getCohortAttendanceRegister(cohortId);
+    return { success: true, register };
   } catch (error: any) {
-    return { error: error.message || "Failed to fetch session data." };
+    return { error: error.message || "Failed to load attendance register." };
   }
 }
 
-export async function saveAttendanceAction(
-  cohortId: string,
-  dateStr: string,
-  isHoliday: boolean,
-  holidayName: string,
-  records: { student_id: string; status: "present" | "absent" | "late" }[]
-) {
+export async function markHolidayAction(cohortId: string, dateStr: string, holidayName?: string) {
+  const check = await requirePermission(cohortId, dateStr);
+  if ("error" in check) return check;
+
   try {
-    const userDetails = await getCurrentUser();
-    if (!userDetails) {
-      return { error: "Unauthenticated. Please log in." };
-    }
+    await setHoliday(cohortId, dateStr, true, holidayName, check.userDetails.user.id);
+    revalidatePath("/admin");
+    revalidatePath("/teacher");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to mark holiday." };
+  }
+}
 
-    const hasPermission = await verifyAttendanceMarkingPermission(
+export async function unmarkHolidayAction(cohortId: string, dateStr: string) {
+  const check = await requirePermission(cohortId, dateStr);
+  if ("error" in check) return check;
+
+  try {
+    await setHoliday(cohortId, dateStr, false, undefined, check.userDetails.user.id);
+    revalidatePath("/admin");
+    revalidatePath("/teacher");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to unmark holiday." };
+  }
+}
+
+export async function bulkMarkAttendanceAction(cohortId: string, dateStr: string, studentIds: string[], status: AttendanceStatus) {
+  const check = await requirePermission(cohortId, dateStr);
+  if ("error" in check) return check;
+
+  try {
+    await saveAttendanceForDate(
       cohortId,
-      userDetails.user.id,
-      userDetails.primaryRole
+      dateStr,
+      studentIds.map((studentId) => ({ student_id: studentId, status })),
+      check.userDetails.user.id
     );
-
-    if (!hasPermission) {
-      return { error: "Access denied. Only assigned instructors or super admins can mark attendance." };
-    }
-
-    // Restriction: Present day only (ignore timezone difference helper to be safe)
-    // Format current local date YYYY-MM-DD
-    const today = new Date();
-    const offset = today.getTimezoneOffset();
-    const localToday = new Date(today.getTime() - (offset*60*1000));
-    const todayStr = localToday.toISOString().substring(0, 10);
-
-    if (dateStr !== todayStr) {
-      return { error: "Access denied. Attendance can only be marked for the present day." };
-    }
-
-    // 1. Upsert attendance session
-    const session = await upsertAttendanceSession({
-      cohort_id: cohortId,
-      session_date: dateStr,
-      is_holiday: isHoliday,
-      holiday_name: isHoliday ? holidayName : undefined,
-      marked_by: userDetails.user.id
-    });
-
-    // 2. Upsert attendance records if it's not a holiday
-    if (!isHoliday && records && records.length > 0) {
-      await saveAttendanceRecords(session.id, records, userDetails.user.id);
-    }
-
     revalidatePath("/admin");
     revalidatePath("/teacher");
     revalidatePath("/student");
-
-    return { success: true, session };
+    return { success: true };
   } catch (error: any) {
-    return { error: error.message || "Failed to save attendance logs." };
+    return { error: error.message || "Failed to save attendance." };
   }
 }
 
-export async function getCohortAttendanceReportAction(cohortId: string) {
+export async function setAttendanceStatusAction(cohortId: string, dateStr: string, studentId: string, status: AttendanceStatus) {
+  const check = await requirePermission(cohortId, dateStr);
+  if ("error" in check) return check;
+
   try {
-    const report = await getCohortAttendanceReport(cohortId);
-    return { success: true, report };
+    await setAttendanceStatus(cohortId, dateStr, studentId, status, check.userDetails.user.id);
+    revalidatePath("/admin");
+    revalidatePath("/teacher");
+    revalidatePath("/student");
+    return { success: true };
   } catch (error: any) {
-    return { error: error.message || "Failed to generate attendance report." };
+    return { error: error.message || "Failed to update attendance record." };
   }
 }
 
-export async function getStudentAttendanceLogsAction(cohortId: string, studentId: string) {
+export async function getAttendanceStatsAction(cohortId: string) {
   try {
-    const logs = await getStudentAttendanceLogs(cohortId, studentId);
-    return { success: true, logs };
+    const stats = await getCohortAttendanceStats(cohortId);
+    return { success: true, stats };
   } catch (error: any) {
-    return { error: error.message || "Failed to load student attendance logs." };
+    return { error: error.message || "Failed to compute attendance statistics." };
+  }
+}
+
+export async function getStudentAttendanceSummaryAction(cohortId: string, studentId: string) {
+  try {
+    const summary = await getStudentAttendanceSummary(cohortId, studentId);
+    return { success: true, summary };
+  } catch (error: any) {
+    return { error: error.message || "Failed to load student attendance summary." };
   }
 }

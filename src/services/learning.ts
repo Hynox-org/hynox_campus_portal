@@ -1422,13 +1422,16 @@ export async function listAllActivities(tenantId: string) {
   const { data, error } = await supabase
     .schema("learning")
     .from("activities")
-    .select("*")
+    .select("*, activity_assignments(cohort_id)")
     .eq("tenant_id", tenantId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  return (data || []).map((act: any) => ({
+    ...act,
+    cohort_ids: (act.activity_assignments || []).map((a: any) => a.cohort_id),
+  }));
 }
 
 export async function createActivityAndSubclass(input: {

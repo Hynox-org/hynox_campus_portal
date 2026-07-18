@@ -27,7 +27,7 @@ import {
   ensureLessonProjectActivityAction,
   forfeitQuizAttemptAction
 } from "@/app/actions/learning-actions";
-import { getStudentAttendanceLogsAction } from "@/app/actions/attendance-actions";
+import { getAttendanceRegisterAction, getStudentAttendanceSummaryAction } from "@/app/actions/attendance-actions";
 import Link from "next/link";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCache } from "@/components/cache-provider";
@@ -350,12 +350,18 @@ export default function StudentConsole({
         return;
       }
       setLoadingAttendance(true);
-      const res = await getStudentAttendanceLogsAction(cohortId, studentId);
-      if (res.logs) {
-        setAttendancePercentage(res.logs.percentage);
-        setAttendanceLogs(res.logs.logs);
-      } else if (res.error) {
-        showError(res.error);
+      const [registerRes, summaryRes] = await Promise.all([
+        getAttendanceRegisterAction(cohortId),
+        getStudentAttendanceSummaryAction(cohortId, studentId),
+      ]);
+      if (registerRes.register) {
+        const logs = registerRes.register.dates
+          .filter((d) => !d.isHoliday)
+          .map((d) => ({ date: d.date, status: registerRes.register!.records[studentId]?.[d.date] || "absent" }));
+        setAttendanceLogs(logs);
+        setAttendancePercentage(summaryRes.summary ? summaryRes.summary.percentage : 100);
+      } else if (registerRes.error) {
+        showError(registerRes.error);
       }
       setLoadingAttendance(false);
     };
@@ -1639,7 +1645,7 @@ export default function StudentConsole({
 
             {/* Split Grid Area */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
+
               {/* Left 2 Columns: Continue Learning, Enrolled Courses & Challenges */}
               <div className="lg:col-span-2 space-y-6">
 
@@ -1947,11 +1953,11 @@ export default function StudentConsole({
                       </div>
                     ) : modules.length > 0 ? (
                       modules.map((mod) => (
-                        <div key={mod.id}>
-                          <p className="sticky top-0 z-10 bg-[#131418]/95 backdrop-blur px-1.5 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-[#C2C6D1] truncate">
+                        <div key={mod.id} className="mb-4 last:mb-0">
+                          <p className="bg-[#16171D] rounded-md px-2 py-1.5 mb-1.5 text-[9px] font-extrabold uppercase tracking-wider text-[#C2C6D1] truncate">
                             Module {mod.position} · {mod.title}
                           </p>
-                          <div className="space-y-1 mt-0.5">
+                          <div className="space-y-1">
                             {mod.lessons && mod.lessons.length > 0 ? (
                               mod.lessons.map((les: any) => {
                                 const progState = lessonProgressMap[les.id];
@@ -2050,7 +2056,7 @@ export default function StudentConsole({
                         onClick={() => setIsSyllabusDrawerOpen(false)}
                         aria-hidden="true"
                       />
-                      <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-[#131418] shadow-xl flex flex-col animate-fadeIn">
+                      <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-[#131418] shadow-xl flex flex-col overflow-hidden animate-fadeIn">
                         {syllabusPanel}
                       </div>
                     </div>

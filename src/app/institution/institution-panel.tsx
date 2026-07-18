@@ -17,7 +17,7 @@ import {
 import { CustomSelect } from "@/components/custom-select";
 import { getStudentDeliveryDataAction, listStudentLessonProgressAction } from "@/app/actions/delivery-actions";
 import { listLessonsForCourseAction } from "@/app/actions/academic-actions";
-import { getCohortAttendanceReportAction } from "@/app/actions/attendance-actions";
+import { getAttendanceStatsAction } from "@/app/actions/attendance-actions";
 import { AlertTriangle } from "lucide-react";
 
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
@@ -118,9 +118,9 @@ export default function InstitutionPanel({
       const reports: Record<string, any> = {};
       for (const c of cohorts) {
         try {
-          const res = await getCohortAttendanceReportAction(c.id);
-          if (res.report) {
-            reports[c.id] = res.report;
+          const res = await getAttendanceStatsAction(c.id);
+          if (res.stats) {
+            reports[c.id] = res.stats;
           }
         } catch (err) {
           console.error("Failed to load report for cohort:", c.id, err);

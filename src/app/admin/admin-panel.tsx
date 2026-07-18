@@ -109,11 +109,89 @@ import ProgramManager from "./program-manager";
 import DeliveryManager from "./delivery-manager";
 import LearningManager from "./learning-manager";
 import AdminStudentProgress from "./student-progress";
+import AttendanceModule from "@/components/attendance-register/attendance-module";
 
 import { useAdminData } from "@/hooks/use-admin";
 import { DashboardLoader } from "@/components/dashboard-loader";
 import { SecondaryLoader } from "@/components/secondary-loader";
 import { CustomSelect } from "@/components/custom-select";
+import AppShell, { ShellNavItem } from "@/components/app-shell";
+
+const ADMIN_NAV_ITEMS: ShellNavItem[] = [
+  {
+    id: "institutions",
+    label: "Institutions",
+    icon: Building,
+    children: [
+      { id: "institutions", label: "List Institutions" },
+      { id: "add_institution", label: "Add Institution" },
+      { id: "explorer", label: "Institution Space" },
+    ],
+  },
+  {
+    id: "onboarding",
+    label: "Onboarding",
+    icon: UserCheck,
+    children: [
+      { id: "onboarding", label: "Onboarding Status" },
+      { id: "csv", label: "CSV Onboarding" },
+      { id: "teacher_mapping", label: "Teacher Onboarding" },
+      { id: "teacher_assignments", label: "Teacher Assignments" },
+      { id: "super_admin_invite", label: "Super Admin Onboarding" },
+    ],
+  },
+  {
+    id: "library",
+    label: "Library",
+    icon: BookOpen,
+    children: [{ id: "library", label: "Course Blueprints" }],
+  },
+  {
+    id: "programs",
+    label: "Batches & Academics",
+    icon: GraduationCap,
+    children: [
+      { id: "examine_programs", label: "Batches Explorer" },
+      { id: "cohorts", label: "Groups & Delivery" },
+      { id: "program_student_progress", label: "Student Progress" },
+    ],
+  },
+  {
+    id: "learning_manager",
+    label: "Learning Activities",
+    icon: Award,
+    children: [
+      { id: "create_activity", label: "Create Activity" },
+      { id: "view_activities", label: "Published Activities" },
+    ],
+  },
+  {
+    id: "attendance",
+    label: "Attendance",
+    icon: UserCheck,
+    children: [{ id: "attendance", label: "Attendance Register" }],
+  },
+];
+
+const ADMIN_PAGE_TITLES: Record<string, string> = {
+  institutions: "Registered Institutions",
+  add_institution: "Add Institution",
+  explorer: "Institution Space",
+  onboarding: "Onboarding Status",
+  csv: "CSV Onboarding",
+  teacher_mapping: "Teacher Onboarding",
+  teacher_assignments: "Teacher Assignments",
+  super_admin_invite: "Super Admin Onboarding",
+  library: "Course Blueprints",
+  examine_programs: "Batches Explorer",
+  cohorts: "Groups & Delivery",
+  enrollments: "Groups & Delivery",
+  course_assignments: "Groups & Delivery",
+  program_student_progress: "Student Progress",
+  create_activity: "Create Activity",
+  view_activities: "Published Activities",
+  attendance: "Attendance Register",
+};
 
 interface AdminPanelProps {
   adminEmail: string;
@@ -124,31 +202,24 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   
   const { data: adminData, isLoading: loadingAdmin, error: adminError } = useAdminData();
   
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showPreviewLoader, setShowPreviewLoader] = useState(false);
   const [showSecondaryPreview, setShowSecondaryPreview] = useState(false);
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  }, []);
-
-  const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager">("institutions");
+  const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager" | "attendance">("institutions");
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "teacher_assignments" | "program_student_progress" | "super_admin_invite">("institutions");
+  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "teacher_assignments" | "program_student_progress" | "super_admin_invite" | "attendance">("institutions");
 
   // Sync state with URL params after hydration on client
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const parent = params.get("parentTab");
-      if (parent && ["institutions", "onboarding", "library", "programs", "learning_manager"].includes(parent)) {
+      if (parent && ["institutions", "onboarding", "library", "programs", "learning_manager", "attendance"].includes(parent)) {
         setActiveParentTab(parent as any);
       }
       const tab = params.get("tab");
-      const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "teacher_assignments", "program_student_progress", "super_admin_invite"];
+      const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "teacher_assignments", "program_student_progress", "super_admin_invite", "attendance"];
       if (tab && validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -1490,48 +1561,19 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   return (
     <>
       <DashboardLoader loading={loadingAdmin} message="Setting up your Super Admin environment..." />
-      <div className="min-h-screen bg-[#1A1C22] flex flex-col text-[#EDEFF5]" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
-      
-      {/* Top Header */}
-      <header className="bg-[#131418]/80 backdrop-blur-md border-b border-[#23252C]/50 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-12 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-1.5 hover:bg-black/5 rounded-md text-[#EDEFF5] border border-transparent hover:border-black/10 transition-all cursor-pointer mr-1"
-              title="Toggle Sidebar"
-            >
-              <Menu size={14} />
-            </button>
-            <div className="bg-[#1A1C22] p-1.5 rounded-md border border-[#23252C]/30">
-              <Building className="text-[#EDEFF5]" size={14} />
-            </div>
-            <div className="flex items-center">
-              <span className="font-bold text-xs text-[#EDEFF5] tracking-tight title-font">Hynox Campus</span>
-              <span className="bg-[#1A1C22] text-[#EDEFF5] border border-[#23252C] px-2 py-0.5 rounded-full text-[8px] font-semibold tracking-wider uppercase ml-2 hidden sm:inline-block">
-                Admin Console
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3 sm:gap-5 text-[11px]">
-            <div className="hidden sm:flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#6E79F4] animate-pulse"></div>
-              <span className="text-[#C2C6D1] font-normal">
-                Logged in as: <strong className="text-[#EDEFF5] font-semibold">{adminEmail}</strong>
-              </span>
-            </div>
-            <button
-              onClick={() => signOutAction()}
-              className="flex items-center gap-1.5 bg-transparent hover:bg-black/5 text-[#EDEFF5] border border-black/15 hover:border-black/30 px-2 sm:px-3 py-1 rounded-md transition-all font-medium cursor-pointer shrink-0"
-              title="Sign Out"
-            >
-              <LogOut size={11} className="text-[#C2C6D1]" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppShell
+        portalLabel="Admin Console"
+        pageTitle={ADMIN_PAGE_TITLES[activeTab] ?? "Super Admin"}
+        items={ADMIN_NAV_ITEMS}
+        activeId={activeParentTab}
+        activeChildId={activeTab}
+        onSelect={(id, childId) => {
+          setActiveParentTab(id as typeof activeParentTab);
+          setActiveTab((childId ?? id) as typeof activeTab);
+        }}
+        userName={adminEmail}
+        userMeta="Super Admin"
+      >
 
       {/* Conditionally render the Dashboard Loader for verification in Admin Panel */}
       {showPreviewLoader && (
@@ -1578,503 +1620,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       )}
 
 
-      {/* Main Grid Workspace */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 flex flex-col lg:flex-row gap-6 lg:gap-8 flex-1 w-full relative">
-        
-        {/* Mobile Sidebar Drawer Backdrop */}
-        {isSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebars container - Collapsible drawer on mobile, inline on desktop */}
-        <div className={`
-          fixed inset-y-0 left-0 z-50 bg-[#131418] lg:bg-transparent p-4 lg:p-0 border-r border-[#23252C]/50 lg:border-none flex gap-4 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:h-auto
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:flex lg:translate-x-0"}
-        `}>
-          {/* PRIMARY SIDEBAR (Icon-only, narrow, Supabase-style) */}
-          <div className="w-14 shrink-0 flex flex-col items-center gap-4 py-2 border-r border-[#23252C]/50 pr-4">
-            <button
-              onClick={() => {
-                setActiveParentTab("institutions");
-                setActiveTab("institutions");
-              }}
-              className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                activeParentTab === "institutions"
-                  ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                  : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-              }`}
-              title="Institutions Space"
-            >
-              <Building size={18} />
-            </button>
-            
-            <button
-              onClick={() => {
-                setActiveParentTab("onboarding");
-                setActiveTab("onboarding");
-              }}
-              className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                activeParentTab === "onboarding"
-                  ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                  : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-              }`}
-              title="Onboarding Modules"
-            >
-              <UserCheck size={18} />
-            </button>
-            
-            <button
-              onClick={() => {
-                setActiveParentTab("library");
-                setActiveTab("library");
-              }}
-              className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                activeParentTab === "library"
-                  ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                  : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-              }`}
-              title="Library Blueprints"
-            >
-              <BookOpen size={18} />
-            </button>
-            
-            <button
-              onClick={() => {
-                setActiveParentTab("programs");
-                setActiveTab("programs");
-              }}
-              className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                activeParentTab === "programs"
-                  ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                  : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-              }`}
-              title="Batches & Academics"
-            >
-              <GraduationCap size={18} />
-            </button>
-            <button
-              onClick={() => {
-                setActiveParentTab("learning_manager");
-                setActiveTab("create_activity");
-              }}
-              className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                activeParentTab === "learning_manager"
-                  ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
-                  : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-              }`}
-              title="Learning Activities"
-            >
-              <Award size={18} />
-            </button>
-          </div>
-
-          {/* SECONDARY SIDEBAR (Sub-options list) */}
-          <div className={`
-            w-52 shrink-0 flex flex-col gap-2 border-r border-[#23252C]/50 pr-4 lg:border-r
-            ${isSidebarOpen ? "flex" : "hidden lg:flex"}
-          `}>
-            <h4 className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider px-2 mb-2">
-              {activeParentTab} Settings
-            </h4>
-            
-            {activeParentTab === "institutions" && (
-              <>
-                <button
-                  onClick={() => {
-                    setActiveTab("institutions");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "institutions"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  List Institutions
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("add_institution");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "add_institution"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Add Institution
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("explorer");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "explorer"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Institution Space
-                </button>
-              </>
-            )}
-
-            {activeParentTab === "onboarding" && (
-              <>
-                <button
-                  onClick={() => {
-                    setActiveTab("onboarding");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "onboarding"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Onboarding Status
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("csv");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "csv"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  CSV Onboarding
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("teacher_mapping");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "teacher_mapping"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Teacher Onboarding
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("teacher_assignments");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "teacher_assignments"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Teacher Assignments
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("super_admin_invite");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "super_admin_invite"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Super Admin Onboarding
-                </button>
-              </>
-            )}
-
-            {activeParentTab === "library" && (
-              <>
-                <button
-                  onClick={() => {
-                    setActiveTab("library");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "library"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Course Blueprints
-                </button>
-              </>
-            )}
-
-            {activeParentTab === "programs" && (
-              <>
-                <button
-                  onClick={() => {
-                    setActiveTab("examine_programs");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "examine_programs"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Batches Explorer
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("cohorts");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "cohorts" || activeTab === "enrollments" || activeTab === "course_assignments"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Groups & Delivery
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("program_student_progress");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "program_student_progress"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Student Progress
-                </button>
-              </>
-            )}
-
-            {activeParentTab === "learning_manager" && (
-              <>
-                <button
-                  onClick={() => {
-                    setActiveTab("create_activity");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "create_activity"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Create Activity
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("view_activities");
-                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-                      setIsSidebarOpen(false);
-                    }
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                    activeTab === "view_activities"
-                      ? "bg-[#6E79F4]/10 text-[#6E79F4]"
-                      : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
-                  }`}
-                >
-                  Published Activities
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Dynamic Wrapper Column to keep code clean */}
-        <div style={{ display: 'none' }}>
-          {/* Leftover Navigation Sidebar placeholder */}
-          <button
-            onClick={() => {
-              setActiveTab("institutions");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "institutions"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <Building size={16} />
-            Institutions
-          </button>
-
-
-          <button
-            onClick={() => {
-              setActiveTab("csv");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "csv"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <FileSpreadsheet size={16} />
-            CSV Onboarding
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("onboarding");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "onboarding"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <ShieldCheck size={16} />
-            Onboarding Status
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("explorer");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "explorer"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <Globe size={16} />
-            Institution Space
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("library");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "library"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <BookOpen size={16} />
-            Library (Blueprints)
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("programs");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "programs"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <GraduationCap size={16} />
-            Programs (Live Content)
-          </button>
-
-          <div className="pt-4 pb-2 border-t border-[#23252C] mt-2">
-            <span className="px-4 text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-2">Delivery Module</span>
-          </div>
-
-          <button
-            onClick={() => {
-              setActiveTab("cohorts");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "cohorts"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <Users size={16} />
-            Cohorts
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("enrollments");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "enrollments"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <UserCheck size={16} />
-            Enrollments
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("course_assignments");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "course_assignments"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <BookOpen size={16} />
-            Course Assignments
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab("create_activity");
-              clearStatuses();
-            }}
-            className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-left text-xs font-semibold transition-all ${
-              activeTab === "create_activity"
-                ? "bg-[#6E79F4]/10 border-[#6E79F4]/20 text-[#6E79F4] shadow-sm"
-                : "bg-[#131418] border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] hover:text-[#EDEFF5]"
-            }`}
-          >
-            <Award size={16} />
-            Learning Activities
-          </button>
-        </div>
+      <div className="flex flex-col gap-6">
 
         {/* Content Area */}
         <div className="flex-1 flex flex-col gap-6">
@@ -2139,15 +1685,16 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-[#C2C6D1]">Category Type *</label>
-                    <select
+                    <CustomSelect
+                      options={[
+                        { id: "college", name: "College" },
+                        { id: "school", name: "School" },
+                        { id: "others", name: "Others" },
+                      ]}
                       value={instType}
-                      onChange={(e) => setInstType(e.target.value)}
-                      className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
-                    >
-                      <option value="college">College</option>
-                      <option value="school">School</option>
-                      <option value="others">Others</option>
-                    </select>
+                      onChange={setInstType}
+                      required
+                    />
                   </div>
                   <div>
                     <label className="block font-semibold mb-1 text-[#C2C6D1]">Contact Email *</label>
@@ -2277,15 +1824,15 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
                       <div>
                         <label className="block font-semibold mb-1 text-[#C2C6D1]">Assigned Role *</label>
-                        <select
+                        <CustomSelect
+                          options={[
+                            { id: "student", name: "Student" },
+                            { id: "institution_admin", name: "Institution Administrator" },
+                          ]}
                           value={singleRole}
-                          onChange={(e) => setSingleRole(e.target.value)}
-                          className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm"
+                          onChange={setSingleRole}
                           required
-                        >
-                          <option value="student">Student</option>
-                          <option value="institution_admin">Institution Administrator</option>
-                        </select>
+                        />
                       </div>
 
                       <div>
@@ -2794,29 +2341,33 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
                     <div className="flex flex-col gap-1 min-w-[120px]">
                       <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider">Assigned Role</span>
-                      <select
+                      <CustomSelect
+                        options={[
+                          { id: "all", name: "All Roles" },
+                          { id: "student_onboarding", name: "Student" },
+                          { id: "institution_admin_invite", name: "Institution Admin" },
+                        ]}
                         value={inviteRoleFilter}
-                        onChange={(e) => setInviteRoleFilter(e.target.value)}
-                        className="bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] shadow-sm"
-                      >
-                        <option value="all">All Roles</option>
-                        <option value="student_onboarding">Student</option>
-                        <option value="institution_admin_invite">Institution Admin</option>
-                      </select>
+                        onChange={setInviteRoleFilter}
+                        className="min-w-[120px]"
+                        required
+                      />
                     </div>
 
                     <div className="flex flex-col gap-1 min-w-[120px]">
                       <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider">Creation Timeline</span>
-                      <select
+                      <CustomSelect
+                        options={[
+                          { id: "all", name: "All Time" },
+                          { id: "today", name: "Today" },
+                          { id: "7days", name: "Last 7 Days" },
+                          { id: "30days", name: "Last 30 Days" },
+                        ]}
                         value={inviteDateFilter}
-                        onChange={(e) => setInviteDateFilter(e.target.value)}
-                        className="bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] shadow-sm"
-                      >
-                        <option value="all">All Time</option>
-                        <option value="today">Today</option>
-                        <option value="7days">Last 7 Days</option>
-                        <option value="30days">Last 30 Days</option>
-                      </select>
+                        onChange={setInviteDateFilter}
+                        className="min-w-[120px]"
+                        required
+                      />
                     </div>
 
                     {(inviteInstitutionFilter !== "all" || inviteRoleFilter !== "all" || inviteDateFilter !== "all" || inviteSearch || inviteFilter !== "all") && (
@@ -3478,6 +3029,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 </>
               )}
 
+            </div>
+          )}
+
+          {/* TAB: ATTENDANCE REGISTER */}
+          {activeTab === "attendance" && (
+            <div className="space-y-6 animate-fade-in">
+              <AttendanceModule institutions={institutions} userRole="super_admin" />
             </div>
           )}
 
@@ -4573,30 +4131,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
       </div>
 
-      {/* Looped Animated Brand Footer */}
-      <div className="border-t border-[#23252C]/30 bg-[#131418] py-8 text-center select-none shadow-sm flex-shrink-0 mt-auto w-full">
-        <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes shimmer {
-            0% { background-position: -200% center; }
-            100% { background-position: 200% center; }
-          }
-          .apple-shimmer-text {
-            background: linear-gradient(90deg, #1d1d1f 20%, #0066cc 50%, #1d1d1f 80%);
-            background-size: 200% auto;
-            color: transparent;
-            -webkit-background-clip: text;
-            background-clip: text;
-            animation: shimmer 4s linear infinite;
-          }
-        `}} />
-        <h1 className="apple-shimmer-text text-xl md:text-2xl font-extrabold tracking-tight font-sans title-font">
-          Hynox Campus
-        </h1>
-        <p className="text-[8px] text-[#C2C6D1] mt-1 font-semibold tracking-wider uppercase">
-          Administrative Command Center
-        </p>
-      </div>
-
       {renderUserDetailDrawer()}
       {renderTeacherDetailDrawer()}
 
@@ -4946,7 +4480,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         );
       })()}
 
-    </div>
+      </AppShell>
     </>
   );
 }

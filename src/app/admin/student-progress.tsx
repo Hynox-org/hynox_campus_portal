@@ -86,7 +86,6 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
 
   // Accordion inside drawer
   const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
-  const [expandedQuizId, setExpandedQuizId] = useState<string | null>(null);
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
   // Reset cohort when program changes
@@ -101,9 +100,17 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
     setLoadingStudentId(enr.id);
     try {
       const studentId = enr.user_id;
-      const [delRes, progressRes] = await Promise.all([
+      const [delRes, progressRes, syllabusEntries] = await Promise.all([
         getStudentDeliveryDataAction(studentId),
-        listStudentLessonProgressAction(studentId)
+        listStudentLessonProgressAction(studentId),
+        // Prefetch every course's lesson list so the syllabus tab is instant
+        Promise.all(
+          allCoursesList.map(async (c: any) => {
+            if (drawerLessonsCache[c.id]) return [c.id, drawerLessonsCache[c.id]] as const;
+            const res = await listLessonsForCourseAction(c.id);
+            return [c.id, res.success && res.lessons ? res.lessons : []] as const;
+          })
+        ),
       ]);
       if (delRes.success && delRes.programs) {
         setActiveStudentProgress(delRes.programs);
@@ -115,6 +122,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
       } else {
         setActiveStudentLessonsProgress([]);
       }
+      setDrawerLessonsCache(prev => ({ ...prev, ...Object.fromEntries(syllabusEntries) }));
       setSelectedStudent(enr);
       setStudentDetailTab("overview");
     } catch (err) {
@@ -320,8 +328,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
             passed: attempt ? (attempt.score >= (q.passing_score || 0)) : false,
             score: attempt ? attempt.score : 0,
             maxScore: q.max_score || 100,
-            submittedAt: attempt ? new Date(attempt.created_at || attempt.updated_at).toLocaleDateString() : "",
-            questions: (attempt as any)?.questions || []
+            submittedAt: attempt ? new Date(attempt.created_at || attempt.updated_at).toLocaleDateString() : ""
           };
         });
 
@@ -342,7 +349,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
         });
 
         return (
-          <div className="fixed inset-0 bg-[#6E79F4]/40 backdrop-blur-sm z-[9998] flex justify-end animate-fadeIn" onClick={() => setSelectedStudent(null)}>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] flex justify-end animate-fadeIn" onClick={() => setSelectedStudent(null)}>
             <div className="relative w-full max-w-3xl bg-[#131418] h-full shadow-2xl flex flex-col z-[9999] animate-slideOver overflow-hidden" onClick={(e) => e.stopPropagation()}>
               
               {/* Drawer Header */}
@@ -423,9 +430,9 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                         <span className="text-[8px] text-[#C2C6D1] block mt-2">{studentProjSubs.length} total uploads</span>
                       </div>
 
-                      <div className="bg-cyan-50 border border-cyan-100 rounded-2xl p-4 text-center">
+                      <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/20 rounded-2xl p-4 text-center">
                         <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block tracking-wider">Coding Runs</span>
-                        <div className="text-xl font-black text-cyan-600 mt-1">
+                        <div className="text-xl font-black text-[#22D3EE] mt-1">
                           {studentChalSubs.filter(c => c.submission_status_code === "accepted").length} / {challenges.length}
                         </div>
                         <span className="text-[8px] text-[#C2C6D1] block mt-2">{studentChalSubs.length} total submits</span>
@@ -525,98 +532,36 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                         No quizzes assigned for this program.
                       </div>
                     ) : (
-                      studentQuizAttempts.map(attempt => {
-                        const isExpanded = expandedQuizId === attempt.id;
-                        return (
-                          <div key={attempt.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden">
-                            <div 
-                              onClick={() => setExpandedQuizId(isExpanded ? null : attempt.id)}
-                              className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-[#16171D]/80 transition-colors select-none"
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <ChevronDown className={`w-4 h-4 text-[#C2C6D1] transition-transform duration-200 ${isExpanded ? "transform rotate-180" : ""}`} />
-                                <div>
-                                  <h4 className="text-xs font-bold text-[#EDEFF5] hover:text-[#6E79F4] transition-colors">{attempt.title}</h4>
+                      studentQuizAttempts.map(attempt => (
+                        <div key={attempt.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden text-xs">
+                          <div className="p-5 flex justify-between items-center gap-4 hover:bg-[#16171D]/80 transition-colors select-none">
+                            <div className="flex items-center gap-2.5">
+                              <div>
+                                <h4 className="text-xs font-bold text-[#EDEFF5]">{attempt.title}</h4>
+                                {attempt.attempted && (
                                   <p className="text-[9px] text-[#C2C6D1] mt-0.5">Attempted on {attempt.submittedAt}</p>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center gap-3 shrink-0">
-                                {attempt.attempted ? (
-                                  <>
-                                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase ${
-                                      attempt.passed 
-                                        ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20" 
-                                        : "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20"
-                                    }`}>
-                                      {attempt.passed ? "Passed" : "Failed"}
-                                    </span>
-                                    <div className="text-xs font-black text-[#EDEFF5]">{attempt.score} / {attempt.maxScore} pts</div>
-                                  </>
-                                ) : (
-                                  <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#1A1C22] text-[#A3A9B6] border uppercase">
-                                    Unattempted
-                                  </span>
                                 )}
                               </div>
                             </div>
 
-                            {isExpanded && attempt.attempted && (
-                              <div className="p-5 border-t border-[#23252C] space-y-4 bg-[#16171D]/30">
-                                <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block">Auditing Answers:</span>
-                                <div className="space-y-3">
-                                  {attempt.questions.map((q: any, qIdx: number) => {
-                                    const isCorrect = q.selectedIndex === q.correctIndex;
-                                    return (
-                                      <div key={qIdx} className="p-3.5 bg-[#131418] border border-[#23252C] rounded-xl text-xs space-y-2">
-                                        <div className="font-semibold text-[#EDEFF5] flex justify-between gap-4">
-                                          <span>Q{qIdx + 1}: {q.text}</span>
-                                          <span className={`font-black shrink-0 ${isCorrect ? "text-[#2FBF71]" : "text-[#F0555D]"}`}>
-                                            {isCorrect ? `+${q.points} pts` : "0 pts"}
-                                          </span>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1.5">
-                                          {q.options.map((opt: any, oIdx: number) => {
-                                            const isSelected = q.selectedIndex === oIdx;
-                                            const isAnsCorrect = q.correctIndex === oIdx;
-                                            
-                                            return (
-                                              <div 
-                                                key={oIdx} 
-                                                className={`p-2 rounded-lg border flex items-center gap-2 text-[11px] ${
-                                                  isAnsCorrect 
-                                                    ? "bg-[#2FBF71]/10 border-[#2FBF71]/30 text-[#2FBF71] font-bold" 
-                                                    : isSelected 
-                                                    ? "bg-[#F0555D]/10 border-[#F0555D]/30 text-[#F0555D] font-semibold" 
-                                                    : "bg-[#131418] border-[#23252C] text-[#C2C6D1]"
-                                                }`}
-                                              >
-                                                <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[8px] font-black shrink-0 ${
-                                                  isAnsCorrect 
-                                                    ? "bg-[#2FBF71] border-transparent text-white" 
-                                                    : isSelected 
-                                                    ? "bg-[#F0555D] border-transparent text-white" 
-                                                    : "border-[#2E313A]"
-                                                }`}>
-                                                  {String.fromCharCode(65 + oIdx)}
-                                                </div>
-                                                <span>{opt.option_text || opt}</span>
-                                                {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#2FBF71]/20 px-1.5 py-0.5 rounded text-[#2FBF71]">Correct Option</span>}
-                                                {isSelected && !isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#F0555D]/20 px-1.5 py-0.5 rounded text-[#F0555D]">Submitted Answer</span>}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
+                            <div className="flex items-center gap-3 shrink-0 font-bold">
+                              {attempt.attempted ? (
+                                attempt.passed ? (
+                                  <span className="px-2.5 py-1 rounded bg-[#2FBF71]/10 text-[#2FBF71] border border-[#2FBF71]/20 font-bold text-[10px]">
+                                    Passed with {attempt.score} marks
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded bg-[#F0555D]/10 text-[#F0555D] border border-[#F0555D]/20 font-bold text-[10px]">
+                                    Failed with {attempt.score} marks
+                                  </span>
+                                )
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-[8px] uppercase bg-[#1A1C22] text-[#A3A9B6]">Not Attempted</span>
+                              )}
+                            </div>
                           </div>
-                        );
-                      })
+                        </div>
+                      ))
                     )}
                   </div>
                 )}

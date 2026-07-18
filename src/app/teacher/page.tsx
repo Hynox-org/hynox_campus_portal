@@ -49,6 +49,7 @@ export default async function TeacherPage() {
       assignedInstitutions={assignedInstitutions}
       teacherEmail={user?.email || authUser?.email || "teacher@hynox.com"}
       teacherName={user?.full_name || "Instructor"}
+      primaryRole={primaryRole}
     />
   );
 }

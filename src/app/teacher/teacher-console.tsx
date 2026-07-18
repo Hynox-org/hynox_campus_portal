@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useEffect, useRef } from "react";
-import AttendancePanel from "@/components/attendance-panel";
+import AttendanceModule from "@/components/attendance-register/attendance-module";
 import ChallengeEditor from "@/app/teacher/challenge-editor";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useQueryClient } from "@tanstack/react-query";
@@ -45,7 +45,9 @@ import {
   GraduationCap,
   CheckCircle2,
   ChevronDown,
-  Loader2
+  Loader2,
+  Building2,
+  MapPin
 } from "lucide-react";
 import { 
   reviewProjectSubmissionAction,
@@ -95,7 +97,7 @@ import {
   listCohortEnrollmentsAction,
   listCohortCourseAssignmentsAction
 } from "@/app/actions/delivery-actions";
-import DeliveryManager from "@/app/admin/delivery-manager";
+import LearningManager from "@/app/admin/learning-manager";
 import AppShell from "@/components/app-shell";
 import { CustomSelect } from "@/components/custom-select";
 
@@ -132,6 +134,7 @@ interface TeacherConsoleProps {
   assignedInstitutions: any[];
   teacherEmail: string;
   teacherName: string;
+  primaryRole: string;
 }
 
 export default function TeacherConsole({
@@ -142,6 +145,7 @@ export default function TeacherConsole({
   assignedInstitutions,
   teacherEmail,
   teacherName,
+  primaryRole,
 }: TeacherConsoleProps) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
@@ -154,8 +158,8 @@ export default function TeacherConsole({
   const acadCourses = academicPrefetch?.courses ?? EMPTY_LIST;
   const acadLessons = academicPrefetch?.lessons ?? EMPTY_LIST;
 
-  const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "syllabus" | "delivery" | "quiz-auditor" | "attendance">("overview");
-  const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "view_activities" | "syllabus" | "quiz-auditor" | "attendance">("overview");
+  const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum" | "attendance">("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCohortDropdownOpen, setIsCohortDropdownOpen] = useState(false);
   const [openingStudentId, setOpeningStudentId] = useState<string | null>(null);
@@ -165,12 +169,12 @@ export default function TeacherConsole({
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      const validTabs = ["overview", "roster", "projects", "challenges", "activities-manager", "syllabus", "delivery", "quiz-auditor", "attendance"];
+      const validTabs = ["overview", "roster", "projects", "challenges", "activities-manager", "view_activities", "syllabus", "quiz-auditor", "attendance"];
       if (tab && validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
       const parent = params.get("parentTab");
-      const validParents = ["overview", "students", "assessments", "curriculum"];
+      const validParents = ["overview", "students", "assessments", "curriculum", "attendance"];
       if (parent && validParents.includes(parent)) {
         setActiveParentTab(parent as any);
       }
@@ -526,6 +530,7 @@ export default function TeacherConsole({
   const [syllabusModules, setSyllabusModules] = useState<any[]>([]);
   const [syllabusLessons, setSyllabusLessons] = useState<any[]>([]);
   const [syllabusResources, setSyllabusResources] = useState<any[]>([]);
+  const [syllabusLoading, setSyllabusLoading] = useState(false);
 
   // Add Lesson Form
   const [newLessonTitle, setNewLessonTitle] = useState("");
@@ -651,8 +656,11 @@ export default function TeacherConsole({
         }
       }
       // Fallback: fetch from API
-      listModulesAction(syllabusCourseId).then(res => setSyllabusModules(res.modules || []));
-      listLessonsForCourseAction(syllabusCourseId).then(res => setSyllabusLessons(res.lessons || []));
+      setSyllabusLoading(true);
+      Promise.all([
+        listModulesAction(syllabusCourseId).then(res => setSyllabusModules(res.modules || [])),
+        listLessonsForCourseAction(syllabusCourseId).then(res => setSyllabusLessons(res.lessons || []))
+      ]).finally(() => setSyllabusLoading(false));
       setSyllabusModuleId("");
       setSyllabusLessonId("");
       setSyllabusResources([]);
@@ -1403,7 +1411,7 @@ export default function TeacherConsole({
         {/* Drawer backdrop */}
         <div 
           onClick={() => setSelectedActivity(null)}
-          className="fixed inset-0 z-40 bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300"
+          className="fixed inset-0 z-40 bg-[#23252D]/30 backdrop-blur-xs transition-opacity duration-300"
         />
 
         {/* Slide-over Drawer */}
@@ -1575,15 +1583,17 @@ export default function TeacherConsole({
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-1">
                           <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Difficulty</label>
-                          <select
+                          <CustomSelect
+                            options={[
+                              { id: "easy", name: "Easy" },
+                              { id: "medium", name: "Medium" },
+                              { id: "hard", name: "Hard" },
+                            ]}
                             value={editForm.chal_difficulty}
-                            onChange={(e) => setEditForm({ ...editForm, chal_difficulty: e.target.value })}
-                            className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
-                          >
-                            <option value="easy">Easy</option>
-                            <option value="medium">Medium</option>
-                            <option value="hard">Hard</option>
-                          </select>
+                            onChange={(value) => setEditForm({ ...editForm, chal_difficulty: value })}
+                            searchable={false}
+                            required
+                          />
                         </div>
                         <div className="space-y-1">
                           <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Time Limit (ms)</label>
@@ -2643,7 +2653,7 @@ export default function TeacherConsole({
               <div className="space-y-4">
                 <h4 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider">Evaluation & Grading Actions</h4>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button
                     type="button"
                     disabled={isAlreadyApproved}
@@ -2877,25 +2887,19 @@ export default function TeacherConsole({
         activeParentTab === "overview"
           ? "Instructor Dashboard"
           : activeParentTab === "students"
-          ? (activeTab === "roster" ? "Student Directory" : activeTab === "delivery" ? "Groups & Delivery" : "Attendance Tracker")
+          ? "Student Directory"
+          : activeParentTab === "attendance"
+          ? "Attendance Register"
           : activeParentTab === "assessments"
           ? (activeTab === "quiz-auditor" ? "Quiz Auditor" : activeTab === "projects" ? "Projects Auditor" : "Coding Auditor")
-          : (activeTab === "activities-manager" ? "Activities Builder" : "Course Syllabus")
+          : (activeTab === "activities-manager" ? "Activities Builder" : activeTab === "view_activities" ? "Published Activities" : "Course Syllabus")
       }
       items={[
         { id: "overview", label: "Overview Space", icon: Layers },
-        { 
-          id: "students", 
-          label: "Student Hub", 
-          icon: Users,
-          children: [
-            { id: "roster", label: "Student Directory" },
-            { id: "delivery", label: "Groups & Delivery" },
-            { id: "attendance", label: "Attendance Tracker" },
-          ]
-        },
-        { 
-          id: "assessments", 
+        { id: "students", label: "Student Hub", icon: Users },
+        { id: "attendance", label: "Attendance", icon: Calendar },
+        {
+          id: "assessments",
           label: "Auditing & Grading", 
           icon: CheckSquare,
           children: [
@@ -2910,6 +2914,7 @@ export default function TeacherConsole({
           icon: BookOpen,
           children: [
             { id: "activities-manager", label: "Activities Builder" },
+            { id: "view_activities", label: "Published Activities" },
             { id: "syllabus", label: "Course Syllabus" },
           ]
         }
@@ -2926,6 +2931,8 @@ export default function TeacherConsole({
             setActiveTab("overview");
           } else if (parentId === "students") {
             setActiveTab("roster");
+          } else if (parentId === "attendance") {
+            setActiveTab("attendance");
           } else if (parentId === "assessments") {
             setActiveTab("quiz-auditor");
           } else if (parentId === "curriculum") {
@@ -3030,22 +3037,10 @@ export default function TeacherConsole({
             </div>
           )}
 
-          {/* TAB: COHORTS & DELIVERY */}
-          {activeTab === "delivery" && (
-            <div className="animate-fadeIn">
-              <DeliveryManager institutions={assignedInstitutions} initialTab="cohorts" isTeacherMode={true} />
-            </div>
-          )}
-
-          {/* TAB: ATTENDANCE TRACKER */}
+          {/* TAB: ATTENDANCE REGISTER */}
           {activeTab === "attendance" && (
             <div className="animate-fadeIn">
-              <AttendancePanel
-                cohorts={cohorts}
-                students={studentsList}
-                enrollments={enrollments}
-                userRole="teacher"
-              />
+              <AttendanceModule institutions={assignedInstitutions} userRole={primaryRole as "super_admin" | "teacher" | "trainer"} />
             </div>
           )}
 
@@ -3158,6 +3153,42 @@ export default function TeacherConsole({
           {/* TAB 1: OVERVIEW */}
           {activeTab === "overview" && (
             <div className="space-y-6 animate-fadeIn">
+              {/* Active Scope: Institution / Group / Timeline */}
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm p-6">
+                <h3 className="text-xs font-bold text-[#C2C6D1] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                  <MapPin size={14} className="text-[#6E79F4]" /> Working Scope
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-3 p-3 bg-[#16171D] border border-[#23252C] rounded-xl">
+                    <div className="p-2 bg-[#6E79F4]/10 text-[#6E79F4] rounded-xl shrink-0"><Building2 size={16} /></div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider">Institution</p>
+                      <p className="text-xs font-bold text-[#EDEFF5] truncate">{currentSelectedInst?.name || "—"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-[#16171D] border border-[#23252C] rounded-xl">
+                    <div className="p-2 bg-[#2FBF71]/10 text-[#2FBF71] rounded-xl shrink-0"><Layers size={16} /></div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider">Group / Cohort</p>
+                      <p className="text-xs font-bold text-[#EDEFF5] truncate">
+                        {selectedCohort ? `${selectedCohort.name} (${selectedCohort.code})` : "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-[#16171D] border border-[#23252C] rounded-xl">
+                    <div className="p-2 bg-[#F5B04A]/10 text-[#F5B04A] rounded-xl shrink-0"><Calendar size={16} /></div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider">Timeline</p>
+                      <p className="text-xs font-bold text-[#EDEFF5] truncate">
+                        {selectedCohort?.start_date
+                          ? `${new Date(selectedCohort.start_date).toLocaleDateString()} – ${selectedCohort.end_date ? new Date(selectedCohort.end_date).toLocaleDateString() : "Ongoing"}`
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-[#131418] border border-[#23252C] p-6 rounded-2xl shadow-sm">
@@ -3212,20 +3243,20 @@ export default function TeacherConsole({
                 ) : (
                   <div className="divide-y divide-[#23252C]">
                     {filteredProjectSubmissions.filter(p => !p.review || p.review.review_status === "pending").slice(0, 5).map(sub => (
-                      <div key={sub.id} className="py-4 flex justify-between items-center gap-4">
-                        <div>
-                          <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.project_title}</h4>
+                      <div key={sub.id} className="py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-[#EDEFF5] truncate">{sub.project_title}</h4>
                           <p className="text-[10px] text-[#C2C6D1] mt-0.5">
                             Submitted by <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong> on {new Date(sub.submitted_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <button 
+                        <button
                           onClick={() => {
                             setSelectedProjectSub(sub);
                             setActiveParentTab("assessments");
                             setActiveTab("projects");
                           }}
-                          className="flex items-center gap-1 bg-[#6E79F4] hover:bg-[#5A66F0] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                          className="flex items-center justify-center gap-1 bg-[#6E79F4] hover:bg-[#5A66F0] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all shrink-0 self-start sm:self-auto"
                         >
                           Grade Submission <ArrowRight size={10} />
                         </button>
@@ -3281,7 +3312,48 @@ export default function TeacherConsole({
                         No matching students found.
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
+                      <>
+                      {/* Mobile card list */}
+                      <div className="sm:hidden space-y-2">
+                        {filteredRoster.map((enr: any) => (
+                          <div
+                            key={enr.id}
+                            onClick={() => openStudentDrawer(enr)}
+                            className={`p-3.5 bg-[#16171D] border border-[#23252C] rounded-xl space-y-2 cursor-pointer active:bg-[#1A1C22] transition-colors ${openingStudentId === enr.id ? "opacity-70" : ""}`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-7 h-7 rounded-full bg-[#6E79F4]/10 text-[#6E79F4] flex items-center justify-center font-bold text-[10px] uppercase border border-[#6E79F4]/25 shadow-sm shrink-0">
+                                {openingStudentId === enr.id
+                                  ? <Loader2 size={12} className="animate-spin" />
+                                  : (enr.student?.full_name || enr.student?.email || "I").substring(0, 2)}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-[#EDEFF5] text-xs truncate">{enr.student?.full_name || "Invited Candidate"}</p>
+                                <p className="text-[10px] text-[#C2C6D1] truncate">{enr.student?.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-[10px]">
+                              <div className="flex items-center gap-2 flex-1">
+                                <div className="flex-1 bg-[#1A1C22] h-1.5 rounded-full overflow-hidden">
+                                  <div className="bg-[#6E79F4] h-full" style={{ width: `${enr.progress_percentage || 0}%` }}></div>
+                                </div>
+                                <span className="font-bold text-[#C2C6D1] shrink-0">{enr.progress_percentage || 0}%</span>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                                enr.status_code === "active"
+                                  ? "bg-[#2FBF71]/10 text-[#2FBF71]"
+                                  : "bg-[#3A3F4B]/10 text-[#C2C6D1]"
+                              }`}>
+                                {enr.status_code}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-[#C2C6D1]">Enrolled {new Date(enr.created_at).toLocaleDateString()}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Desktop / tablet table */}
+                      <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="border-b border-[#23252C] text-[#C2C6D1] select-none">
@@ -3333,6 +3405,7 @@ export default function TeacherConsole({
                           </tbody>
                         </table>
                       </div>
+                      </>
                     )}
                   </div>
                 );
@@ -3560,9 +3633,9 @@ export default function TeacherConsole({
 
           {/* TAB 5: ACTIVITIES & ASSIGNMENTS MANAGER */}
           {activeTab === "activities-manager" && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-              <div className="lg:col-span-2 bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm space-y-6">
-                
+            <div className="animate-fadeIn">
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm space-y-6">
+
                 {!createdActivityId ? (
                   <form onSubmit={handleCreateActivityBase} className="space-y-4">
                     <h3 className="text-sm font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C] flex items-center gap-1.5">
@@ -3573,15 +3646,13 @@ export default function TeacherConsole({
                       <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                         Select Course *
                       </label>
-                      <select
+                      <CustomSelect
+                        options={filteredCourses.map((c: any) => ({ id: c.id, name: c.title }))}
                         value={selectedCourseId}
-                        onChange={(e) => setSelectedCourseId(e.target.value)}
-                        className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
+                        onChange={setSelectedCourseId}
+                        placeholder="-- Choose Course --"
                         required
-                      >
-                        <option value="">-- Choose Course --</option>
-                        {filteredCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                      </select>
+                      />
                       {lessonsLoading && (
                         <p className="text-[10px] text-[#C2C6D1] font-semibold mt-1">Preparing this course for activities...</p>
                       )}
@@ -3597,15 +3668,17 @@ export default function TeacherConsole({
                         <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                           Activity Type
                         </label>
-                        <select
+                        <CustomSelect
+                          options={[
+                            { id: "quiz", name: "Quiz Assessment" },
+                            { id: "project", name: "Project Repository Upload" },
+                            { id: "programming", name: "Coding Challenge" },
+                          ]}
                           value={activityType}
-                          onChange={(e: any) => setActivityType(e.target.value)}
-                          className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
-                        >
-                          <option value="quiz">Quiz Assessment</option>
-                          <option value="project">Project Repository Upload</option>
-                          <option value="programming">Coding Challenge</option>
-                        </select>
+                          onChange={(value: any) => setActivityType(value)}
+                          searchable={false}
+                          required
+                        />
                       </div>
 
                       <div>
@@ -3833,14 +3906,16 @@ export default function TeacherConsole({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="text-[10px] block font-bold text-[#C2C6D1]">Question Type</label>
-                            <select 
+                            <CustomSelect
+                              options={[
+                                { id: "single_choice", name: "Single Choice" },
+                                { id: "multiple_choice", name: "Multiple Choice" },
+                              ]}
                               value={newQuestionType}
-                              onChange={(e) => setNewQuestionType(e.target.value)}
-                              className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
-                            >
-                              <option value="single_choice">Single Choice</option>
-                              <option value="multiple_choice">Multiple Choice</option>
-                            </select>
+                              onChange={(value: any) => setNewQuestionType(value)}
+                              searchable={false}
+                              required
+                            />
                           </div>
                           <div>
                             <label className="text-[10px] block font-bold text-[#C2C6D1]">Points</label>
@@ -3992,36 +4067,18 @@ export default function TeacherConsole({
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit space-y-4">
-                <h3 className="text-xs font-bold text-[#EDEFF5] uppercase pb-2 border-b border-[#23252C] flex items-center gap-1.5">
-                  <Calendar size={14} className="text-[#6E79F4]" /> Scheduled Activities
-                </h3>
-                
-                {activities.length === 0 ? (
-                  <p className="text-xs text-[#C2C6D1] text-center py-6">No learning activity modules published.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {activities.map(act => (
-                      <div key={act.id} className="p-3 bg-[#16171D] border border-[#23252C] rounded-xl text-[10px] flex justify-between items-center gap-2">
-                        <div className="flex-1 truncate">
-                          <span className="font-bold block text-[#EDEFF5] truncate">{act.title}</span>
-                          <div className="flex gap-3 text-[#C2C6D1] mt-1 pt-1 border-t border-[#23252C]/80 text-[9px]">
-                            <span className="capitalize">Type: {act.activity_type_code === "programming" ? "code challenge" : act.activity_type_code}</span>
-                            <span>Max Score: {act.max_score}</span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleViewActivityClick(act)}
-                          className="bg-[#131418] border border-[#23252C] hover:bg-[#16171D] text-[#6E79F4] font-bold px-2.5 py-1 rounded-lg transition-all text-[9px] shrink-0"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+          {/* TAB 5.5: PUBLISHED ACTIVITIES */}
+          {activeTab === "view_activities" && (
+            <div className="animate-fadeIn">
+              <LearningManager
+                institutions={currentSelectedInst ? [currentSelectedInst] : []}
+                mode="view"
+                lockInstitution
+                scopeLabel={selectedCohort?.name}
+              />
             </div>
           )}
 
@@ -4033,17 +4090,21 @@ export default function TeacherConsole({
                 
                 <div>
                   <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">Select Course</label>
-                  <select
+                  <CustomSelect
+                    options={filteredCourses.map((c: any) => ({ id: c.id, name: c.title }))}
                     value={syllabusCourseId}
-                    onChange={(e) => setSyllabusCourseId(e.target.value)}
-                    className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
-                  >
-                    <option value="">-- Choose Course --</option>
-                    {filteredCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                  </select>
+                    onChange={setSyllabusCourseId}
+                    placeholder="-- Choose Course --"
+                  />
                 </div>
 
-                {syllabusCourseId && (
+                {syllabusCourseId && syllabusLoading && (
+                  <div className="py-6 flex items-center justify-center">
+                    <SecondaryLoader variant="spinner" message="Loading course syllabus..." className="!border-0 !p-0 shadow-none bg-transparent" />
+                  </div>
+                )}
+
+                {syllabusCourseId && !syllabusLoading && (
                   <div className="space-y-3 pt-2">
                     <div className="flex justify-between items-center">
                       <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">Modules</label>
@@ -4082,10 +4143,11 @@ export default function TeacherConsole({
                     )}
 
                     <div className="flex gap-2 items-center">
-                      <select
+                      <CustomSelect
+                        className="flex-1"
+                        options={syllabusModules.map((m: any) => ({ id: m.id, name: `Mod ${m.position}: ${m.title}` }))}
                         value={syllabusModuleId}
-                        onChange={(e) => {
-                          const modId = e.target.value;
+                        onChange={(modId) => {
                           setSyllabusModuleId(modId);
                           if (modId) {
                             listLessonsAction(modId).then(res => setSyllabusLessons(res.lessons || []));
@@ -4094,11 +4156,8 @@ export default function TeacherConsole({
                           }
                           setSyllabusLessonId("");
                         }}
-                        className="bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer flex-1"
-                      >
-                        <option value="">-- All Course Modules --</option>
-                        {syllabusModules.map(m => <option key={m.id} value={m.id}>Mod {m.position}: {m.title}</option>)}
-                      </select>
+                        placeholder="-- All Course Modules --"
+                      />
                       {syllabusModuleId && (
                         <button 
                           onClick={() => handleDeleteModule(syllabusModuleId)}
@@ -4112,7 +4171,7 @@ export default function TeacherConsole({
                   </div>
                 )}
 
-                {syllabusCourseId && (
+                {syllabusCourseId && !syllabusLoading && (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center pt-2">
                       <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">Lessons</label>
@@ -4201,8 +4260,8 @@ export default function TeacherConsole({
                 ) : syllabusLessonId ? (
                   <>
                     {/* View Mode Toggle Header */}
-                    <div className="bg-[#131418] border border-[#23252C] p-4 rounded-2xl shadow-sm flex items-center justify-between">
-                      <div className="flex gap-2">
+                    <div className="bg-[#131418] border border-[#23252C] p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={() => setSyllabusViewMode("preview")}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -4226,7 +4285,7 @@ export default function TeacherConsole({
                           Edit Details & Resources
                         </button>
                       </div>
-                      <span className="text-[10px] text-[#C2C6D1] font-mono uppercase bg-[#1A1C22] px-2 py-0.5 rounded-md font-bold">
+                      <span className="text-[10px] text-[#C2C6D1] font-mono uppercase bg-[#1A1C22] px-2 py-0.5 rounded-md font-bold self-start sm:self-auto">
                         Mode: {syllabusViewMode}
                       </span>
                     </div>
@@ -4456,15 +4515,13 @@ export default function TeacherConsole({
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                               <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Lesson Type *</label>
-                              <select
+                              <CustomSelect
+                                options={lessonTypes.map((t: any) => ({ id: t.id, name: t.description || t.code }))}
                                 value={newLessonTypeId || defaultLessonTypeId}
-                                onChange={(e) => setNewLessonTypeId(e.target.value)}
-                                className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
-                              >
-                                {lessonTypes.map((t: any) => (
-                                  <option key={t.id} value={t.id}>{t.description || t.code}</option>
-                                ))}
-                              </select>
+                                onChange={setNewLessonTypeId}
+                                searchable={false}
+                                required
+                              />
                             </div>
                             <div>
                               <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Duration (Minutes)</label>
@@ -4577,15 +4634,17 @@ export default function TeacherConsole({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="text-[9px] font-bold text-[#C2C6D1] block mb-1">Resource Type</label>
-                                <select 
+                                <CustomSelect
+                                  options={[
+                                    { id: "pdf", name: "PDF Document" },
+                                    { id: "link", name: "External Resource Link" },
+                                    { id: "cheatsheet", name: "Cheatsheet" },
+                                  ]}
                                   value={resType}
-                                  onChange={(e) => setResType(e.target.value)}
-                                  className="w-full bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
-                                >
-                                  <option value="pdf">PDF Document</option>
-                                  <option value="link">External Resource Link</option>
-                                  <option value="cheatsheet">Cheatsheet</option>
-                                </select>
+                                  onChange={setResType}
+                                  searchable={false}
+                                  required
+                                />
                               </div>
                               <div>
                                 <label className="text-[9px] font-bold text-[#C2C6D1] block mb-1">Title *</label>

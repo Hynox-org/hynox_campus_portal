@@ -109,33 +109,45 @@ export default function AppShell({
               )}
             </button>
 
-            {active && item.children && item.children.length > 0 && (
-              <div className="flex flex-col gap-0.5 ml-[26px] pl-2.5 border-l border-[#23252C] my-1 animate-fadeIn">
-                {item.children.map((child) => {
-                  const childActive = child.id === activeChildId;
-                  return (
-                    <button
-                      key={child.id}
-                      onClick={() => {
-                        onSelect(item.id, child.id);
-                        setDrawerOpen(false);
-                      }}
-                      className={cx(
-                        "flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-[11px] font-semibold text-left transition-all duration-150 cursor-pointer",
-                        childActive
-                          ? "text-[#6E79F4] bg-[#6E79F4]/10"
-                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#1A1C22]"
-                      )}
-                    >
-                      <span className="truncate">{child.label}</span>
-                      {child.badge != null && (
-                        <span className="bg-[#1A1C22] border border-[#2E313A] text-[#E2E4EB] text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums">
-                          {child.badge}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+            {item.children && item.children.length > 0 && (
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-out"
+                style={{ gridTemplateRows: active ? "1fr" : "0fr" }}
+              >
+                <div className="overflow-hidden">
+                  <div
+                    className={cx(
+                      "flex flex-col gap-0.5 ml-[26px] pl-2.5 border-l border-[#23252C] my-1 transition-all duration-300 ease-out",
+                      active ? "opacity-100 translate-y-0 delay-75" : "opacity-0 -translate-y-1"
+                    )}
+                  >
+                    {item.children.map((child) => {
+                      const childActive = child.id === activeChildId;
+                      return (
+                        <button
+                          key={child.id}
+                          onClick={() => {
+                            onSelect(item.id, child.id);
+                            setDrawerOpen(false);
+                          }}
+                          className={cx(
+                            "flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-[11px] font-semibold text-left transition-all duration-150 cursor-pointer",
+                            childActive
+                              ? "text-[#6E79F4] bg-[#6E79F4]/10"
+                              : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#1A1C22]"
+                          )}
+                        >
+                          <span className="truncate">{child.label}</span>
+                          {child.badge != null && (
+                            <span className="bg-[#1A1C22] border border-[#2E313A] text-[#E2E4EB] text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums">
+                              {child.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
           </React.Fragment>

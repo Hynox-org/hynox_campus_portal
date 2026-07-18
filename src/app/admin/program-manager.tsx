@@ -1221,18 +1221,13 @@ export default function ProgramManager({
         <p className="text-xs text-[#C2C6D1] mb-4">
           Select an institution scope below to explore registered programs and instantiated syllabus courses.
         </p>
-        <select
+        <CustomSelect
+          options={institutions.map((inst) => ({ id: inst.id, name: inst.name, code: inst.institution_code }))}
           value={selectedInstId}
-          onChange={(e) => setSelectedInstId(e.target.value)}
-          className="w-full max-w-md bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
-        >
-          <option value="">-- Select Institution Campus --</option>
-          {institutions.map((inst) => (
-            <option key={inst.id} value={inst.id}>
-              {inst.name} ({inst.institution_code})
-            </option>
-          ))}
-        </select>
+          onChange={setSelectedInstId}
+          placeholder="-- Select Institution Campus --"
+          className="max-w-md"
+        />
       </div>
 
       {selectedInstId && (

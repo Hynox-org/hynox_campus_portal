@@ -58,9 +58,14 @@ function formatDatetimeLocal(isoString?: string) {
 interface LearningManagerProps {
   institutions: any[];
   mode?: "create" | "view";
+  /** When true (teacher view), the institution is derived from the teacher's own cohort
+   * assignments instead of being picked from a dropdown like a super admin would. */
+  lockInstitution?: boolean;
+  /** Label describing the teacher's active cohort/group, shown in the scope sidebar. */
+  scopeLabel?: string;
 }
 
-export default function LearningManager({ institutions, mode = "create" }: LearningManagerProps) {
+export default function LearningManager({ institutions, mode = "create", lockInstitution = false, scopeLabel }: LearningManagerProps) {
   const queryClient = useQueryClient();
   const [selectedInstId, setSelectedInstId] = useState("");
   const [programs, setPrograms] = useState<any[]>([]);
@@ -78,6 +83,7 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   // Base Activity list
   const [activities, setActivities] = useState<any[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [cohortFilter, setCohortFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useToast();
 
@@ -275,6 +281,13 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
   });
 
   const isDataLoading = loadingAcademic || loadingDelivery || loadingActivities;
+
+  // Teacher view: institution is derived from their own cohort assignments, not chosen manually.
+  useEffect(() => {
+    if (lockInstitution && !selectedInstId && institutions.length > 0) {
+      setSelectedInstId(institutions[0].id);
+    }
+  }, [lockInstitution, institutions, selectedInstId]);
 
   // Sync state from React Query data
   useEffect(() => {
@@ -1108,24 +1121,26 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
     <div className="space-y-6 text-xs text-[#EDEFF5] w-full">
 
       {/* Top Banner Scope */}
-      <div className="bg-[#131418] border border-[#23252C] p-6 rounded-xl shadow-sm">
-        <h3 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#C2C6D1] flex items-center gap-1.5">
-          <Shield size={15} className="text-[#6E79F4]" /> Learning Activities Scope
-        </h3>
-        <p className="text-xs text-[#C2C6D1] mb-4">
-          Select campus context to list or create learning assignments.
-        </p>
-        <CustomSelect
-          options={institutions}
-          value={selectedInstId}
-          onChange={(val) => {
-            setSelectedInstId(val);
-            setSelectedActivity(null);
-          }}
-          placeholder="-- Select Institution Campus --"
-          className="max-w-md"
-        />
-      </div>
+      {!lockInstitution && (
+        <div className="bg-[#131418] border border-[#23252C] p-6 rounded-xl shadow-sm">
+          <h3 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#C2C6D1] flex items-center gap-1.5">
+            <Shield size={15} className="text-[#6E79F4]" /> Learning Activities Scope
+          </h3>
+          <p className="text-xs text-[#C2C6D1] mb-4">
+            Select campus context to list or create learning assignments.
+          </p>
+          <CustomSelect
+            options={institutions}
+            value={selectedInstId}
+            onChange={(val) => {
+              setSelectedInstId(val);
+              setSelectedActivity(null);
+            }}
+            placeholder="-- Select Institution Campus --"
+            className="max-w-md"
+          />
+        </div>
+      )}
 
       {selectedInstId && (
         isDataLoading ? (
@@ -1143,44 +1158,38 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
               <div className="space-y-3">
                 <div>
                   <label className="block font-semibold text-[#C2C6D1] mb-1">Learning Program</label>
-                  <select
+                  <CustomSelect
+                    options={programs.map(p => ({ id: p.id, name: p.title }))}
                     value={selectedProgId}
-                    onChange={(e) => {
-                      setSelectedProgId(e.target.value);
+                    onChange={(val) => {
+                      setSelectedProgId(val);
                       handleCourseSelection("");
                       setAssignCohortId("");
                     }}
-                    className="w-full bg-[#16171D] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs outline-none text-[#EDEFF5]"
-                  >
-                    <option value="">-- Select Program --</option>
-                    {programs.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                  </select>
+                    placeholder="-- Select Program --"
+                  />
                 </div>
 
                 <div>
                   <label className="block font-semibold text-[#C2C6D1] mb-1">Target Cohort *</label>
-                  <select
+                  <CustomSelect
+                    options={cohorts.map(c => ({ id: c.id, name: c.name, code: c.code }))}
                     value={assignCohortId}
-                    onChange={(e) => setAssignCohortId(e.target.value)}
-                    className="w-full bg-[#16171D] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs outline-none text-[#EDEFF5]"
+                    onChange={setAssignCohortId}
+                    placeholder="-- Select Cohort --"
                     required
-                  >
-                    <option value="">-- Select Cohort --</option>
-                    {cohorts.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
-                  </select>
+                  />
                 </div>
 
                 <div>
                   <label className="block font-semibold text-[#C2C6D1] mb-1">Course *</label>
-                  <select
+                  <CustomSelect
+                    options={courses.map(c => ({ id: c.id, name: c.title }))}
                     value={selectedCourseId}
-                    onChange={(e) => handleCourseSelection(e.target.value)}
-                    className="w-full bg-[#16171D] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs outline-none text-[#EDEFF5]"
+                    onChange={handleCourseSelection}
+                    placeholder="-- Select Course --"
                     required
-                  >
-                    <option value="">-- Select Course --</option>
-                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                  </select>
+                  />
                 </div>
               </div>
             </div>
@@ -1198,15 +1207,16 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block font-semibold text-[#C2C6D1] mb-1">Activity Type *</label>
-                      <select
+                      <CustomSelect
+                        options={[
+                          { id: "quiz", name: "Quiz Engine Assessment" },
+                          { id: "project", name: "Project Work (GitHub URL)" },
+                          { id: "programming", name: "Programming Challenge (Judge Engine)" },
+                        ]}
                         value={activityType}
-                        onChange={(e: any) => setActivityType(e.target.value)}
-                        className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4]"
-                      >
-                        <option value="quiz">Quiz Engine Assessment</option>
-                        <option value="project">Project Work (GitHub URL)</option>
-                        <option value="programming">Programming Challenge (Judge Engine)</option>
-                      </select>
+                        onChange={(val) => setActivityType(val as typeof activityType)}
+                        required
+                      />
                     </div>
 
                     <div>
@@ -1927,108 +1937,229 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
           </div>
         ) : (
           // VIEW PUBLISHED ACTIVITIES VIEW
-          <div className="bg-[#131418] border border-[#23252C] rounded-xl p-5 shadow-sm space-y-4">
+          <div className={lockInstitution ? "grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" : ""}>
+            {lockInstitution && (
+              <div className="lg:col-span-3 bg-[#131418] border border-[#23252C] rounded-xl shadow-sm h-fit">
+                <div className="px-4 py-4 border-b border-[#1F2128] bg-[#0E0F13] rounded-t-xl">
+                  <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider">Activity Scope</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Campus</label>
+                    <p className="text-xs font-semibold text-[#EDEFF5] px-2.5 py-1.5 bg-[#16171D] border border-[#23252C] rounded-lg truncate">
+                      {institutions.find((i) => i.id === selectedInstId)?.name || "—"}
+                    </p>
+                  </div>
+                  {scopeLabel && (
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Group / Cohort</label>
+                      <p className="text-xs font-semibold text-[#EDEFF5] px-2.5 py-1.5 bg-[#16171D] border border-[#23252C] rounded-lg truncate">
+                        {scopeLabel}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Activity Type</label>
+                    <CustomSelect
+                      options={[
+                        { id: "all", name: "All Activity Types" },
+                        { id: "quiz", name: "Quizzes only" },
+                        { id: "project", name: "Projects only" },
+                        { id: "programming", name: "Coding challenges only" },
+                      ]}
+                      value={typeFilter}
+                      onChange={setTypeFilter}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Cohort</label>
+                    <CustomSelect
+                      options={[{ id: "all", name: "All Cohorts" }, ...cohorts.map(c => ({ id: c.id, name: c.name, code: c.code }))]}
+                      value={cohortFilter}
+                      onChange={setCohortFilter}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+          <div className={`bg-[#131418] border border-[#23252C] rounded-xl p-5 shadow-sm space-y-4 ${lockInstitution ? "lg:col-span-9" : ""}`}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1F2128] pb-2 gap-4">
               <h4 className="font-bold text-xs uppercase tracking-wider text-[#EDEFF5] flex items-center gap-1.5">
                 <List size={14} className="text-[#6E79F4]" /> Published Learning Activities ({activities.length})
               </h4>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1 text-xs outline-none text-[#EDEFF5] font-semibold focus:border-[#6E79F4]"
-              >
-                <option value="all">All Activity Types</option>
-                <option value="quiz">Quizzes only</option>
-                <option value="project">Projects only</option>
-                <option value="programming">Coding challenges only</option>
-              </select>
+              {!lockInstitution && (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <CustomSelect
+                    options={[
+                      { id: "all", name: "All Activity Types" },
+                      { id: "quiz", name: "Quizzes only" },
+                      { id: "project", name: "Projects only" },
+                      { id: "programming", name: "Coding challenges only" },
+                    ]}
+                    value={typeFilter}
+                    onChange={setTypeFilter}
+                    className="min-w-[190px]"
+                    required
+                  />
+                  <CustomSelect
+                    options={[{ id: "all", name: "All Cohorts" }, ...cohorts.map(c => ({ id: c.id, name: c.name, code: c.code }))]}
+                    value={cohortFilter}
+                    onChange={setCohortFilter}
+                    className="min-w-[190px]"
+                    required
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#16171D] border-b border-[#23252C] font-bold text-[#C2C6D1]">
-                    <th className="px-4 py-3">Activity Title</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Max Score</th>
-                    <th className="px-4 py-3">Passing Score</th>
-                    <th className="px-4 py-3">Mandatory</th>
-                    <th className="px-4 py-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#23252C]">
-                  {(() => {
-                    const filtered = activities.filter(
-                      (act) => typeFilter === "all" || act.activity_type_code === typeFilter
-                    );
-                    if (filtered.length > 0) {
-                      return filtered.map((act) => (
-                        <tr 
-                          key={act.id} 
-                          onClick={() => handleViewActivityClick(act)}
-                          className="hover:bg-[#16171D]/50 cursor-pointer transition-colors"
-                        >
-                          <td className="px-4 py-3.5 font-semibold text-[#EDEFF5]">
-                            {act.title}
-                          </td>
-                          <td className="px-4 py-3.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                              act.activity_type_code === "quiz" ? "bg-[#22D3EE]/10 text-[#22D3EE] border border-[#22D3EE]/20" :
-                              act.activity_type_code === "project" ? "bg-[#F5B04A]/10 text-[#F5B04A] border border-[#F5B04A]/20" :
-                              "bg-[#2FBF71]/10 text-[#2FBF71] border border-[#2FBF71]/20"
-                            }`}>
-                              {act.activity_type_code}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5 font-mono text-[#C2C6D1]">{act.max_score}</td>
-                          <td className="px-4 py-3.5 font-mono text-[#C2C6D1]">{act.passing_score}</td>
-                          <td className="px-4 py-3.5">
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                              act.is_mandatory ? "bg-red-50 text-red-600 border border-red-100" : "bg-[#1A1C22] text-[#C2C6D1]"
-                            }`}>
-                              {act.is_mandatory ? "Required" : "Optional"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3.5 text-right font-bold flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => {
-                                handleViewActivityClick(act);
-                                setTimeout(() => setIsEditing(true), 100);
-                              }}
-                              className="p-1.5 bg-[#16171D] hover:bg-[#6E79F4]/10 hover:text-[#6E79F4] text-[#C2C6D1] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
-                              title="Edit Activity"
-                            >
-                              <Edit size={12} /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteActivity(act.id)}
-                              className="p-1.5 bg-red-50 hover:bg-red-100 text-[#F0555D] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
-                              title="Delete Activity"
-                            >
-                              <Trash2 size={12} /> Delete
-                            </button>
-                            <button
-                              onClick={() => handleViewActivityClick(act)}
-                              className="p-1.5 bg-[#1A1C22] hover:bg-[#23252C] text-[#EDEFF5] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
-                              title="View details"
-                            >
-                              View Console
-                            </button>
-                          </td>
+            {(() => {
+              const filtered = activities.filter(
+                (act) =>
+                  (typeFilter === "all" || act.activity_type_code === typeFilter) &&
+                  (cohortFilter === "all" || (act.cohort_ids || []).includes(cohortFilter))
+              );
+
+              const typeBadge = (act: any) => (
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                  act.activity_type_code === "quiz" ? "bg-[#22D3EE]/10 text-[#22D3EE] border border-[#22D3EE]/20" :
+                  act.activity_type_code === "project" ? "bg-[#F5B04A]/10 text-[#F5B04A] border border-[#F5B04A]/20" :
+                  "bg-[#2FBF71]/10 text-[#2FBF71] border border-[#2FBF71]/20"
+                }`}>
+                  {act.activity_type_code}
+                </span>
+              );
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="px-4 py-10 text-center text-[#C2C6D1] italic text-xs">
+                    No published activities match the selected type filter.
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  {/* Mobile card list */}
+                  <div className="sm:hidden space-y-3">
+                    {filtered.map((act) => (
+                      <div
+                        key={act.id}
+                        onClick={() => handleViewActivityClick(act)}
+                        className="bg-[#16171D] border border-[#23252C] rounded-xl p-4 space-y-3 cursor-pointer active:bg-[#1A1C22] transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-semibold text-[#EDEFF5] text-xs min-w-0 break-words">{act.title}</span>
+                          {typeBadge(act)}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[#C2C6D1]">
+                          <span>Max: <span className="font-mono text-[#EDEFF5]">{act.max_score}</span></span>
+                          <span>Pass: <span className="font-mono text-[#EDEFF5]">{act.passing_score}</span></span>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                            act.is_mandatory ? "bg-[#F0555D]/10 text-[#F0555D] border border-[#F0555D]/20" : "bg-[#1A1C22] text-[#C2C6D1]"
+                          }`}>
+                            {act.is_mandatory ? "Required" : "Optional"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2 border-t border-[#23252C]" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => {
+                              handleViewActivityClick(act);
+                              setTimeout(() => setIsEditing(true), 100);
+                            }}
+                            className="flex-1 p-1.5 bg-[#131418] hover:bg-[#6E79F4]/10 hover:text-[#6E79F4] text-[#C2C6D1] rounded-lg transition-all flex items-center justify-center gap-1 font-semibold text-[10px]"
+                          >
+                            <Edit size={12} /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteActivity(act.id)}
+                            className="flex-1 p-1.5 bg-[#F0555D]/10 hover:bg-[#F0555D]/20 text-[#F0555D] rounded-lg transition-all flex items-center justify-center gap-1 font-semibold text-[10px]"
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                          <button
+                            onClick={() => handleViewActivityClick(act)}
+                            className="flex-1 p-1.5 bg-[#131418] hover:bg-[#23252C] text-[#EDEFF5] rounded-lg transition-all flex items-center justify-center gap-1 font-semibold text-[10px]"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop / tablet table */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-[#16171D] border-b border-[#23252C] font-bold text-[#C2C6D1]">
+                          <th className="px-4 py-3">Activity Title</th>
+                          <th className="px-4 py-3">Type</th>
+                          <th className="px-4 py-3">Max Score</th>
+                          <th className="px-4 py-3">Passing Score</th>
+                          <th className="px-4 py-3">Mandatory</th>
+                          <th className="px-4 py-3 text-right">Action</th>
                         </tr>
-                      ));
-                    }
-                    return (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-10 text-center text-[#C2C6D1] italic">
-                          No published activities match the selected type filter.
-                        </td>
-                      </tr>
-                    );
-                  })()}
-                </tbody>
-              </table>
-            </div>
+                      </thead>
+                      <tbody className="divide-y divide-[#23252C]">
+                        {filtered.map((act) => (
+                          <tr
+                            key={act.id}
+                            onClick={() => handleViewActivityClick(act)}
+                            className="hover:bg-[#16171D]/50 cursor-pointer transition-colors"
+                          >
+                            <td className="px-4 py-3.5 font-semibold text-[#EDEFF5]">
+                              {act.title}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              {typeBadge(act)}
+                            </td>
+                            <td className="px-4 py-3.5 font-mono text-[#C2C6D1]">{act.max_score}</td>
+                            <td className="px-4 py-3.5 font-mono text-[#C2C6D1]">{act.passing_score}</td>
+                            <td className="px-4 py-3.5">
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                act.is_mandatory ? "bg-[#F0555D]/10 text-[#F0555D] border border-[#F0555D]/20" : "bg-[#1A1C22] text-[#C2C6D1]"
+                              }`}>
+                                {act.is_mandatory ? "Required" : "Optional"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-right font-bold flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => {
+                                  handleViewActivityClick(act);
+                                  setTimeout(() => setIsEditing(true), 100);
+                                }}
+                                className="p-1.5 bg-[#16171D] hover:bg-[#6E79F4]/10 hover:text-[#6E79F4] text-[#C2C6D1] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
+                                title="Edit Activity"
+                              >
+                                <Edit size={12} /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteActivity(act.id)}
+                                className="p-1.5 bg-[#F0555D]/10 hover:bg-[#F0555D]/20 text-[#F0555D] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
+                                title="Delete Activity"
+                              >
+                                <Trash2 size={12} /> Delete
+                              </button>
+                              <button
+                                onClick={() => handleViewActivityClick(act)}
+                                className="p-1.5 bg-[#1A1C22] hover:bg-[#23252C] text-[#EDEFF5] rounded-lg transition-all flex items-center gap-1 font-semibold text-[10px]"
+                                title="View details"
+                              >
+                                View Console
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
           </div>
         )
       )}
@@ -2039,23 +2170,23 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
           {/* Drawer backdrop */}
           <div 
             onClick={() => setSelectedActivity(null)}
-            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-lg bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
-            
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full sm:max-w-lg bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
+
             {/* Header */}
-            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex justify-between items-center shrink-0">
-              <div>
+            <div className="bg-[#16171D] px-4 sm:px-6 py-4 sm:py-5 border-b border-[#23252C] flex justify-between items-center gap-3 shrink-0">
+              <div className="min-w-0">
                 <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
-                  <Award size={16} className="text-[#6E79F4]" /> Activity Console
+                  <Award size={16} className="text-[#6E79F4] shrink-0" /> Activity Console
                 </h3>
-                <p className="text-[10px] text-[#C2C6D1] mt-0.5">{selectedActivity.title}</p>
+                <p className="text-[10px] text-[#C2C6D1] mt-0.5 truncate">{selectedActivity.title}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedActivity(null)}
-                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold shrink-0"
               >
                 âœ•
               </button>
@@ -2065,9 +2196,9 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
             <div className="flex border-b border-[#23252C] shrink-0 bg-[#16171D]/30">
               <button
                 onClick={() => setActiveDrawerTab("config")}
-                className={`flex-1 py-3 text-center font-bold border-b-2 transition-all ${
-                  activeDrawerTab === "config" 
-                    ? "border-[#6E79F4] text-[#6E79F4]" 
+                className={`flex-1 px-2 py-3 text-center font-bold border-b-2 transition-all truncate ${
+                  activeDrawerTab === "config"
+                    ? "border-[#6E79F4] text-[#6E79F4]"
                     : "border-transparent text-[#C2C6D1] hover:text-[#EDEFF5]"
                 }`}
               >
@@ -2075,18 +2206,18 @@ export default function LearningManager({ institutions, mode = "create" }: Learn
               </button>
               <button
                 onClick={() => setActiveDrawerTab("performance")}
-                className={`flex-1 py-3 text-center font-bold border-b-2 transition-all ${
-                  activeDrawerTab === "performance" 
-                    ? "border-[#6E79F4] text-[#6E79F4]" 
+                className={`flex-1 px-2 py-3 text-center font-bold border-b-2 transition-all truncate ${
+                  activeDrawerTab === "performance"
+                    ? "border-[#6E79F4] text-[#6E79F4]"
                     : "border-transparent text-[#C2C6D1] hover:text-[#EDEFF5]"
                 }`}
               >
-                Student Performance ({studentProgressList.length})
+                Performance ({studentProgressList.length})
               </button>
             </div>
 
             {/* Content body */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               {detailsLoading ? (
                 <SecondaryLoader variant="spinner" message="Loading details & grades..." />
               ) : activeDrawerTab === "config" ? (
