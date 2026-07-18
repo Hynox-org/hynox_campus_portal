@@ -335,10 +335,10 @@ export default function LibraryBuilder() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left selector column */}
-        <div className="lg:col-span-4 bg-white border border-[#E2E8F0] rounded-xl p-4 shadow-sm space-y-4">
+        <div className="lg:col-span-4 bg-[#131418] border border-[#23252C] rounded-xl p-4 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#0F172A] flex items-center gap-1.5">
-              <BookOpen size={14} className="text-[#2563EB]" /> Course Blueprints
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5] flex items-center gap-1.5">
+              <BookOpen size={14} className="text-[#6E79F4]" /> Course Blueprints
             </h4>
             <button
               onClick={() => {
@@ -356,7 +356,7 @@ export default function LibraryBuilder() {
                 });
                 setCourseDrawerOpen(true);
               }}
-              className="flex items-center gap-1 bg-[#2563EB] text-white px-2.5 py-1 rounded-lg hover:bg-[#2563EB]/95 transition-all text-[10px] font-bold shadow-sm cursor-pointer"
+              className="flex items-center gap-1 bg-[#6E79F4] text-white px-2.5 py-1 rounded-lg hover:bg-[#6E79F4]/95 transition-all text-[10px] font-bold shadow-sm cursor-pointer"
             >
               <Plus size={12} /> New Template
             </button>
@@ -368,9 +368,9 @@ export default function LibraryBuilder() {
               placeholder="Search blueprints..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#2563EB] focus:bg-white transition-all pl-7"
+              className="w-full bg-[#16171D] border border-[#23252C] rounded-lg px-3 py-1.5 text-xs text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] focus:bg-[#131418] transition-all pl-7"
             />
-            <span className="absolute left-2.5 top-2 text-[#475569]/60 text-[10px]">🔍</span>
+            <span className="absolute left-2.5 top-2 text-[#C2C6D1]/60 text-[10px]">🔍</span>
           </div>
 
           <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
@@ -389,20 +389,20 @@ export default function LibraryBuilder() {
                     onClick={() => handleSelectCourse(template.id)}
                     className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex flex-col gap-2 relative ${
                       selectedCourse?.id === template.id
-                        ? "bg-[#2563EB]/5 border-[#2563EB]/40 text-[#2563EB] shadow-xs"
-                        : "bg-white hover:bg-slate-50 border-[#E2E8F0] text-[#0F172A]"
+                        ? "bg-[#6E79F4]/5 border-[#6E79F4]/40 text-[#6E79F4] shadow-xs"
+                        : "bg-[#131418] hover:bg-[#16171D] border-[#23252C] text-[#EDEFF5]"
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="min-w-0 pr-2">
-                        <p className="font-sans font-semibold text-[13px] text-slate-800 hover:text-[#2563EB] transition-colors truncate">{template.title}</p>
+                        <p className="font-sans font-semibold text-[13px] text-[#EDEFF5] hover:text-[#6E79F4] transition-colors truncate">{template.title}</p>
                       </div>
-                      <span className="text-[8px] bg-slate-100 text-[#475569] px-1 rounded uppercase font-bold shrink-0 font-mono border border-slate-200">
+                      <span className="text-[8px] bg-[#1A1C22] text-[#C2C6D1] px-1 rounded uppercase font-bold shrink-0 font-mono border border-[#23252C]">
                         {template.course_type_code || "theory"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-end text-[9px] text-[#475569] border-t border-slate-100/80 pt-1.5 mt-0.5">
-                      <span className="font-semibold text-[#2563EB] flex items-center gap-0.5">
+                    <div className="flex items-center justify-end text-[9px] text-[#C2C6D1] border-t border-[#1F2128]/80 pt-1.5 mt-0.5">
+                      <span className="font-semibold text-[#6E79F4] flex items-center gap-0.5">
                         View details <ChevronRight size={10} />
                       </span>
                     </div>
@@ -411,7 +411,7 @@ export default function LibraryBuilder() {
               }
 
               return (
-                <p className="text-[11px] text-[#475569] text-center py-4 bg-slate-50/50 rounded-lg">No course templates found.</p>
+                <p className="text-[11px] text-[#C2C6D1] text-center py-4 bg-[#16171D]/50 rounded-lg">No course templates found.</p>
               );
             })()}
           </div>
@@ -420,31 +420,31 @@ export default function LibraryBuilder() {
         {/* Right workspace details column */}
         <div className="lg:col-span-8 space-y-6">
           {courseDataLoading ? (
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center text-xs text-[#475569] shadow-sm flex flex-col items-center justify-center min-h-[300px]">
+            <div className="bg-[#131418] border border-[#23252C] rounded-xl p-12 text-center text-xs text-[#C2C6D1] shadow-sm flex flex-col items-center justify-center min-h-[300px]">
               <SecondaryLoader variant="spinner" message="Loading full course blueprint data (modules, lessons & resources)..." />
             </div>
           ) : selectedCourse ? (
             <div className="space-y-6">
               
               {/* Selected Blueprint Detail Header */}
-              <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm relative group">
+              <div className="bg-[#131418] border border-[#23252C] rounded-xl p-5 shadow-sm relative group">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-[9px] uppercase font-bold text-[#2563EB] tracking-wider bg-[#2563EB]/10 px-2 py-0.5 rounded border border-[#2563EB]/25">
+                      <span className="text-[9px] uppercase font-bold text-[#6E79F4] tracking-wider bg-[#6E79F4]/10 px-2 py-0.5 rounded border border-[#6E79F4]/25">
                         Blueprint Blueprint
                       </span>
-                      <span className="text-[9px] bg-slate-100 text-[#475569] px-1.5 py-0.5 rounded font-bold uppercase font-mono">
+                      <span className="text-[9px] bg-[#1A1C22] text-[#C2C6D1] px-1.5 py-0.5 rounded font-bold uppercase font-mono">
                         {selectedCourse.course_type_code || "theory"}
                       </span>
                     </div>
-                    <h3 className="font-bold text-sm text-[#0F172A] mt-2 flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-[#EDEFF5] mt-2 flex items-center gap-2">
                       {selectedCourse.title}
                     </h3>
-                    <p className="text-xs text-[#475569] mt-1 line-clamp-2">
+                    <p className="text-xs text-[#C2C6D1] mt-1 line-clamp-2">
                       {selectedCourse.description || "No description set for this blueprint."}
                     </p>
-                    <p className="text-[10px] text-[#475569] mt-1.5 font-mono">
+                    <p className="text-[10px] text-[#C2C6D1] mt-1.5 font-mono">
                       Slug: /{selectedCourse.slug}
                     </p>
                   </div>
@@ -465,7 +465,7 @@ export default function LibraryBuilder() {
                         });
                         setCourseDrawerOpen(true);
                       }}
-                      className="p-1 hover:bg-slate-100 rounded text-[#475569] hover:text-[#0F172A]"
+                      className="p-1 hover:bg-[#1A1C22] rounded text-[#C2C6D1] hover:text-[#EDEFF5]"
                       title="Edit Blueprint"
                     >
                       <Edit size={14} />
@@ -482,7 +482,7 @@ export default function LibraryBuilder() {
                           }
                         }
                       }}
-                      className="p-1 hover:bg-red-50 rounded text-[#DC2626] hover:text-red-700"
+                      className="p-1 hover:bg-red-50 rounded text-[#F0555D] hover:text-red-700"
                       title="Delete Blueprint"
                     >
                       <Trash2 size={14} />
@@ -492,10 +492,10 @@ export default function LibraryBuilder() {
               </div>
 
               {/* Modules list of selected course blueprint */}
-              <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                    <FolderPlus size={14} className="text-[#2563EB]" /> Blueprint Structure (Modules & Lessons)
+              <div className="bg-[#131418] border border-[#23252C] rounded-xl p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-[#1F2128] pb-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5">
+                    <FolderPlus size={14} className="text-[#6E79F4]" /> Blueprint Structure (Modules & Lessons)
                   </h4>
                   <button
                     onClick={() => {
@@ -503,7 +503,7 @@ export default function LibraryBuilder() {
                       setModuleForm({ title: "", description: "", position: (modulesCache[selectedCourse.id]?.length || 0) + 1 });
                       setModuleDrawerOpen(true);
                     }}
-                    className="flex items-center gap-1 text-[#2563EB] hover:underline text-[11px] font-bold cursor-pointer"
+                    className="flex items-center gap-1 text-[#6E79F4] hover:underline text-[11px] font-bold cursor-pointer"
                   >
                     <Plus size={12} /> Add Module Template
                   </button>
@@ -519,14 +519,14 @@ export default function LibraryBuilder() {
                         const hasLessons = lessonsCache[mod.id] && lessonsCache[mod.id].length > 0;
 
                         return (
-                          <div key={mod.id} className="border border-[#E2E8F0] rounded-lg overflow-hidden text-xs bg-slate-50/10">
+                          <div key={mod.id} className="border border-[#23252C] rounded-lg overflow-hidden text-xs bg-[#16171D]/10">
                             
                             {/* Module Expand Toggle Header */}
                             <div
-                              className="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 cursor-pointer select-none bg-white font-semibold text-[#0F172A] border-b border-slate-100"
+                              className="px-4 py-2.5 flex items-center justify-between hover:bg-[#16171D] cursor-pointer select-none bg-[#131418] font-semibold text-[#EDEFF5] border-b border-[#1F2128]"
                             >
                               <div className="flex items-center gap-2 min-w-0 flex-1" onClick={() => toggleModuleExpand(mod.id)}>
-                                {isModExpanded ? <ChevronDown size={13} className="text-[#475569]" /> : <ChevronRight size={13} className="text-[#475569]" />}
+                                {isModExpanded ? <ChevronDown size={13} className="text-[#C2C6D1]" /> : <ChevronRight size={13} className="text-[#C2C6D1]" />}
                                 <span>Module {mod.position}: {mod.title}</span>
                               </div>
                               <div className="flex items-center gap-3 shrink-0">
@@ -540,7 +540,7 @@ export default function LibraryBuilder() {
                                     });
                                     setModuleDrawerOpen(true);
                                   }}
-                                  className="text-[#475569] hover:text-[#0F172A] p-0.5 hover:bg-slate-100 rounded"
+                                  className="text-[#C2C6D1] hover:text-[#EDEFF5] p-0.5 hover:bg-[#1A1C22] rounded"
                                   title="Edit Module"
                                 >
                                   <Edit size={12} />
@@ -553,12 +553,12 @@ export default function LibraryBuilder() {
                                       else await refreshModules(selectedCourse.id);
                                     }
                                   }}
-                                  className="text-[#DC2626] hover:text-red-700 p-0.5 hover:bg-slate-100 rounded"
+                                  className="text-[#F0555D] hover:text-red-700 p-0.5 hover:bg-[#1A1C22] rounded"
                                   title="Delete Module"
                                 >
                                   <Trash2 size={12} />
                                 </button>
-                                <span className="text-[9px] text-[#475569] font-mono bg-slate-100 px-1 rounded shrink-0">
+                                <span className="text-[9px] text-[#C2C6D1] font-mono bg-[#1A1C22] px-1 rounded shrink-0">
                                   {lessonsCache[mod.id]?.length !== undefined ? `${lessonsCache[mod.id].length} Lessons` : "View Lessons"}
                                 </span>
                               </div>
@@ -567,7 +567,7 @@ export default function LibraryBuilder() {
                             {/* Lessons container */}
                             <div className={`grid transition-all duration-300 ease-in-out ${isModExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                               <div className="overflow-hidden">
-                                <div className="p-3 pl-6 space-y-2 bg-slate-50/30 border-t border-slate-50">
+                                <div className="p-3 pl-6 space-y-2 bg-[#16171D]/30 border-t border-[#1A1C22]">
                                 <div className="flex justify-end mb-1">
                                   <button
                                     onClick={() => {
@@ -583,7 +583,7 @@ export default function LibraryBuilder() {
                                       });
                                       setLessonDrawerOpen(true);
                                     }}
-                                    className="flex items-center gap-1 text-[#2563EB] hover:underline text-[10px] font-bold cursor-pointer"
+                                    className="flex items-center gap-1 text-[#6E79F4] hover:underline text-[10px] font-bold cursor-pointer"
                                   >
                                     <Plus size={11} /> Add Lesson Template
                                   </button>
@@ -597,16 +597,16 @@ export default function LibraryBuilder() {
                                     const hasResources = resourcesCache[les.id] && resourcesCache[les.id].length > 0;
 
                                     return (
-                                      <div key={les.id} className="border border-slate-200 rounded-lg p-2.5 bg-white space-y-2">
+                                      <div key={les.id} className="border border-[#23252C] rounded-lg p-2.5 bg-[#131418] space-y-2">
                                         
                                         {/* Lesson node header */}
                                         <div
                                           className="flex items-center justify-between cursor-pointer select-none"
                                         >
                                           <div className="flex items-center gap-1.5 min-w-0 flex-1" onClick={() => toggleLessonExpand(les.id)}>
-                                            {isLesExpanded ? <ChevronDown size={12} className="text-[#475569]" /> : <ChevronRight size={12} className="text-[#475569]" />}
-                                            <span className="font-medium text-[#0F172A] truncate">{les.title}</span>
-                                            <span className="text-[8px] bg-slate-100 text-[#475569] px-1 rounded uppercase font-mono font-bold shrink-0">{les.lesson_type_code || "text"}</span>
+                                            {isLesExpanded ? <ChevronDown size={12} className="text-[#C2C6D1]" /> : <ChevronRight size={12} className="text-[#C2C6D1]" />}
+                                            <span className="font-medium text-[#EDEFF5] truncate">{les.title}</span>
+                                            <span className="text-[8px] bg-[#1A1C22] text-[#C2C6D1] px-1 rounded uppercase font-mono font-bold shrink-0">{les.lesson_type_code || "text"}</span>
                                           </div>
                                           <div className="flex items-center gap-2.5 shrink-0">
                                             <button
@@ -623,7 +623,7 @@ export default function LibraryBuilder() {
                                                 });
                                                 setLessonDrawerOpen(true);
                                               }}
-                                              className="text-[#475569] hover:text-[#0F172A] p-0.5 hover:bg-slate-100 rounded"
+                                              className="text-[#C2C6D1] hover:text-[#EDEFF5] p-0.5 hover:bg-[#1A1C22] rounded"
                                               title="Edit Lesson"
                                             >
                                               <Edit size={11} />
@@ -636,7 +636,7 @@ export default function LibraryBuilder() {
                                                   else await refreshLessons(mod.id);
                                                 }
                                               }}
-                                              className="text-[#DC2626] hover:text-red-700 p-0.5 hover:bg-slate-100 rounded"
+                                              className="text-[#F0555D] hover:text-red-700 p-0.5 hover:bg-[#1A1C22] rounded"
                                               title="Delete Lesson"
                                             >
                                               <Trash2 size={11} />
@@ -647,36 +647,36 @@ export default function LibraryBuilder() {
                                         {/* Lesson resources list (lazy loaded) */}
                                         <div className={`grid transition-all duration-300 ease-in-out ${isLesExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                                           <div className="overflow-hidden">
-                                            <div className="border-t border-slate-100 pt-2 mt-2 space-y-2 pl-4">
+                                            <div className="border-t border-[#1F2128] pt-2 mt-2 space-y-2 pl-4">
                                             {les.video_url && (
-                                              <div className="flex items-center gap-1.5 text-[10px] bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200">
-                                                <Play size={10} className="fill-[#2563EB] text-[#2563EB] shrink-0" />
-                                                <span className="font-semibold text-slate-700">Video Link:</span>
-                                                <a href={les.video_url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-[#2563EB] font-bold flex-1">
+                                              <div className="flex items-center gap-1.5 text-[10px] bg-[#16171D] px-2 py-1.5 rounded-lg border border-[#23252C]">
+                                                <Play size={10} className="fill-[#6E79F4] text-[#6E79F4] shrink-0" />
+                                                <span className="font-semibold text-[#E2E4EB]">Video Link:</span>
+                                                <a href={les.video_url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-[#6E79F4] font-bold flex-1">
                                                   {les.video_url}
                                                 </a>
                                               </div>
                                             )}
                                             {(les.content_json?.body || les.content_json?.text) && (
-                                              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2 shadow-inner">
-                                                <div className="flex justify-between items-center border-b border-slate-200/50 pb-1">
-                                                  <span className="font-bold text-[#86868b] text-[8px] uppercase tracking-wider font-sans">Blueprint Learning Content (Markdown)</span>
-                                                  <span className="text-[8px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-mono font-bold">Rendered</span>
+                                              <div className="bg-[#16171D] border border-[#23252C] p-4 rounded-xl space-y-2 shadow-inner">
+                                                <div className="flex justify-between items-center border-b border-[#23252C]/50 pb-1">
+                                                  <span className="font-bold text-[#C2C6D1] text-[8px] uppercase tracking-wider font-sans">Blueprint Learning Content (Markdown)</span>
+                                                  <span className="text-[8px] bg-[#23252C] text-[#C2C6D1] px-1.5 py-0.2 rounded font-mono font-bold">Rendered</span>
                                                 </div>
                                                 <div className="max-h-80 overflow-y-auto pr-1">
                                                   <MarkdownRenderer content={les.content_json.body || les.content_json.text} />
                                                 </div>
                                               </div>
                                             )}
-                                            <div className="flex items-center justify-between border-b border-slate-50 pb-1 mb-1">
-                                              <span className="text-[9px] uppercase font-bold text-[#86868b]">Attached Resources</span>
+                                            <div className="flex items-center justify-between border-b border-[#1A1C22] pb-1 mb-1">
+                                              <span className="text-[9px] uppercase font-bold text-[#C2C6D1]">Attached Resources</span>
                                               <button
                                                 onClick={() => {
                                                   setSelectedLessonId(les.id);
                                                   setResourceForm({ title: "", resource_type: "link", external_url: "", file_url: "", position: (resourcesCache[les.id]?.length || 0) + 1 });
                                                   setResourceDrawerOpen(true);
                                                 }}
-                                                className="flex items-center gap-1 text-[#2563EB] hover:underline text-[9px] font-bold cursor-pointer"
+                                                className="flex items-center gap-1 text-[#6E79F4] hover:underline text-[9px] font-bold cursor-pointer"
                                               >
                                                 <Plus size={10} /> Add Resource Blueprint
                                               </button>
@@ -684,17 +684,17 @@ export default function LibraryBuilder() {
                                             {resourcesCache[les.id] ? (
                                               hasResources ? (
                                                 resourcesCache[les.id].map((resrc: any) => (
-                                                  <div key={resrc.id} className="flex items-center justify-between text-[10px] text-[#475569] py-1 bg-slate-50 px-2 rounded">
+                                                  <div key={resrc.id} className="flex items-center justify-between text-[10px] text-[#C2C6D1] py-1 bg-[#16171D] px-2 rounded">
                                                     <div className="flex items-center gap-1.5 min-w-0">
                                                       <FileText size={10} className="shrink-0" />
                                                       <span className="truncate">{resrc.title}</span>
-                                                      <span className="text-[8px] bg-slate-200 text-[#475569] px-1 rounded uppercase font-bold shrink-0">{resrc.resource_type}</span>
+                                                      <span className="text-[8px] bg-[#23252C] text-[#C2C6D1] px-1 rounded uppercase font-bold shrink-0">{resrc.resource_type}</span>
                                                       {(resrc.file_url || resrc.external_url) && (
                                                         <a 
                                                           href={resrc.file_url || resrc.external_url} 
                                                           target="_blank" 
                                                           rel="noopener noreferrer" 
-                                                          className="text-[#2563EB] hover:underline shrink-0"
+                                                          className="text-[#6E79F4] hover:underline shrink-0"
                                                         >
                                                           <ExternalLink size={9} />
                                                         </a>
@@ -708,7 +708,7 @@ export default function LibraryBuilder() {
                                                           else await refreshResources(les.id);
                                                         }
                                                       }}
-                                                      className="text-[#DC2626] hover:text-red-700 p-0.5 hover:bg-slate-100 rounded"
+                                                      className="text-[#F0555D] hover:text-red-700 p-0.5 hover:bg-[#1A1C22] rounded"
                                                       title="Delete Resource"
                                                     >
                                                       <Trash2 size={11} />
@@ -716,7 +716,7 @@ export default function LibraryBuilder() {
                                                   </div>
                                                 ))
                                               ) : (
-                                                <p className="text-[9px] text-[#475569] italic">No resources attached to this lesson.</p>
+                                                <p className="text-[9px] text-[#C2C6D1] italic">No resources attached to this lesson.</p>
                                               )
                                             ) : (
                                               <SecondaryLoader variant="skeleton" message="Loading resource attachments..." className="!border-0 !p-1 shadow-none bg-transparent" />
@@ -729,7 +729,7 @@ export default function LibraryBuilder() {
                                     );
                                   })
                                 ) : (
-                                  <p className="text-[10px] text-[#475569] italic">No lessons in this module.</p>
+                                  <p className="text-[10px] text-[#C2C6D1] italic">No lessons in this module.</p>
                                 )}
                                 </div>
                               </div>
@@ -739,7 +739,7 @@ export default function LibraryBuilder() {
                         );
                       })
                     ) : (
-                      <div className="text-center py-6 text-[#475569] italic">
+                      <div className="text-center py-6 text-[#C2C6D1] italic">
                         No curriculum modules defined.
                       </div>
                     )}
@@ -749,9 +749,9 @@ export default function LibraryBuilder() {
 
             </div>
           ) : (
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center text-xs text-[#475569] shadow-sm">
-              <BookOpen className="mx-auto mb-2 text-[#475569]/40" size={32} />
-              <p className="font-semibold text-[#0F172A]">Select a Course Blueprint from the left pane</p>
+            <div className="bg-[#131418] border border-[#23252C] rounded-xl p-12 text-center text-xs text-[#C2C6D1] shadow-sm">
+              <BookOpen className="mx-auto mb-2 text-[#C2C6D1]/40" size={32} />
+              <p className="font-semibold text-[#EDEFF5]">Select a Course Blueprint from the left pane</p>
               <p className="mt-1">Manage nested syllabus templates, lessons, and assets without affecting student live classes.</p>
             </div>
           )}
@@ -765,22 +765,22 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setCourseDrawerOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
             {/* Header */}
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-bold text-sm text-[#0F172A] flex items-center gap-1.5">
-                  <BookOpen size={16} className="text-[#2563EB]" /> {editingCourse ? "Edit Course Blueprint" : "Create Course Blueprint"}
+                <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
+                  <BookOpen size={16} className="text-[#6E79F4]" /> {editingCourse ? "Edit Course Blueprint" : "Create Course Blueprint"}
                 </h3>
-                <p className="text-[10px] text-[#475569] mt-0.5">Define metadata and structures for courses cloned later into paths.</p>
+                <p className="text-[10px] text-[#C2C6D1] mt-0.5">Define metadata and structures for courses cloned later into paths.</p>
               </div>
               <button
                 onClick={() => setCourseDrawerOpen(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
               >
                 ✕
               </button>
@@ -790,7 +790,7 @@ export default function LibraryBuilder() {
             <form onSubmit={handleCourseSubmit} className="flex-1 flex flex-col min-h-0">
               <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Blueprint Title *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Blueprint Title *</label>
                   <input
                     type="text"
                     placeholder="e.g. React Fundamentals"
@@ -802,58 +802,58 @@ export default function LibraryBuilder() {
                         slug: editingCourse ? courseForm.slug : e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")
                       });
                     }}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Blueprint URL Slug *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Blueprint URL Slug *</label>
                   <input
                     type="text"
                     placeholder="e.g. react-fundamentals"
                     value={courseForm.slug}
                     onChange={(e) => setCourseForm({ ...courseForm, slug: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Description</label>
+                  <label className="block font-bold text-[#C2C6D1]">Description</label>
                   <textarea
                     placeholder="Course blueprint details, objectives..."
                     value={courseForm.description}
                     onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })}
                     rows={3}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm resize-none text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm resize-none text-[#EDEFF5]"
                   />
                 </div>
 
                 <div className="space-y-1 relative">
-                  <label className="block font-bold text-[#475569]">Course Type *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Course Type *</label>
                   <button
                     type="button"
                     onClick={() => setIsCourseTypeDropdownOpen(!isCourseTypeDropdownOpen)}
                     onBlur={() => setTimeout(() => setIsCourseTypeDropdownOpen(false), 200)}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-medium text-[#0F172A] flex justify-between items-center cursor-pointer"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-medium text-[#EDEFF5] flex justify-between items-center cursor-pointer"
                   >
                     <span>
                       {courseForm.course_type_code === "theory" && "Theory"}
                       {courseForm.course_type_code === "hybrid" && "Hybrid"}
                       {courseForm.course_type_code === "project" && "Project-based"}
                     </span>
-                    <ChevronDown size={14} className={`text-[#475569] transition-transform duration-200 ${isCourseTypeDropdownOpen ? "rotate-180" : ""}`} />
+                    <ChevronDown size={14} className={`text-[#C2C6D1] transition-transform duration-200 ${isCourseTypeDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
 
                   {isCourseTypeDropdownOpen && (
-                    <div className="absolute left-0 right-0 mt-1 bg-white border border-[#E2E8F0] rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
+                    <div className="absolute left-0 right-0 mt-1 bg-[#131418] border border-[#23252C] rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn">
                       <div
                         onMouseDown={() => {
                           setCourseForm({ ...courseForm, course_type_code: "theory" });
                           setIsCourseTypeDropdownOpen(false);
                         }}
-                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 transition-colors ${courseForm.course_type_code === "theory" ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#0F172A]"}`}
+                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-[#16171D] transition-colors ${courseForm.course_type_code === "theory" ? "bg-[#6E79F4]/5 text-[#6E79F4] font-bold" : "text-[#EDEFF5]"}`}
                       >
                         Theory
                       </div>
@@ -862,7 +862,7 @@ export default function LibraryBuilder() {
                           setCourseForm({ ...courseForm, course_type_code: "hybrid" });
                           setIsCourseTypeDropdownOpen(false);
                         }}
-                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 transition-colors ${courseForm.course_type_code === "hybrid" ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#0F172A]"}`}
+                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-[#16171D] transition-colors ${courseForm.course_type_code === "hybrid" ? "bg-[#6E79F4]/5 text-[#6E79F4] font-bold" : "text-[#EDEFF5]"}`}
                       >
                         Hybrid
                       </div>
@@ -871,7 +871,7 @@ export default function LibraryBuilder() {
                           setCourseForm({ ...courseForm, course_type_code: "project" });
                           setIsCourseTypeDropdownOpen(false);
                         }}
-                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 transition-colors ${courseForm.course_type_code === "project" ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#0F172A]"}`}
+                        className={`px-3 py-2 text-xs cursor-pointer hover:bg-[#16171D] transition-colors ${courseForm.course_type_code === "project" ? "bg-[#6E79F4]/5 text-[#6E79F4] font-bold" : "text-[#EDEFF5]"}`}
                       >
                         Project-based
                       </div>
@@ -881,18 +881,18 @@ export default function LibraryBuilder() {
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex flex-wrap justify-end gap-3 shrink-0">
+              <div className="bg-[#16171D] border-t border-[#23252C] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setCourseDrawerOpen(false)}
-                  className="border border-[#E2E8F0] hover:bg-slate-100 px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
+                  className="border border-[#23252C] hover:bg-[#1A1C22] px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-[#2563EB] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-colors cursor-pointer disabled:opacity-50"
+                  className="bg-[#6E79F4] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save Blueprint"}
                 </button>
@@ -908,22 +908,22 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setModuleDrawerOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
             {/* Header */}
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-bold text-sm text-[#0F172A] flex items-center gap-1.5">
-                  <Folder size={16} className="text-[#2563EB]" /> {editingModule ? "Edit Module Template" : "Add Module Template"}
+                <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
+                  <Folder size={16} className="text-[#6E79F4]" /> {editingModule ? "Edit Module Template" : "Add Module Template"}
                 </h3>
-                <p className="text-[10px] text-[#475569] mt-0.5">Organize course syllabus chapters or learning sections.</p>
+                <p className="text-[10px] text-[#C2C6D1] mt-0.5">Organize course syllabus chapters or learning sections.</p>
               </div>
               <button
                 onClick={() => setModuleDrawerOpen(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
               >
                 ✕
               </button>
@@ -933,53 +933,53 @@ export default function LibraryBuilder() {
             <form onSubmit={handleModuleSubmit} className="flex-1 flex flex-col min-h-0">
               <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Module Title *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Module Title *</label>
                   <input
                     type="text"
                     placeholder="e.g. Introduction to Routing"
                     value={moduleForm.title}
                     onChange={(e) => setModuleForm({ ...moduleForm, title: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Description</label>
+                  <label className="block font-bold text-[#C2C6D1]">Description</label>
                   <textarea
                     placeholder="Summary of module learning goals..."
                     value={moduleForm.description}
                     onChange={(e) => setModuleForm({ ...moduleForm, description: e.target.value })}
                     rows={3}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm resize-none text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm resize-none text-[#EDEFF5]"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Order Position</label>
+                  <label className="block font-bold text-[#C2C6D1]">Order Position</label>
                   <input
                     type="number"
                     value={moduleForm.position}
                     onChange={(e) => setModuleForm({ ...moduleForm, position: parseInt(e.target.value) || 1 })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     min={1}
                   />
                 </div>
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex flex-wrap justify-end gap-3 shrink-0">
+              <div className="bg-[#16171D] border-t border-[#23252C] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setModuleDrawerOpen(false)}
-                  className="border border-[#E2E8F0] hover:bg-slate-100 px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
+                  className="border border-[#23252C] hover:bg-[#1A1C22] px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-[#2563EB] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-colors cursor-pointer disabled:opacity-50"
+                  className="bg-[#6E79F4] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save Module"}
                 </button>
@@ -995,22 +995,22 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setLessonDrawerOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
             {/* Header */}
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-bold text-sm text-[#0F172A] flex items-center gap-1.5">
-                  <FileText size={16} className="text-[#2563EB]" /> {editingLesson ? "Edit Lesson Template" : "Add Lesson Template"}
+                <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
+                  <FileText size={16} className="text-[#6E79F4]" /> {editingLesson ? "Edit Lesson Template" : "Add Lesson Template"}
                 </h3>
-                <p className="text-[10px] text-[#475569] mt-0.5">Map dynamic content lessons to the module parent template.</p>
+                <p className="text-[10px] text-[#C2C6D1] mt-0.5">Map dynamic content lessons to the module parent template.</p>
               </div>
               <button
                 onClick={() => setLessonDrawerOpen(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
               >
                 ✕
               </button>
@@ -1020,23 +1020,23 @@ export default function LibraryBuilder() {
             <form onSubmit={handleLessonSubmit} className="flex-1 flex flex-col min-h-0">
               <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Lesson Title *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Lesson Title *</label>
                   <input
                     type="text"
                     placeholder="e.g. Dynamic Page Routing"
                     value={lessonForm.title}
                     onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Lesson Type *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Lesson Type *</label>
                   <select
                     value={lessonForm.lesson_type_code}
                     onChange={(e) => setLessonForm({ ...lessonForm, lesson_type_code: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-medium text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-medium text-[#EDEFF5]"
                   >
                     <option value="text">Text Document</option>
                     <option value="video">Video Lecture</option>
@@ -1045,24 +1045,24 @@ export default function LibraryBuilder() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Video URL (Optional)</label>
+                  <label className="block font-bold text-[#C2C6D1]">Video URL (Optional)</label>
                   <input
                     type="text"
                     placeholder="https://vimeo.com/... or cloud storage URL"
                     value={lessonForm.video_url}
                     onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Learning Content (Markdown / Text) *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Learning Content (Markdown / Text) *</label>
                   <textarea
                     placeholder="Enter markdown or text content for this lesson template..."
                     value={lessonForm.content_text}
                     onChange={(e) => setLessonForm({ ...lessonForm, content_text: e.target.value })}
                     rows={6}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     required
                   />
                 </div>
@@ -1070,18 +1070,18 @@ export default function LibraryBuilder() {
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex flex-wrap justify-end gap-3 shrink-0">
+              <div className="bg-[#16171D] border-t border-[#23252C] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setLessonDrawerOpen(false)}
-                  className="border border-[#E2E8F0] hover:bg-slate-100 px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
+                  className="border border-[#23252C] hover:bg-[#1A1C22] px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-[#2563EB] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-colors cursor-pointer disabled:opacity-50"
+                  className="bg-[#6E79F4] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save Lesson"}
                 </button>
@@ -1097,22 +1097,22 @@ export default function LibraryBuilder() {
           {/* Backdrop overlay */}
           <div
             onClick={() => setResourceDrawerOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
 
           {/* Slide-over Drawer */}
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#0F172A]">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
             {/* Header */}
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-bold text-sm text-[#0F172A] flex items-center gap-1.5">
-                  <Link2 size={16} className="text-[#2563EB]" /> Add Resource Template
+                <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
+                  <Link2 size={16} className="text-[#6E79F4]" /> Add Resource Template
                 </h3>
-                <p className="text-[10px] text-[#475569] mt-0.5">Attach static documents, files, or reference links to the lesson.</p>
+                <p className="text-[10px] text-[#C2C6D1] mt-0.5">Attach static documents, files, or reference links to the lesson.</p>
               </div>
               <button
                 onClick={() => setResourceDrawerOpen(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-lg text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
               >
                 ✕
               </button>
@@ -1122,23 +1122,23 @@ export default function LibraryBuilder() {
             <form onSubmit={handleResourceSubmit} className="flex-1 flex flex-col min-h-0">
               <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Resource Title *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Resource Title *</label>
                   <input
                     type="text"
                     placeholder="e.g. GitHub Repository, Assignment PDF"
                     value={resourceForm.title}
                     onChange={(e) => setResourceForm({ ...resourceForm, title: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">Resource Type *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Resource Type *</label>
                   <select
                     value={resourceForm.resource_type}
                     onChange={(e) => setResourceForm({ ...resourceForm, resource_type: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-medium text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-medium text-[#EDEFF5]"
                   >
                     <option value="link">External Web Link</option>
                     <option value="pdf">PDF File</option>
@@ -1148,41 +1148,41 @@ export default function LibraryBuilder() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">External URL (Optional)</label>
+                  <label className="block font-bold text-[#C2C6D1]">External URL (Optional)</label>
                   <input
                     type="text"
                     placeholder="https://github.com/..."
                     value={resourceForm.external_url}
                     onChange={(e) => setResourceForm({ ...resourceForm, external_url: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#475569]">File URL (Optional)</label>
+                  <label className="block font-bold text-[#C2C6D1]">File URL (Optional)</label>
                   <input
                     type="text"
                     placeholder="course-assets/handouts/assignment-1.pdf"
                     value={resourceForm.file_url}
                     onChange={(e) => setResourceForm({ ...resourceForm, file_url: e.target.value })}
-                    className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono text-[#0F172A]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"
                   />
                 </div>
               </div>
 
               {/* Actions Footer */}
-              <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex flex-wrap justify-end gap-3 shrink-0">
+              <div className="bg-[#16171D] border-t border-[#23252C] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setResourceDrawerOpen(false)}
-                  className="border border-[#E2E8F0] hover:bg-slate-100 px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
+                  className="border border-[#23252C] hover:bg-[#1A1C22] px-4 py-2 rounded-lg font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-[#2563EB] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-colors cursor-pointer disabled:opacity-50"
+                  className="bg-[#6E79F4] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {saving ? "Adding..." : "Add Resource Template"}
                 </button>

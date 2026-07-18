@@ -32,6 +32,7 @@ import Link from "next/link";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCache } from "@/components/cache-provider";
 import { useQueryClient } from "@tanstack/react-query";
+import AppShell from "@/components/app-shell";
 import { seedAcademicListCaches, unwrapActionResult } from "@/lib/dashboard-query";
 import { 
   Building, 
@@ -663,16 +664,16 @@ export default function StudentConsole({
     const isPdf = lowerUrl.includes(".pdf") || lowerUrl.includes("/object/public/") || lowerUrl.includes("supabase") || lowerUrl.includes("drive.google.com");
     if (isPdf) {
       return (
-        <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden shadow-sm h-[380px] sm:h-[480px] md:h-[600px] w-full flex flex-col mb-4">
-          <div className="bg-slate-50 border-b border-[#E2E8F0] px-4 py-2.5 flex items-center justify-between text-[10px]">
-            <span className="font-bold text-[#0F172A] flex items-center gap-1.5">
-              <File size={13} className="text-[#2563EB]" /> Embedded PDF Study Material
+        <div className="bg-[#131418] border border-[#23252C] rounded-xl overflow-hidden shadow-sm h-[380px] sm:h-[480px] md:h-[600px] w-full flex flex-col mb-4">
+          <div className="bg-[#16171D] border-b border-[#23252C] px-4 py-2.5 flex items-center justify-between text-[10px]">
+            <span className="font-bold text-[#EDEFF5] flex items-center gap-1.5">
+              <File size={13} className="text-[#6E79F4]" /> Embedded PDF Study Material
             </span>
             <a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#2563EB] hover:underline font-bold flex items-center gap-0.5"
+              className="text-[#6E79F4] hover:underline font-bold flex items-center gap-0.5"
             >
               Open in New Tab <ExternalLink size={10} />
             </a>
@@ -686,13 +687,13 @@ export default function StudentConsole({
     // rather than silently mislabeling it.
     return (
       <div className="bg-slate-900 aspect-video rounded-xl flex flex-col items-center justify-center text-white p-6 text-center border border-slate-800 shadow-sm mb-4">
-        <Play size={32} className="text-[#2563EB] mb-2 fill-[#2563EB]" />
+        <Play size={32} className="text-[#6E79F4] mb-2 fill-[#6E79F4]" />
         <p className="text-xs font-semibold mb-3">External Video Resource</p>
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="bg-[#2563EB] hover:bg-[#2563EB]/90 text-white font-bold text-[11px] px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+          className="bg-[#6E79F4] hover:bg-[#6E79F4]/90 text-white font-bold text-[11px] px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
         >
           Play Video External Link <ExternalLink size={10} />
         </a>
@@ -713,7 +714,7 @@ export default function StudentConsole({
       ? "bg-red-50 text-red-700 border-red-100"
       : isActive
       ? "bg-amber-50 text-amber-700 border-amber-100"
-      : "bg-slate-50 text-[#475569] border-[#E2E8F0]";
+      : "bg-[#16171D] text-[#C2C6D1] border-[#23252C]";
     const sizeClasses = size === "sm" ? "px-2 py-0.5 text-[9px]" : "px-1.5 py-0.5 text-[8px]";
     return (
       <span className={`rounded font-bold border uppercase tracking-wide ${sizeClasses} ${style}`}>
@@ -1368,13 +1369,13 @@ export default function StudentConsole({
       <DashboardLoader loading={loadingStudentDelivery} message="Setting up your Student Hub..." />
       {quizViolationWarning && (
         <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 border-4 border-[#DC2626]">
-            <ShieldAlert size={48} className="text-[#DC2626] mx-auto animate-pulse" />
+          <div className="bg-[#131418] rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 border-4 border-[#F0555D]">
+            <ShieldAlert size={48} className="text-[#F0555D] mx-auto animate-pulse" />
             <div>
-              <h3 className="font-bold text-sm text-[#DC2626] uppercase tracking-wide">Quiz Environment Violation Detected</h3>
-              <p className="text-[#475569] text-xs mt-2 leading-relaxed">
+              <h3 className="font-bold text-sm text-[#F0555D] uppercase tracking-wide">Quiz Environment Violation Detected</h3>
+              <p className="text-[#C2C6D1] text-xs mt-2 leading-relaxed">
                 You left fullscreen mode or switched away from the quiz. Return within{" "}
-                <span className="font-mono font-bold text-[#DC2626]">
+                <span className="font-mono font-bold text-[#F0555D]">
                   {Math.max(0, Math.ceil((quizViolationWarning.deadline - Date.now()) / 1000))}s
                 </span>{" "}
                 or your attempt will be forfeited with a score of 0. This is your only warning.
@@ -1384,37 +1385,81 @@ export default function StudentConsole({
               onClick={() => {
                 document.documentElement.requestFullscreen().catch(() => {});
               }}
-              className="bg-[#DC2626] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold hover:bg-[#DC2626]/90 transition-all text-xs flex items-center gap-1.5 justify-center w-full"
+              className="bg-[#F0555D] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold hover:bg-[#F0555D]/90 transition-all text-xs flex items-center gap-1.5 justify-center w-full"
             >
               <Maximize2 size={13} /> Return to Fullscreen &amp; Continue
             </button>
           </div>
         </div>
       )}
-      <div className="flex flex-col gap-6 w-full max-w-full overflow-x-hidden" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
-      {/* Global Program Selector Bar */}
-      <div className="bg-white border border-[#E2E8F0] p-4 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <AppShell
+        portalLabel="Student Hub"
+        pageTitle={
+          activeParentTab === "overview"
+            ? "Overview"
+            : activeParentTab === "curriculum"
+            ? "Syllabus"
+            : activeTab === "projects"
+            ? "Projects"
+            : "Quizzes"
+        }
+        items={[
+          { id: "overview", label: "Overview", icon: Building },
+          { id: "curriculum", label: "Syllabus", icon: BookOpen, badge: selectedCohort?.courses?.length || 0 },
+          {
+            id: "assessments",
+            label: "Assessments",
+            icon: Award,
+            children: [
+              { id: "quizzes", label: "Quizzes", badge: quizCount },
+              { id: "projects", label: "Projects", badge: projectCount },
+              { id: "challenges", label: "Code Challenges", badge: challengeCount },
+            ],
+          },
+        ]}
+        activeId={activeParentTab}
+        activeChildId={activeTab}
+        onSelect={(id, childId) => {
+          if (id === "overview") {
+            setActiveParentTab("overview");
+            setActiveTab("overview");
+            setSelectedCourse(null);
+            setActiveLesson(null);
+          } else if (id === "curriculum") {
+            setActiveParentTab("curriculum");
+            setActiveTab("academics");
+            setSelectedCourse(null);
+            setActiveLesson(null);
+          } else if (id === "assessments") {
+            if (childId === "challenges") {
+              window.location.href = "/student/programming";
+              return;
+            }
+            setActiveParentTab("assessments");
+            setActiveTab(childId === "projects" ? "projects" : "quizzes");
+            setSelectedQuizActivity(null);
+            setSelectedProjectActivity(null);
+            setSelectedChallengeActivity(null);
+          }
+        }}
+        userName={fullName}
+        userMeta={institution ? institution.name : "Public Cohort"}
+        headerActions={
           <div className="relative" ref={cohortDropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-2.5 bg-white border border-[#E2E8F0] px-4 py-2.5 rounded-xl hover:border-[#2563EB]/30 hover:bg-[#2563EB]/5 transition-all text-xs font-semibold text-[#0F172A] shadow-xs"
+              className="flex items-center gap-2 bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl hover:border-[#6E79F4]/40 hover:bg-[#6E79F4]/5 transition-all text-[11px] font-bold text-[#EDEFF5] cursor-pointer max-w-[220px] sm:max-w-[320px]"
             >
-              <div className="bg-[#2563EB]/10 text-[#2563EB] p-1.5 rounded-lg">
-                <GraduationCap size={15} />
-              </div>
-              <div className="flex flex-col text-left">
-                <span className="text-[9px] text-[#475569] font-bold uppercase tracking-wider">Active Group / Cohort</span>
-                <span className="truncate max-w-[150px] sm:max-w-[320px] font-bold">
-                  {selectedCohort ? `${selectedCohort.name} (${selectedCohort.code})` : "No Active Group"}
-                </span>
-              </div>
-              <ChevronDown size={14} className="text-[#475569] ml-1" />
+              <GraduationCap size={14} className="text-[#6E79F4] shrink-0" />
+              <span className="truncate">
+                {selectedCohort ? `${selectedCohort.name} (${selectedCohort.code})` : "No Active Group"}
+              </span>
+              <ChevronDown size={13} className="text-[#A3A9B6] shrink-0" />
             </button>
 
             {isDropdownOpen && (
-              <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-[calc(100vw-2.5rem)] max-w-80 bg-white border border-[#E2E8F0] rounded-xl shadow-lg z-50 py-1.5 animate-fadeIn">
-                <div className="px-4 py-1.5 border-b border-[#E2E8F0] text-[9px] font-bold text-[#475569] uppercase tracking-wider">
+              <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-[#131418] border border-[#23252C] rounded-xl shadow-card z-50 py-1.5 animate-fadeIn">
+                <div className="px-4 py-1.5 border-b border-[#23252C] text-[9px] font-bold text-[#A3A9B6] uppercase tracking-wider">
                   Switch Active Group / Cohort
                 </div>
                 <div className="max-h-60 overflow-y-auto">
@@ -1443,226 +1488,27 @@ export default function StudentConsole({
                             handleSelectCohort(coh);
                             setIsDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-all flex flex-col gap-0.5 text-xs ${
-                            selectedCohort?.id === coh.id ? "bg-[#2563EB]/5 text-[#2563EB] font-bold" : "text-[#475569]"
+                          className={`w-full text-left px-4 py-2.5 hover:bg-[#16171D] transition-all flex flex-col gap-0.5 text-xs cursor-pointer ${
+                            selectedCohort?.id === coh.id ? "bg-[#6E79F4]/5 text-[#6E79F4] font-bold" : "text-[#C2C6D1]"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-bold truncate min-w-0 flex-1">{coh.name} ({coh.code})</span>
-                            {selectedCohort?.id === coh.id && <CheckCircle2 size={13} className="text-[#2563EB] shrink-0" />}
+                            {selectedCohort?.id === coh.id && <CheckCircle2 size={13} className="text-[#6E79F4] shrink-0" />}
                           </div>
-                          <span className="text-[9px] text-[#475569] truncate font-medium">Program: {coh.programTitle}</span>
+                          <span className="text-[9px] text-[#A3A9B6] truncate font-medium">Program: {coh.programTitle}</span>
                         </button>
                       ));
                     }
-                    return <div className="px-4 py-3 text-xs text-[#475569]">No groups available.</div>;
+                    return <div className="px-4 py-3 text-xs text-[#C2C6D1]">No groups available.</div>;
                   })()}
                 </div>
               </div>
             )}
           </div>
-        </div>
-        
-        {selectedCohort && (
-          <div className="text-[10px] text-[#475569] font-medium flex items-center gap-2">
-            <span className="bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[9px]">
-              Program: {selectedCohort.programTitle}
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-6 md:items-start text-xs">
-
-        {/* MOBILE TAB STRIP (below md) */}
-        <div className="md:hidden w-full -mx-0 bg-white border border-[#E2E8F0] rounded-2xl shadow-sm p-2 flex flex-col gap-2">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
-            <button
-              onClick={() => {
-                setActiveParentTab("overview");
-                setActiveTab("overview");
-                setSelectedCourse(null);
-                setActiveLesson(null);
-              }}
-              className={`shrink-0 min-h-[40px] flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                activeParentTab === "overview"
-                  ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                  : "bg-white border-[#E2E8F0] text-[#475569]"
-              }`}
-            >
-              <Building size={16} /> Overview
-            </button>
-            <button
-              onClick={() => {
-                setActiveParentTab("curriculum");
-                setActiveTab("academics");
-                setSelectedCourse(null);
-                setActiveLesson(null);
-              }}
-              className={`shrink-0 min-h-[40px] flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                activeParentTab === "curriculum"
-                  ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                  : "bg-white border-[#E2E8F0] text-[#475569]"
-              }`}
-            >
-              <BookOpen size={16} /> Syllabus
-            </button>
-            <button
-              onClick={() => {
-                setActiveParentTab("assessments");
-                setActiveTab("quizzes");
-                setSelectedQuizActivity(null);
-                setSelectedProjectActivity(null);
-                setSelectedChallengeActivity(null);
-              }}
-              className={`shrink-0 min-h-[40px] flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                activeParentTab === "assessments"
-                  ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                  : "bg-white border-[#E2E8F0] text-[#475569]"
-              }`}
-            >
-              <Award size={16} /> Assessments
-            </button>
-          </div>
-
-          {activeParentTab === "assessments" && (
-            <div className="flex items-center gap-2 overflow-x-auto pt-1 border-t border-[#E2E8F0] -mx-1 px-1 no-scrollbar">
-              <button
-                onClick={() => {
-                  setActiveTab("quizzes");
-                  setSelectedQuizActivity(null);
-                  setSelectedProjectActivity(null);
-                  setSelectedChallengeActivity(null);
-                }}
-                className={`shrink-0 min-h-[40px] flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === "quizzes" ? "bg-[#2563EB]/10 text-[#2563EB]" : "text-[#475569] bg-slate-50"
-                }`}
-              >
-                Quizzes <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{quizCount}</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("projects");
-                  setSelectedQuizActivity(null);
-                  setSelectedProjectActivity(null);
-                  setSelectedChallengeActivity(null);
-                }}
-                className={`shrink-0 min-h-[40px] flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === "projects" ? "bg-[#2563EB]/10 text-[#2563EB]" : "text-[#475569] bg-slate-50"
-                }`}
-              >
-                Projects <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{projectCount}</span>
-              </button>
-              <Link
-                href="/student/programming"
-                className="shrink-0 min-h-[40px] flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer text-[#475569] bg-slate-50"
-              >
-                Code Challenges <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{challengeCount}</span>
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* NAV RAIL (md and up) */}
-        <div className="hidden md:flex flex-col gap-1 shrink-0 w-56 bg-white border border-[#E2E8F0] p-3 rounded-2xl shadow-sm h-fit">
-          <button
-            onClick={() => {
-              setActiveParentTab("overview");
-              setActiveTab("overview");
-              setSelectedCourse(null);
-              setActiveLesson(null);
-            }}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all cursor-pointer ${
-              activeParentTab === "overview"
-                ? "bg-[#2563EB] text-white shadow-sm"
-                : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-            }`}
-          >
-            <Building size={16} /> Overview
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveParentTab("curriculum");
-              setActiveTab("academics");
-              setSelectedCourse(null);
-              setActiveLesson(null);
-            }}
-            className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all cursor-pointer ${
-              activeParentTab === "curriculum"
-                ? "bg-[#2563EB] text-white shadow-sm"
-                : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-            }`}
-          >
-            <span className="flex items-center gap-2.5"><BookOpen size={16} /> Syllabus</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeParentTab === "curriculum" ? "bg-white/20" : "bg-slate-100 text-slate-700"}`}>
-              {selectedCohort?.courses?.length || 0}
-            </span>
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveParentTab("assessments");
-              setActiveTab("quizzes");
-              setSelectedQuizActivity(null);
-              setSelectedProjectActivity(null);
-              setSelectedChallengeActivity(null);
-            }}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-left transition-all cursor-pointer ${
-              activeParentTab === "assessments"
-                ? "bg-[#2563EB] text-white shadow-sm"
-                : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-            }`}
-          >
-            <Award size={16} /> Assessments
-          </button>
-
-          {activeParentTab === "assessments" && (
-            <div className="flex flex-col gap-1 pl-4 mt-1 border-l-2 border-[#E2E8F0] ml-4">
-              <button
-                onClick={() => {
-                  setActiveTab("quizzes");
-                  setSelectedQuizActivity(null);
-                  setSelectedProjectActivity(null);
-                  setSelectedChallengeActivity(null);
-                }}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                  activeTab === "quizzes"
-                    ? "bg-[#2563EB]/10 text-[#2563EB]"
-                    : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-                }`}
-              >
-                <span>Quizzes</span>
-                <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{quizCount}</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveTab("projects");
-                  setSelectedQuizActivity(null);
-                  setSelectedProjectActivity(null);
-                  setSelectedChallengeActivity(null);
-                }}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
-                  activeTab === "projects"
-                    ? "bg-[#2563EB]/10 text-[#2563EB]"
-                    : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-                }`}
-              >
-                <span>Projects</span>
-                <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{projectCount}</span>
-              </button>
-
-              <Link
-                href="/student/programming"
-                className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
-              >
-                <span>Code Challenges</span>
-                <span className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{challengeCount}</span>
-              </Link>
-            </div>
-          )}
-        </div>
+        }
+      >
+        <div className="flex flex-col gap-6 w-full max-w-full overflow-x-hidden animate-pageIn">
 
         {/* Main Content Area */}
         <div className="flex-1 min-w-0 flex flex-col gap-6">
@@ -1672,14 +1518,14 @@ export default function StudentConsole({
           <div className="space-y-8 animate-fadeIn">
 
             {/* Header Greeting Block */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] p-6 sm:p-7 rounded-2xl shadow-md flex flex-col gap-6">
-              <div className="absolute -top-16 -right-16 w-64 h-64 bg-[#2563EB]/25 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-20 -left-10 w-56 h-56 bg-[#10B981]/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#151725] via-[#12131A] to-[#0E0F13] border border-[#23252C] p-6 sm:p-7 rounded-2xl shadow-card flex flex-col gap-6">
+              <div className="absolute -top-16 -right-16 w-64 h-64 bg-[#6E79F4]/25 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-20 -left-10 w-56 h-56 bg-[#2FBF71]/10 rounded-full blur-3xl pointer-events-none" />
 
               <div className="relative z-10 flex flex-col md:flex-row justify-between md:items-center gap-6">
                 <div className="space-y-1.5 w-full md:w-auto min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="bg-white/10 text-white border border-white/15 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm">
+                    <span className="bg-[#131418]/10 text-white border border-white/15 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm">
                       Student Hub
                     </span>
                     {selectedCohort && (
@@ -1705,7 +1551,7 @@ export default function StudentConsole({
                       setActiveParentTab("curriculum");
                       setActiveTab("academics");
                     }}
-                    className="relative z-10 flex items-center gap-2 bg-[#2563EB] hover:bg-[#3B82F6] text-white px-4 py-2.5 rounded-xl shadow-sm text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shrink-0"
+                    className="relative z-10 flex items-center gap-2 bg-[#6E79F4] hover:bg-[#3B82F6] text-white px-4 py-2.5 rounded-xl shadow-sm text-xs font-bold transition-all active:scale-[0.98] cursor-pointer shrink-0"
                   >
                     <Play size={13} className="fill-white" />
                     <span>Continue Learning</span>
@@ -1724,7 +1570,7 @@ export default function StudentConsole({
                   <button
                     key={pill.label}
                     onClick={pill.onClick}
-                    className="mt-2 flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                    className="mt-2 flex items-center gap-1.5 bg-[#131418]/5 hover:bg-[#131418]/10 border border-white/10 text-slate-200 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
                   >
                     <pill.icon size={12} /> {pill.label}
                   </button>
@@ -1739,7 +1585,7 @@ export default function StudentConsole({
                   key: "progress",
                   label: "Program Progress",
                   icon: BookOpen,
-                  color: "#2563EB",
+                  color: "#6E79F4",
                   value: activeCoursesList.length > 0
                     ? `${Math.round(activeCoursesList.reduce((acc: number, c: any) => acc + (c.progress?.progress_percentage || 0), 0) / activeCoursesList.length)}%`
                     : "0%",
@@ -1749,7 +1595,7 @@ export default function StudentConsole({
                   key: "active-courses",
                   label: "Active Courses",
                   icon: Clock,
-                  color: "#F59E0B",
+                  color: "#F5B04A",
                   value: `${inProgressCourses} / ${totalEnrolledCourses}`,
                   caption: "Courses in Progress",
                 },
@@ -1757,7 +1603,7 @@ export default function StudentConsole({
                   key: "completed-tasks",
                   label: "Completed Tasks",
                   icon: Award,
-                  color: "#10B981",
+                  color: "#2FBF71",
                   value: `${completedActivities} Done`,
                   caption: "Assessments Completed",
                 },
@@ -1765,24 +1611,24 @@ export default function StudentConsole({
                   key: "pending-tasks",
                   label: "Pending Work",
                   icon: FileQuestion,
-                  color: "#06B6D4",
+                  color: "#22D3EE",
                   value: `${pendingActivities} Tasks`,
                   caption: "Awaiting Submission",
                 },
               ].map((stat) => (
                 <div
                   key={stat.key}
-                  className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-subtle space-y-3 hover:shadow-md hover:border-[#2563EB]/15 transition-all duration-200"
+                  className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 shadow-subtle space-y-3 hover:shadow-md hover:border-[#6E79F4]/15 transition-all duration-200"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-wider">{stat.label}</span>
+                    <span className="text-[10px] text-[#C2C6D1] font-bold uppercase tracking-wider">{stat.label}</span>
                     <div className="p-2 rounded-xl" style={{ backgroundColor: `${stat.color}1A`, color: stat.color }}>
                       <stat.icon size={16} />
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-[#0F172A] leading-tight">{stat.value}</h3>
-                    <p className="text-[10px] text-[#64748B] font-semibold mt-0.5">{stat.caption}</p>
+                    <h3 className="text-lg font-bold text-[#EDEFF5] leading-tight">{stat.value}</h3>
+                    <p className="text-[10px] text-[#C2C6D1] font-semibold mt-0.5">{stat.caption}</p>
                   </div>
                 </div>
               ))}
@@ -1796,25 +1642,25 @@ export default function StudentConsole({
 
                 {/* Continue Learning spotlight */}
                 {continueCourse && (
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0 w-full sm:w-auto">
                       <div className="relative w-14 h-14 shrink-0">
                         <svg viewBox="0 0 40 40" className="w-14 h-14 -rotate-90">
-                          <circle cx="20" cy="20" r="16" fill="none" stroke="#E2E8F0" strokeWidth="4" />
+                          <circle cx="20" cy="20" r="16" fill="none" stroke="#23252C" strokeWidth="4" />
                           <circle
                             cx="20" cy="20" r="16" fill="none"
-                            stroke="#2563EB" strokeWidth="4" strokeLinecap="round"
+                            stroke="#6E79F4" strokeWidth="4" strokeLinecap="round"
                             strokeDasharray={`${(2 * Math.PI * 16 * (continueCourse.progress?.progress_percentage || 0)) / 100} ${2 * Math.PI * 16}`}
                           />
                         </svg>
-                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-[#0F172A]">
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-[#EDEFF5]">
                           {continueCourse.progress?.progress_percentage || 0}%
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#2563EB]">Continue Learning</p>
-                        <h3 className="font-bold text-sm text-[#0F172A] truncate">{continueCourse.title}</h3>
-                        <p className="text-[10px] text-[#64748B] mt-0.5">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#6E79F4]">Continue Learning</p>
+                        <h3 className="font-bold text-sm text-[#EDEFF5] truncate">{continueCourse.title}</h3>
+                        <p className="text-[10px] text-[#C2C6D1] mt-0.5">
                           Lessons {continueCourse.progress?.completed_lessons || 0}/{continueCourse.progress?.total_lessons || 0}
                           {(continueCourse.progress?.completed_lessons || 0) >= (continueCourse.progress?.total_lessons || 0) && (continueCourse.progress?.progress_percentage || 0) < 100
                             ? " • assessments pending"
@@ -1828,7 +1674,7 @@ export default function StudentConsole({
                         setActiveParentTab("curriculum");
                         setActiveTab("academics");
                       }}
-                      className="bg-[#2563EB] hover:bg-[#2563EB]/90 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98] cursor-pointer shrink-0 w-full sm:w-auto"
+                      className="bg-[#6E79F4] hover:bg-[#6E79F4]/90 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition-all active:scale-[0.98] cursor-pointer shrink-0 w-full sm:w-auto"
                     >
                       Resume
                     </button>
@@ -1837,12 +1683,12 @@ export default function StudentConsole({
 
                 {/* Enrolled Courses list */}
                 {totalEnrolledCourses > 0 ? (
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
-                    <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
-                      <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-2">
-                        <BookOpenCheck className="text-[#2563EB]" size={14} /> Enrolled Courses
+                  <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
+                    <div className="flex items-center justify-between border-b border-[#23252C] pb-3">
+                      <h3 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider flex items-center gap-2">
+                        <BookOpenCheck className="text-[#6E79F4]" size={14} /> Enrolled Courses
                       </h3>
-                      <span className="text-[10px] text-[#64748B] font-bold">
+                      <span className="text-[10px] text-[#C2C6D1] font-bold">
                         {totalEnrolledCourses} Course{totalEnrolledCourses > 1 ? "s" : ""}
                       </span>
                     </div>
@@ -1858,21 +1704,21 @@ export default function StudentConsole({
                               setActiveParentTab("curriculum");
                               setActiveTab("academics");
                             }}
-                            className="w-full text-left border border-[#E2E8F0] hover:border-[#2563EB]/25 hover:bg-slate-50/50 rounded-xl p-3 space-y-2 active:scale-[0.98] transition-all cursor-pointer"
+                            className="w-full text-left border border-[#23252C] hover:border-[#6E79F4]/25 hover:bg-[#16171D]/50 rounded-xl p-3 space-y-2 active:scale-[0.98] transition-all cursor-pointer"
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-bold text-xs text-[#0F172A] truncate min-w-0 flex-1">{course.title}</span>
+                              <span className="font-bold text-xs text-[#EDEFF5] truncate min-w-0 flex-1">{course.title}</span>
                               <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase shrink-0 ${pct === 100 ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"}`}>
                                 {pct}%
                               </span>
                             </div>
                             <div className="w-full bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full ${pct === 100 ? "bg-[#10B981]" : "bg-[#2563EB]"}`}
+                                className={`h-full rounded-full ${pct === 100 ? "bg-[#2FBF71]" : "bg-[#6E79F4]"}`}
                                 style={{ width: `${pct}%` }}
                               />
                             </div>
-                            <div className="flex justify-between text-[9px] text-[#64748B] font-semibold">
+                            <div className="flex justify-between text-[9px] text-[#C2C6D1] font-semibold">
                               <span className="capitalize">{(course.progress?.status_code || "Not Started").replace("_", " ")}</span>
                               <span>Lessons {course.progress?.completed_lessons || 0}/{course.progress?.total_lessons || 0}</span>
                             </div>
@@ -1882,9 +1728,9 @@ export default function StudentConsole({
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 text-center shadow-subtle space-y-2">
-                    <p className="text-sm font-semibold text-[#0F172A]">No study curriculum found</p>
-                    <p className="text-xs text-[#64748B]">You are not currently enrolled in any active cohorts.</p>
+                  <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-8 text-center shadow-subtle space-y-2">
+                    <p className="text-sm font-semibold text-[#EDEFF5]">No study curriculum found</p>
+                    <p className="text-xs text-[#C2C6D1]">You are not currently enrolled in any active cohorts.</p>
                   </div>
                 )}
 
@@ -1895,15 +1741,15 @@ export default function StudentConsole({
 
                 {/* Attendance Overview card */}
                 {selectedCohort && (
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
-                    <h3 className="text-xs font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-3 flex items-center gap-2 uppercase tracking-wider">
-                      <Calendar className="text-[#2563EB]" size={14} /> Attendance Overview
+                  <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-4 sm:p-5 shadow-subtle space-y-4">
+                    <h3 className="text-xs font-bold text-[#EDEFF5] border-b border-[#23252C] pb-3 flex items-center gap-2 uppercase tracking-wider">
+                      <Calendar className="text-[#6E79F4]" size={14} /> Attendance Overview
                     </h3>
 
                     {loadingAttendance ? (
                       <div className="space-y-2">
-                        <div className="h-6 bg-slate-100 animate-pulse rounded-lg w-1/3"></div>
-                        <div className="h-2 bg-slate-100 animate-pulse rounded-full"></div>
+                        <div className="h-6 bg-[#1A1C22] animate-pulse rounded-lg w-1/3"></div>
+                        <div className="h-2 bg-[#1A1C22] animate-pulse rounded-full"></div>
                       </div>
                     ) : attendancePercentage !== null ? (
                       <>
@@ -1911,12 +1757,12 @@ export default function StudentConsole({
                           <div>
                             <span
                               className={`text-2xl font-bold leading-none ${
-                                attendancePercentage >= 75 ? "text-[#10B981]" : attendancePercentage >= 50 ? "text-[#F59E0B]" : "text-red-500"
+                                attendancePercentage >= 75 ? "text-[#2FBF71]" : attendancePercentage >= 50 ? "text-[#F5B04A]" : "text-red-500"
                               }`}
                             >
                               {Math.round(attendancePercentage)}%
                             </span>
-                            <p className="text-[10px] text-[#64748B] font-semibold mt-1">Present across {attendanceLogs.length} session{attendanceLogs.length !== 1 ? "s" : ""}</p>
+                            <p className="text-[10px] text-[#C2C6D1] font-semibold mt-1">Present across {attendanceLogs.length} session{attendanceLogs.length !== 1 ? "s" : ""}</p>
                           </div>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wide ${
@@ -1930,10 +1776,10 @@ export default function StudentConsole({
                             {attendancePercentage >= 75 ? "Good Standing" : attendancePercentage >= 50 ? "At Risk" : "Low Attendance"}
                           </span>
                         </div>
-                        <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full overflow-hidden">
+                        <div className="w-full bg-[#23252C] h-1.5 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              attendancePercentage >= 75 ? "bg-[#10B981]" : attendancePercentage >= 50 ? "bg-[#F59E0B]" : "bg-red-500"
+                              attendancePercentage >= 75 ? "bg-[#2FBF71]" : attendancePercentage >= 50 ? "bg-[#F5B04A]" : "bg-red-500"
                             }`}
                             style={{ width: `${Math.min(attendancePercentage, 100)}%` }}
                           />
@@ -1941,8 +1787,8 @@ export default function StudentConsole({
 
                         {attendanceLogs.length > 0 && (
                           <div className="space-y-1.5 pt-1">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#64748B]">Recent Sessions</p>
-                            <div className="divide-y divide-[#E2E8F0]">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#C2C6D1]">Recent Sessions</p>
+                            <div className="divide-y divide-[#23252C]">
                               {[...attendanceLogs].reverse().slice(0, 5).map((log: any, idx: number) => {
                                 const statusStyle =
                                   log.status === "present"
@@ -1951,10 +1797,10 @@ export default function StudentConsole({
                                     ? "bg-amber-50 text-amber-700 border-amber-100"
                                     : log.status === "absent"
                                     ? "bg-red-50 text-red-700 border-red-100"
-                                    : "bg-slate-50 text-[#64748B] border-[#E2E8F0]";
+                                    : "bg-[#16171D] text-[#C2C6D1] border-[#23252C]";
                                 return (
                                   <div key={`${log.date}-${idx}`} className="py-1.5 flex items-center justify-between text-[10px]">
-                                    <span className="text-[#475569] font-medium">
+                                    <span className="text-[#C2C6D1] font-medium">
                                       {new Date(log.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                                     </span>
                                     <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[8px] border ${statusStyle}`}>
@@ -1968,7 +1814,7 @@ export default function StudentConsole({
                         )}
                       </>
                     ) : (
-                      <div className="text-center py-6 bg-slate-50/20 rounded-xl border border-dashed border-[#E2E8F0] text-[10px] text-[#64748B] font-medium">
+                      <div className="text-center py-6 bg-[#16171D]/20 rounded-xl border border-dashed border-[#23252C] text-[10px] text-[#C2C6D1] font-medium">
                         No attendance records found for this group yet.
                       </div>
                     )}
@@ -1986,13 +1832,13 @@ export default function StudentConsole({
         {activeTab === "academics" && (
           <div className="space-y-6 w-full max-w-full overflow-hidden">
             {!selectedCohort ? (
-              <div className="text-center py-8 text-[#475569] font-medium bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-sm">
+              <div className="text-center py-8 text-[#C2C6D1] font-medium bg-[#131418] border border-[#23252C] rounded-xl p-6 shadow-sm">
                 You are not currently enrolled in any active groups. Please contact your administrator.
               </div>
             ) : !selectedCourse ? (
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 w-full max-w-full overflow-hidden">
-                <div className="flex items-center gap-2 text-xs border-b border-[#E2E8F0] pb-3 mb-3">
-                  <span className="font-bold text-[#0F172A]">Courses under {selectedCohort.name} ({selectedCohort.code})</span>
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-4 sm:p-6 shadow-sm space-y-4 w-full max-w-full overflow-hidden">
+                <div className="flex items-center gap-2 text-xs border-b border-[#23252C] pb-3 mb-3">
+                  <span className="font-bold text-[#EDEFF5]">Courses under {selectedCohort.name} ({selectedCohort.code})</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2012,39 +1858,39 @@ export default function StudentConsole({
                             handleSelectCourse(course);
                           }
                         }}
-                        className="group bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md hover:border-[#2563EB]/25 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40 transition-all duration-200 flex flex-col justify-between cursor-pointer"
+                        className="group bg-[#131418] border border-[#23252C] rounded-xl p-5 shadow-sm hover:shadow-md hover:border-[#6E79F4]/25 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6E79F4]/40 transition-all duration-200 flex flex-col justify-between cursor-pointer"
                       >
                         <div>
                           <div className="flex items-center justify-between mb-3">
                             <div className="relative w-11 h-11 shrink-0">
                               <svg viewBox="0 0 40 40" className="w-11 h-11 -rotate-90">
-                                <circle cx="20" cy="20" r="16" fill="none" stroke="#E2E8F0" strokeWidth="4" />
+                                <circle cx="20" cy="20" r="16" fill="none" stroke="#23252C" strokeWidth="4" />
                                 <circle
                                   cx="20" cy="20" r="16" fill="none"
-                                  stroke="#2563EB" strokeWidth="4" strokeLinecap="round"
+                                  stroke="#6E79F4" strokeWidth="4" strokeLinecap="round"
                                   strokeDasharray={`${(2 * Math.PI * 16 * pct) / 100} ${2 * Math.PI * 16}`}
                                 />
                               </svg>
-                              <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-[#0F172A]">
+                              <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-[#EDEFF5]">
                                 {pct}%
                               </span>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-slate-50 text-[#475569] border-[#E2E8F0]">
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#16171D] text-[#C2C6D1] border-[#23252C]">
                               {course.course_type}
                             </span>
                           </div>
 
-                          <h3 className="font-bold text-xs text-[#0F172A] mb-1">{course.title}</h3>
-                          <p className="text-[10px] text-[#475569] line-clamp-2 leading-relaxed mb-4">
+                          <h3 className="font-bold text-xs text-[#EDEFF5] mb-1">{course.title}</h3>
+                          <p className="text-[10px] text-[#C2C6D1] line-clamp-2 leading-relaxed mb-4">
                             {course.description || "No course description provided."}
                           </p>
                         </div>
 
-                        <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0] text-[10px] text-[#475569]">
+                        <div className="flex items-center justify-between pt-3 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
                           <span className="flex items-center gap-1">
                             <Clock size={11} /> {course.duration_minutes || 0} mins
                           </span>
-                          <span className="flex items-center gap-1.5 font-bold text-white bg-[#2563EB] group-hover:bg-[#2563EB]/90 px-3 py-1.5 rounded-lg transition-colors">
+                          <span className="flex items-center gap-1.5 font-bold text-white bg-[#6E79F4] group-hover:bg-[#6E79F4]/90 px-3 py-1.5 rounded-lg transition-colors">
                             {pct > 0 ? "Continue" : "Start Learning"} <ArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" />
                           </span>
                         </div>
@@ -2052,7 +1898,7 @@ export default function StudentConsole({
                       );
                     })
                   ) : (
-                    <div className="col-span-2 text-center py-8 text-[#475569] font-medium bg-slate-50/20 rounded-xl">
+                    <div className="col-span-2 text-center py-8 text-[#C2C6D1] font-medium bg-[#16171D]/20 rounded-xl">
                       No assigned courses registered under this program.
                     </div>
                   )}
@@ -2069,37 +1915,37 @@ export default function StudentConsole({
 
               const syllabusPanel = (
                 <>
-                  <div className="p-4 border-b border-[#E2E8F0] shrink-0">
+                  <div className="p-4 border-b border-[#23252C] shrink-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-bold text-xs text-[#0F172A] truncate min-w-0 flex-1">{selectedCourse.title}</h3>
+                      <h3 className="font-bold text-xs text-[#EDEFF5] truncate min-w-0 flex-1">{selectedCourse.title}</h3>
                       <button
                         onClick={() => setIsSyllabusDrawerOpen(false)}
-                        className="lg:hidden shrink-0 text-[#475569] hover:text-[#0F172A] cursor-pointer p-1"
+                        className="lg:hidden shrink-0 text-[#C2C6D1] hover:text-[#EDEFF5] cursor-pointer p-1"
                         aria-label="Close syllabus"
                       >
                         <X size={16} />
                       </button>
                     </div>
-                    <div className="flex items-center justify-between text-[9px] text-[#475569] font-bold mt-2">
+                    <div className="flex items-center justify-between text-[9px] text-[#C2C6D1] font-bold mt-2">
                       <span>{totalCourseLessons > 0 ? `${completedCourseLessons}/${totalCourseLessons} lessons` : "No lessons yet"}</span>
                       <span>{coursePct}%</span>
                     </div>
-                    <div className="w-full bg-[#E2E8F0] h-1 rounded-full overflow-hidden mt-1.5">
-                      <div className="bg-[#2563EB] h-full rounded-full transition-all duration-300" style={{ width: `${coursePct}%` }} />
+                    <div className="w-full bg-[#23252C] h-1 rounded-full overflow-hidden mt-1.5">
+                      <div className="bg-[#6E79F4] h-full rounded-full transition-all duration-300" style={{ width: `${coursePct}%` }} />
                     </div>
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-3 space-y-4">
                     {loading ? (
                       <div className="flex flex-col gap-3">
-                        <div className="h-10 bg-slate-100 animate-pulse rounded-lg"></div>
-                        <div className="h-10 bg-slate-100 animate-pulse rounded-lg"></div>
-                        <div className="h-10 bg-slate-100 animate-pulse rounded-lg"></div>
+                        <div className="h-10 bg-[#1A1C22] animate-pulse rounded-lg"></div>
+                        <div className="h-10 bg-[#1A1C22] animate-pulse rounded-lg"></div>
+                        <div className="h-10 bg-[#1A1C22] animate-pulse rounded-lg"></div>
                       </div>
                     ) : modules.length > 0 ? (
                       modules.map((mod) => (
                         <div key={mod.id}>
-                          <p className="sticky top-0 z-10 bg-white/95 backdrop-blur px-1.5 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-[#64748B] truncate">
+                          <p className="sticky top-0 z-10 bg-[#131418]/95 backdrop-blur px-1.5 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-[#C2C6D1] truncate">
                             Module {mod.position} · {mod.title}
                           </p>
                           <div className="space-y-1 mt-0.5">
@@ -2126,38 +1972,38 @@ export default function StudentConsole({
                                         setIsSyllabusDrawerOpen(false);
                                       }
                                     }}
-                                    className={`flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer select-none transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/40 ${
+                                    className={`flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer select-none transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6E79F4]/40 ${
                                       isActive
-                                        ? "bg-[#2563EB]/10 ring-1 ring-[#2563EB]/20"
-                                        : "hover:bg-slate-50"
+                                        ? "bg-[#6E79F4]/10 ring-1 ring-[#6E79F4]/20"
+                                        : "hover:bg-[#16171D]"
                                     }`}
                                   >
                                     <div className="shrink-0" aria-hidden="true">
                                       {isCompleted ? (
-                                        <CheckCircle2 size={15} className="text-[#16A34A]" />
+                                        <CheckCircle2 size={15} className="text-[#2FBF71]" />
                                       ) : isInProgress ? (
-                                        <Circle size={15} className="text-[#F59E0B] fill-[#F59E0B]/10 animate-pulse" />
+                                        <Circle size={15} className="text-[#F5B04A] fill-[#F5B04A]/10 animate-pulse" />
                                       ) : (
-                                        <Circle size={15} className="text-[#CBD5E1]" />
+                                        <Circle size={15} className="text-[#C9CDD8]" />
                                       )}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <p className={`text-[11px] font-semibold truncate ${isActive ? "text-[#2563EB]" : isCompleted ? "text-[#475569] line-through" : "text-[#0F172A]"}`}>
+                                      <p className={`text-[11px] font-semibold truncate ${isActive ? "text-[#6E79F4]" : isCompleted ? "text-[#C2C6D1] line-through" : "text-[#EDEFF5]"}`}>
                                         {les.title}
                                       </p>
-                                      <p className="text-[9px] text-[#64748B] font-mono">{les.duration || 0} mins</p>
+                                      <p className="text-[9px] text-[#C2C6D1] font-mono">{les.duration || 0} mins</p>
                                     </div>
                                   </div>
                                 );
                               })
                             ) : (
-                              <p className="text-[9px] text-[#64748B] italic px-1.5 py-1">No lessons in this module.</p>
+                              <p className="text-[9px] text-[#C2C6D1] italic px-1.5 py-1">No lessons in this module.</p>
                             )}
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-8 text-[10px] text-[#64748B] font-medium">
+                      <div className="text-center py-8 text-[10px] text-[#C2C6D1] font-medium">
                         No curriculum modules have been defined for this course.
                       </div>
                     )}
@@ -2174,13 +2020,13 @@ export default function StudentConsole({
                       setSelectedCourse(null);
                       setActiveLesson(null);
                     }}
-                    className="text-[#2563EB] hover:underline flex items-center gap-1 font-bold cursor-pointer text-xs shrink-0"
+                    className="text-[#6E79F4] hover:underline flex items-center gap-1 font-bold cursor-pointer text-xs shrink-0"
                   >
                     <ChevronLeft size={14} /> Courses
                   </button>
                   <button
                     onClick={() => setIsSyllabusDrawerOpen(true)}
-                    className="lg:hidden flex items-center gap-1.5 bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-[10px] font-bold text-[#0F172A] shadow-2xs cursor-pointer"
+                    className="lg:hidden flex items-center gap-1.5 bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-[10px] font-bold text-[#EDEFF5] shadow-2xs cursor-pointer"
                   >
                     <Menu size={13} /> Syllabus ({completedCourseLessons}/{totalCourseLessons})
                   </button>
@@ -2189,7 +2035,7 @@ export default function StudentConsole({
                 <div className="flex flex-col lg:flex-row gap-6 lg:items-start w-full max-w-full">
 
                   {/* Persistent left sidebar (desktop) */}
-                  <div className="hidden lg:flex lg:flex-col w-[300px] shrink-0 bg-white border border-[#E2E8F0] rounded-2xl shadow-sm sticky top-4 max-h-[calc(100vh-32px)] overflow-hidden">
+                  <div className="hidden lg:flex lg:flex-col w-[300px] shrink-0 bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm sticky top-4 max-h-[calc(100vh-32px)] overflow-hidden">
                     {syllabusPanel}
                   </div>
 
@@ -2201,7 +2047,7 @@ export default function StudentConsole({
                         onClick={() => setIsSyllabusDrawerOpen(false)}
                         aria-hidden="true"
                       />
-                      <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-xl flex flex-col animate-fadeIn">
+                      <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-[#131418] shadow-xl flex flex-col animate-fadeIn">
                         {syllabusPanel}
                       </div>
                     </div>
@@ -2210,19 +2056,19 @@ export default function StudentConsole({
                   {/* Main content area: lesson player */}
                   <div className="flex-1 min-w-0 w-full space-y-6">
                     {activeLesson ? (
-                      <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm w-full overflow-hidden max-h-[calc(100vh-140px)] overflow-y-auto">
-                        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-4 sm:px-6 pt-4 sm:pt-6 pb-4 flex items-center justify-between border-b border-[#E2E8F0]">
+                      <div className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm w-full overflow-hidden max-h-[calc(100vh-140px)] overflow-y-auto">
+                        <div className="sticky top-0 z-10 bg-[#131418]/95 backdrop-blur px-4 sm:px-6 pt-4 sm:pt-6 pb-4 flex items-center justify-between border-b border-[#23252C]">
                           <div className="min-w-0 flex-1">
-                            <span className="bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/15 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide">
+                            <span className="bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/15 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wide">
                               {activeLesson.lesson_type?.description || "Theory Material"}
                             </span>
-                            <h4 className="font-bold text-base text-[#0F172A] mt-2 tracking-tight truncate">{activeLesson.title}</h4>
+                            <h4 className="font-bold text-base text-[#EDEFF5] mt-2 tracking-tight truncate">{activeLesson.title}</h4>
                           </div>
                           {(() => {
                             const isCompleted = lessonProgressMap[activeLesson.id]?.status_code === "completed";
                             if (isCompleted) {
                               return (
-                                <span className="bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/25 px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 ml-3">
+                                <span className="bg-[#2FBF71]/15 text-[#2FBF71] border border-[#2FBF71]/25 px-2.5 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wide flex items-center gap-1 shrink-0 ml-3">
                                   <CheckCircle size={11} /> Completed
                                 </span>
                               );
@@ -2239,36 +2085,36 @@ export default function StudentConsole({
                           !(activeLesson.content_json?.body || activeLesson.content_json?.text) &&
                           !(activeLesson.resources && activeLesson.resources.length > 0) &&
                           !["assignment", "assessment"].includes((activeLesson.lesson_type?.code || "").toLowerCase()) && (
-                          <div className="bg-slate-50/50 border border-dashed border-[#E2E8F0] rounded-xl p-6 text-center text-[#475569] font-medium text-xs">
+                          <div className="bg-[#16171D]/50 border border-dashed border-[#23252C] rounded-xl p-6 text-center text-[#C2C6D1] font-medium text-xs">
                             No study material has been attached to this lesson yet. You can still mark it as completed once you've covered it with your instructor.
                           </div>
                         )}
 
                         {["assignment", "assessment"].includes((activeLesson.lesson_type?.code || "").toLowerCase()) && (
                           lessonProjectDetails ? (
-                            <div className="border border-[#E2E8F0] rounded-xl p-4 sm:p-5 space-y-4 bg-slate-50/20">
-                              <h4 className="font-bold text-xs text-[#0f172a] flex items-center gap-1.5">
-                                <FolderCode className="text-[#2563EB]" size={14} /> Assignment Submission
+                            <div className="border border-[#23252C] rounded-xl p-4 sm:p-5 space-y-4 bg-[#16171D]/20">
+                              <h4 className="font-bold text-xs text-[#EDEFF5] flex items-center gap-1.5">
+                                <FolderCode className="text-[#6E79F4]" size={14} /> Assignment Submission
                               </h4>
 
-                              <div className="text-xs text-[#475569] leading-relaxed space-y-2">
+                              <div className="text-xs text-[#C2C6D1] leading-relaxed space-y-2">
                                 {lessonProjectDetails.project_overview && <p>{lessonProjectDetails.project_overview}</p>}
                                 {lessonProjectDetails.requirements && (
                                   <div>
-                                    <p className="font-bold text-[#0F172A] text-[11px]">Requirements</p>
+                                    <p className="font-bold text-[#EDEFF5] text-[11px]">Requirements</p>
                                     <p className="whitespace-pre-line">{lessonProjectDetails.requirements}</p>
                                   </div>
                                 )}
                                 {lessonProjectDetails.deliverables && (
                                   <div>
-                                    <p className="font-bold text-[#0F172A] text-[11px]">Deliverables</p>
+                                    <p className="font-bold text-[#EDEFF5] text-[11px]">Deliverables</p>
                                     <p className="whitespace-pre-line">{lessonProjectDetails.deliverables}</p>
                                   </div>
                                 )}
                               </div>
 
                               {lessonProjectSubmission && (
-                                <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                                <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/20 text-[#2FBF71] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
                                   <CheckCircle2 size={12} />
                                   <span>Last Submitted: {new Date(lessonProjectSubmission.submitted_at).toLocaleString()}</span>
                                 </div>
@@ -2285,7 +2131,7 @@ export default function StudentConsole({
                               )}
 
                               {lessonProjectReview?.review_status === "approved" && (
-                                <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                                <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/20 text-[#2FBF71] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
                                   <CheckCircle2 size={13} />
                                   <span>This assignment has been approved — no resubmission needed.</span>
                                 </div>
@@ -2303,7 +2149,7 @@ export default function StudentConsole({
                                 return (
                                   <div className="space-y-3 text-xs">
                                     <div className="flex flex-col gap-1.5">
-                                      <label htmlFor="lesson-github-url" className="font-bold text-[#0f172a]">GitHub Repository URL</label>
+                                      <label htmlFor="lesson-github-url" className="font-bold text-[#EDEFF5]">GitHub Repository URL</label>
                                       <input
                                         id="lesson-github-url"
                                         type="text"
@@ -2311,12 +2157,12 @@ export default function StudentConsole({
                                         onChange={(e) => setLessonGithubUrl(e.target.value)}
                                         disabled={locked}
                                         placeholder="https://github.com/username/repository"
-                                        className="bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#2563EB] transition-all disabled:bg-slate-50 disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+                                        className="bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#6E79F4] transition-all disabled:bg-[#16171D] disabled:text-[#A3A9B6] disabled:cursor-not-allowed"
                                       />
                                     </div>
 
                                     <div className="flex flex-col gap-1.5">
-                                      <label htmlFor="lesson-submission-notes" className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
+                                      <label htmlFor="lesson-submission-notes" className="font-bold text-[#EDEFF5]">Submission Notes (optional)</label>
                                       <textarea
                                         id="lesson-submission-notes"
                                         value={lessonSubmissionNotes}
@@ -2324,14 +2170,14 @@ export default function StudentConsole({
                                         disabled={locked}
                                         placeholder="Write details or instructions for running the codebase here..."
                                         rows={3}
-                                        className="bg-white border border-[#E2E8F0] rounded-lg p-3 w-full text-xs outline-none focus:border-[#2563EB] transition-all disabled:bg-slate-50 disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+                                        className="bg-[#131418] border border-[#23252C] rounded-lg p-3 w-full text-xs outline-none focus:border-[#6E79F4] transition-all disabled:bg-[#16171D] disabled:text-[#A3A9B6] disabled:cursor-not-allowed"
                                       />
                                     </div>
 
                                     <button
                                       onClick={handleLessonSubmitProjectUrl}
                                       disabled={actionLoading || locked}
-                                      className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="bg-[#6E79F4] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#6E79F4]/95 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                       {locked ? "Submission Locked" : "Submit Assignment"}
                                     </button>
@@ -2341,26 +2187,26 @@ export default function StudentConsole({
 
                               {lessonProjectReview && (() => {
                                 const reviewColor = lessonProjectReview.review_status === "approved"
-                                  ? "#16A34A"
+                                  ? "#2FBF71"
                                   : lessonProjectReview.review_status === "rejected"
-                                  ? "#DC2626"
-                                  : "#F59E0B";
+                                  ? "#F0555D"
+                                  : "#F5B04A";
                                 return (
                                   <div className="border rounded-xl p-4 space-y-2" style={{ borderColor: `${reviewColor}33`, backgroundColor: `${reviewColor}0D` }}>
                                     <h4 className="font-bold text-[10px] uppercase tracking-wide" style={{ color: reviewColor }}>Mentor Review</h4>
                                     <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
                                       <div>
-                                        <span className="text-[9px] text-[#64748B] block">Status</span>
+                                        <span className="text-[9px] text-[#C2C6D1] block">Status</span>
                                         <span className="capitalize">{lessonProjectReview.review_status.replace(/_/g, " ")}</span>
                                       </div>
                                       <div>
-                                        <span className="text-[9px] text-[#64748B] block">Score</span>
+                                        <span className="text-[9px] text-[#C2C6D1] block">Score</span>
                                         <span>{lessonProjectReview.score !== null ? `${lessonProjectReview.score} / ${lessonProjectDetails.max_score}` : "Not Graded"}</span>
                                       </div>
                                     </div>
                                     {lessonProjectReview.feedback && (
-                                      <div className="bg-white p-3 rounded-lg border border-[#e2e8f0] text-[#475569]">
-                                        <span className="text-[9px] font-bold text-[#0f172a] block mb-1">Mentor Feedback</span>
+                                      <div className="bg-[#131418] p-3 rounded-lg border border-[#23252C] text-[#C2C6D1]">
+                                        <span className="text-[9px] font-bold text-[#EDEFF5] block mb-1">Mentor Feedback</span>
                                         <p className="italic">{lessonProjectReview.feedback}</p>
                                       </div>
                                     )}
@@ -2369,43 +2215,43 @@ export default function StudentConsole({
                               })()}
                             </div>
                           ) : (
-                            <div className="bg-slate-50/50 border border-dashed border-[#E2E8F0] rounded-xl p-6 text-center text-[#64748B] font-medium text-xs">
+                            <div className="bg-[#16171D]/50 border border-dashed border-[#23252C] rounded-xl p-6 text-center text-[#C2C6D1] font-medium text-xs">
                               Preparing this assignment's submission form...
                             </div>
                           )
                         )}
 
                         {(activeLesson.content_json?.body || activeLesson.content_json?.text) && (
-                          <div className="bg-white border border-[#E2E8F0] p-4 sm:p-6 md:p-8 rounded-2xl shadow-subtle space-y-4">
-                            <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#64748B] flex items-center gap-1.5 border-b border-[#E2E8F0] pb-3">
+                          <div className="bg-[#131418] border border-[#23252C] p-4 sm:p-6 md:p-8 rounded-2xl shadow-subtle space-y-4">
+                            <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5 border-b border-[#23252C] pb-3">
                               📖 Lesson Syllabus & Study Guide
                             </h4>
-                            <div className="prose max-w-none text-slate-700 leading-relaxed text-[13px]">
+                            <div className="prose max-w-none text-[#E2E4EB] leading-relaxed text-[13px]">
                               <MarkdownRenderer content={activeLesson.content_json.body || activeLesson.content_json.text} />
                             </div>
                           </div>
                         )}
 
                         {activeLesson.resources && activeLesson.resources.length > 0 && (
-                          <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-3 shadow-2xs">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1">
-                              <File size={11} className="text-slate-400" /> Attached Reference Documents & Code blue prints
+                          <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 space-y-3 shadow-2xs">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1">
+                              <File size={11} className="text-[#A3A9B6]" /> Attached Reference Documents & Code blue prints
                             </p>
-                            <div className="divide-y divide-[#E2E8F0] text-xs">
+                            <div className="divide-y divide-[#23252C] text-xs">
                               {activeLesson.resources.map((res: any) => {
                                 const downloadUrl = res.external_url || res.file_url || res.resource_url;
                                 return (
                                   <div key={res.id} className="py-2.5 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-semibold text-[#0f172a]">{res.title}</span>
-                                      <span className="px-1.5 py-0.2 bg-slate-100 rounded text-[8px] text-[#475569] uppercase font-mono font-bold shrink-0">{res.resource_type || "File"}</span>
+                                      <span className="font-semibold text-[#EDEFF5]">{res.title}</span>
+                                      <span className="px-1.5 py-0.2 bg-[#1A1C22] rounded text-[8px] text-[#C2C6D1] uppercase font-mono font-bold shrink-0">{res.resource_type || "File"}</span>
                                     </div>
                                     {downloadUrl && (
                                       <a 
                                         href={downloadUrl} 
                                         target="_blank" 
                                         rel="noopener noreferrer" 
-                                        className="text-[#2563EB] font-bold flex items-center gap-0.5 hover:underline cursor-pointer"
+                                        className="text-[#6E79F4] font-bold flex items-center gap-0.5 hover:underline cursor-pointer"
                                       >
                                         Open/Download <ExternalLink size={11} />
                                       </a>
@@ -2418,10 +2264,10 @@ export default function StudentConsole({
                         )}
 
                         {/* Lesson Completion Footer */}
-                        <div className="border-t border-[#E2E8F0] pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
+                        <div className="border-t border-[#23252C] pt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
                           <div>
-                            <p className="text-[10px] text-[#64748B] font-bold uppercase tracking-wider">Milestone Status</p>
-                            <p className="text-xs text-[#0F172A] font-semibold mt-0.5">
+                            <p className="text-[10px] text-[#C2C6D1] font-bold uppercase tracking-wider">Milestone Status</p>
+                            <p className="text-xs text-[#EDEFF5] font-semibold mt-0.5">
                               {(() => {
                                 const isCompleted = lessonProgressMap[activeLesson.id]?.status_code === "completed";
                                 return isCompleted ? "You have successfully finished this lesson" : "Review the material above and mark it as completed";
@@ -2434,7 +2280,7 @@ export default function StudentConsole({
                               const isCompleted = lessonProgressMap[activeLesson.id]?.status_code === "completed";
                               if (isCompleted) {
                                 return (
-                                  <span className="bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/25 px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 shadow-2xs">
+                                  <span className="bg-[#2FBF71]/15 text-[#2FBF71] border border-[#2FBF71]/25 px-4 py-2 rounded-xl text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 shadow-2xs">
                                     <CheckCircle size={13} /> Lesson Completed
                                   </span>
                                 );
@@ -2444,7 +2290,7 @@ export default function StudentConsole({
                                 <button
                                   onClick={() => handleCompleteLesson(activeLesson)}
                                   disabled={actionLoading}
-                                  className="bg-[#2563EB] hover:bg-[#2563EB]/95 text-white px-4.5 py-2.5 rounded-xl shadow-sm text-xs font-bold transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5 disabled:opacity-50 select-none"
+                                  className="bg-[#6E79F4] hover:bg-[#6E79F4]/95 text-white px-4.5 py-2.5 rounded-xl shadow-sm text-xs font-bold transition-all active:scale-[0.98] cursor-pointer flex items-center gap-1.5 disabled:opacity-50 select-none"
                                 >
                                   Mark Lesson as Completed
                                 </button>
@@ -2455,11 +2301,11 @@ export default function StudentConsole({
 
                         {/* Previous / Next lesson navigation */}
                         {(prevLesson || nextLesson) && (
-                          <div className="flex items-center justify-between gap-3 border-t border-[#E2E8F0] pt-4">
+                          <div className="flex items-center justify-between gap-3 border-t border-[#23252C] pt-4">
                             <button
                               onClick={() => prevLesson && handleStartLesson(prevLesson)}
                               disabled={!prevLesson}
-                              className="flex items-center gap-1.5 text-[10px] font-bold text-[#475569] hover:text-[#2563EB] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer min-w-0"
+                              className="flex items-center gap-1.5 text-[10px] font-bold text-[#C2C6D1] hover:text-[#6E79F4] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer min-w-0"
                             >
                               <ChevronLeft size={14} className="shrink-0" />
                               <span className="truncate max-w-[110px] sm:max-w-[180px]">{prevLesson?.title || "Previous"}</span>
@@ -2467,7 +2313,7 @@ export default function StudentConsole({
                             <button
                               onClick={() => nextLesson && handleStartLesson(nextLesson)}
                               disabled={!nextLesson}
-                              className="flex items-center gap-1.5 text-[10px] font-bold text-[#2563EB] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer min-w-0"
+                              className="flex items-center gap-1.5 text-[10px] font-bold text-[#6E79F4] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer min-w-0"
                             >
                               <span className="truncate max-w-[110px] sm:max-w-[180px]">{nextLesson?.title || "Next"}</span>
                               <ChevronRight size={14} className="shrink-0" />
@@ -2478,7 +2324,7 @@ export default function StudentConsole({
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 text-center shadow-sm text-slate-500 font-semibold w-full">
+                      <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-8 text-center shadow-sm text-[#C2C6D1] font-semibold w-full">
                         Please select a lesson from the syllabus outline to start learning.
                       </div>
                     )}
@@ -2493,28 +2339,28 @@ export default function StudentConsole({
 
         {/* TAB 3: QUIZZES */}
         {activeTab === "quizzes" && (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
+          <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-4 sm:p-6 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
             {!selectedQuizActivity ? (
               <>
-                <h3 className="text-sm font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-3 flex items-center gap-2">
-                  <FileQuestion className="text-[#2563EB]" size={16} /> My Assigned Quizzes
+                <h3 className="text-sm font-bold text-[#EDEFF5] border-b border-[#23252C] pb-3 flex items-center gap-2">
+                  <FileQuestion className="text-[#6E79F4]" size={16} /> My Assigned Quizzes
                 </h3>
                 {loadingActivities ? (
                   <div className="space-y-3">
-                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
-                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-[#1A1C22] animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-[#1A1C22] animate-pulse rounded-xl"></div>
                   </div>
                 ) : programActivities.filter(a => a.activity_type_code === "quiz").length > 0 ? (
                   <div className="space-y-4">
                     {programActivities.filter(a => a.activity_type_code === "quiz").map((act) => (
-                      <div key={act.id} className="border border-[#E2E8F0] rounded-xl p-4.5 bg-white flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:shadow-md hover:border-[#2563EB]/15 transition-all">
+                      <div key={act.id} className="border border-[#23252C] rounded-xl p-4.5 bg-[#131418] flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:shadow-md hover:border-[#6E79F4]/15 transition-all">
                         <div className="min-w-0">
-                          <h4 className="font-bold text-xs text-[#0F172A]">{act.title}</h4>
-                          <p className="text-[#475569] text-[10px] mt-1.5 max-w-xl leading-relaxed">{act.description || "No description provided."}</p>
+                          <h4 className="font-bold text-xs text-[#EDEFF5]">{act.title}</h4>
+                          <p className="text-[#C2C6D1] text-[10px] mt-1.5 max-w-xl leading-relaxed">{act.description || "No description provided."}</p>
                           <div className="flex flex-wrap items-center gap-2 mt-3 text-[9px]">
                             <StatusBadge status={act.progress?.status_code} size="sm" />
                             {act.progress?.score !== null && (
-                              <span className="bg-[#16A34A]/10 text-[#16A34A] px-2 py-0.5 rounded font-bold border border-[#16A34A]/15">
+                              <span className="bg-[#2FBF71]/10 text-[#2FBF71] px-2 py-0.5 rounded font-bold border border-[#2FBF71]/15">
                                 Score: {act.progress?.score} / {act.progress?.max_score || 100}
                               </span>
                             )}
@@ -2522,7 +2368,7 @@ export default function StudentConsole({
                         </div>
                         <button
                           onClick={() => handleEnterQuiz(act)}
-                          className="bg-[#2563EB] text-white px-3.5 py-2 sm:py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-all flex items-center justify-center gap-1 text-[10px] shrink-0 w-full sm:w-auto min-h-[36px]"
+                          className="bg-[#6E79F4] text-white px-3.5 py-2 sm:py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-all flex items-center justify-center gap-1 text-[10px] shrink-0 w-full sm:w-auto min-h-[36px]"
                         >
                           Enter Quiz <ChevronRight size={12} />
                         </button>
@@ -2530,32 +2376,32 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-10 bg-slate-50/30 rounded-xl border border-dashed border-[#E2E8F0] text-[#475569] font-medium">
+                  <div className="text-center py-10 bg-[#16171D]/30 rounded-xl border border-dashed border-[#23252C] text-[#C2C6D1] font-medium">
                     No quizzes assigned to your group yet.
                   </div>
                 )}
               </>
             ) : (
               <div className="space-y-6">
-                <div className="flex items-center gap-2 text-xs border-b border-[#E2E8F0] pb-3">
+                <div className="flex items-center gap-2 text-xs border-b border-[#23252C] pb-3">
                   <button
                     onClick={() => {
                       setSelectedQuizActivity(null);
                       setQuizDetails(null);
                       setQuizQuestions([]);
                     }}
-                    className="text-[#2563EB] hover:underline flex items-center gap-1 font-bold"
+                    className="text-[#6E79F4] hover:underline flex items-center gap-1 font-bold"
                   >
                     <ChevronLeft size={14} /> Quizzes
                   </button>
                   <span className="text-slate-300">/</span>
-                  <span className="font-semibold text-[#0F172A]">{selectedQuizActivity.title}</span>
+                  <span className="font-semibold text-[#EDEFF5]">{selectedQuizActivity.title}</span>
                 </div>
 
                 {loading ? (
                   <div className="space-y-3">
-                    <div className="h-24 bg-slate-100 animate-pulse rounded-xl"></div>
-                    <div className="h-10 bg-slate-100 animate-pulse rounded-xl w-1/3"></div>
+                    <div className="h-24 bg-[#1A1C22] animate-pulse rounded-xl"></div>
+                    <div className="h-10 bg-[#1A1C22] animate-pulse rounded-xl w-1/3"></div>
                   </div>
                 ) : quizDetails ? (
                   <div className="space-y-6">
@@ -2569,24 +2415,24 @@ export default function StudentConsole({
                         return (
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div className="bg-white p-3 rounded-lg border border-[#e2e8f0]">
-                                <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Questions Count</span>
-                                <span className="font-bold text-[#0F172A] text-xs">{quizQuestions.length} Questions</span>
+                              <div className="bg-[#131418] p-3 rounded-lg border border-[#23252C]">
+                                <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Questions Count</span>
+                                <span className="font-bold text-[#EDEFF5] text-xs">{quizQuestions.length} Questions</span>
                               </div>
-                              <div className="bg-white p-3 rounded-lg border border-[#e2e8f0]">
-                                <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Attempts Done</span>
-                                <span className="font-bold text-[#0F172A] text-xs font-mono">{selectedQuizActivity.progress?.attempt_number || 0} / {quizDetails.max_attempts ?? "—"}</span>
+                              <div className="bg-[#131418] p-3 rounded-lg border border-[#23252C]">
+                                <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Attempts Done</span>
+                                <span className="font-bold text-[#EDEFF5] text-xs font-mono">{selectedQuizActivity.progress?.attempt_number || 0} / {quizDetails.max_attempts ?? "—"}</span>
                               </div>
                               {assignment?.available_from && (
-                                <div className="bg-white p-3 rounded-lg border border-[#e2e8f0]">
-                                  <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Available From</span>
-                                  <span className="font-bold text-[#0F172A] text-[11px]">{new Date(assignment.available_from).toLocaleString()}</span>
+                                <div className="bg-[#131418] p-3 rounded-lg border border-[#23252C]">
+                                  <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Available From</span>
+                                  <span className="font-bold text-[#EDEFF5] text-[11px]">{new Date(assignment.available_from).toLocaleString()}</span>
                                 </div>
                               )}
                               {assignment?.available_until && (
-                                <div className="bg-white p-3 rounded-lg border border-[#e2e8f0]">
-                                  <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Due Date</span>
-                                  <span className={`font-bold text-[11px] ${isPastDue ? 'text-red-600' : 'text-[#0F172A]'}`}>{new Date(assignment.available_until).toLocaleString()}</span>
+                                <div className="bg-[#131418] p-3 rounded-lg border border-[#23252C]">
+                                  <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Due Date</span>
+                                  <span className={`font-bold text-[11px] ${isPastDue ? 'text-red-600' : 'text-[#EDEFF5]'}`}>{new Date(assignment.available_until).toLocaleString()}</span>
                                 </div>
                               )}
                             </div>
@@ -2602,19 +2448,19 @@ export default function StudentConsole({
                                 <span>The due date for this quiz has passed. You cannot start a new attempt.</span>
                               </div>
                             ) : selectedQuizActivity.progress?.status_code === "completed" ? (
-                              <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
+                              <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/20 text-[#2FBF71] rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
                                 <CheckCircle2 size={15} />
                                 <span>You've already passed this quiz — no further attempts are needed.</span>
                               </div>
                             ) : (selectedQuizActivity.progress?.attempt_number || 0) >= quizDetails.max_attempts ? (
-                              <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
+                              <div className="bg-[#F0555D]/5 border border-[#F0555D]/20 text-[#F0555D] rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
                                 <AlertTriangle size={15} />
                                 <span>You have reached the maximum allowed attempts limit for this quiz. Retakes are locked.</span>
                               </div>
                             ) : (
                               <div className="space-y-3">
                                 {quizDetails.strict_mode && (
-                                  <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-lg p-3.5 text-xs font-semibold flex items-start gap-2">
+                                  <div className="bg-[#F0555D]/5 border border-[#F0555D]/20 text-[#F0555D] rounded-lg p-3.5 text-xs font-semibold flex items-start gap-2">
                                     <ShieldAlert size={16} className="shrink-0 mt-0.5" />
                                     <span>This is a proctored quiz. It will open in fullscreen. Leaving fullscreen, switching tabs, or navigating back ends your attempt with a score of 0 — you get one warning.</span>
                                   </div>
@@ -2622,7 +2468,7 @@ export default function StudentConsole({
                                 <button
                                   onClick={handleStartQuiz}
                                   disabled={actionLoading}
-                                  className="bg-[#2563EB] text-white px-5 py-2.5 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-all text-xs flex items-center gap-1.5 disabled:opacity-50 font-sans"
+                                  className="bg-[#6E79F4] text-white px-5 py-2.5 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-all text-xs flex items-center gap-1.5 disabled:opacity-50 font-sans"
                                 >
                                   <Play size={13} fill="white" /> Start Quiz Attempt
                                 </button>
@@ -2636,23 +2482,23 @@ export default function StudentConsole({
                     {/* Quiz Questions List / Active Test screen */}
                     {activeAttempt && (
                       <div className="space-y-6">
-                        <div className="bg-[#2563EB]/5 border border-[#2563EB]/20 rounded-xl p-4 flex justify-between items-center">
-                          <span className="font-semibold text-[#2563EB] text-[10px] uppercase tracking-wider">Attempt #{activeAttempt.attempt_number} in progress...</span>
+                        <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/20 rounded-xl p-4 flex justify-between items-center">
+                          <span className="font-semibold text-[#6E79F4] text-[10px] uppercase tracking-wider">Attempt #{activeAttempt.attempt_number} in progress...</span>
                           {timeLeft !== null ? (
-                            <span className="bg-white border border-red-200 px-3 py-1.5 rounded font-mono font-bold text-xs text-red-600 flex items-center gap-1.5 animate-pulse">
+                            <span className="bg-[#131418] border border-red-200 px-3 py-1.5 rounded font-mono font-bold text-xs text-red-600 flex items-center gap-1.5 animate-pulse">
                               <Clock size={13} /> Time Left: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                             </span>
                           ) : (
-                            <span className="bg-white border border-[#2563EB]/30 px-3 py-1 rounded font-bold text-xs text-[#2563EB]">Time Started: {new Date(activeAttempt.started_at).toLocaleTimeString()}</span>
+                            <span className="bg-[#131418] border border-[#6E79F4]/30 px-3 py-1 rounded font-bold text-xs text-[#6E79F4]">Time Started: {new Date(activeAttempt.started_at).toLocaleTimeString()}</span>
                           )}
                         </div>
 
                         <div className="space-y-6">
                           {quizQuestions.map((q, idx) => (
-                            <div key={q.id} className="border border-[#E2E8F0] rounded-xl p-5 space-y-4">
-                              <h4 className="font-bold text-xs text-[#0f172a] flex gap-2">
-                                <span className="text-[#2563EB]">Q{idx + 1}.</span> {q.question_text}
-                                <span className="font-mono text-[9px] text-[#475569] bg-slate-100 px-1.5 py-0.5 rounded">({q.points} pts)</span>
+                            <div key={q.id} className="border border-[#23252C] rounded-xl p-5 space-y-4">
+                              <h4 className="font-bold text-xs text-[#EDEFF5] flex gap-2">
+                                <span className="text-[#6E79F4]">Q{idx + 1}.</span> {q.question_text}
+                                <span className="font-mono text-[9px] text-[#C2C6D1] bg-[#1A1C22] px-1.5 py-0.5 rounded">({q.points} pts)</span>
                               </h4>
 
                               <div className="grid grid-cols-1 gap-2.5">
@@ -2661,10 +2507,10 @@ export default function StudentConsole({
                                   return (
                                     <label
                                       key={opt.id}
-                                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-slate-50 transition-all ${
+                                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-[#16171D] transition-all ${
                                         isSelected
-                                          ? "border-[#2563EB] bg-[#2563EB]/5 font-semibold text-[#2563EB]"
-                                          : "border-[#E2E8F0] bg-white text-[#475569]"
+                                          ? "border-[#6E79F4] bg-[#6E79F4]/5 font-semibold text-[#6E79F4]"
+                                          : "border-[#23252C] bg-[#131418] text-[#C2C6D1]"
                                       }`}
                                     >
                                       <input
@@ -2673,7 +2519,7 @@ export default function StudentConsole({
                                         value={opt.id}
                                         checked={isSelected}
                                         onChange={() => handleOptionSelect(q.id, opt.id, q.question_type)}
-                                        className="accent-[#2563EB]"
+                                        className="accent-[#6E79F4]"
                                       />
                                       <span>{opt.option_text}</span>
                                     </label>
@@ -2687,18 +2533,18 @@ export default function StudentConsole({
                         <button
                           onClick={handleSubmitQuiz}
                           disabled={actionLoading}
-                          className="bg-[#16A34A] text-white px-5 py-2.5 rounded-lg shadow-sm font-semibold hover:bg-[#16A34A]/95 transition-all text-xs flex items-center gap-1.5 disabled:opacity-50 w-full justify-center"
+                          className="bg-[#2FBF71] text-white px-5 py-2.5 rounded-lg shadow-sm font-semibold hover:bg-[#2FBF71]/95 transition-all text-xs flex items-center gap-1.5 disabled:opacity-50 w-full justify-center"
                         >
                           <Send size={13} /> Submit Quiz Answers
                         </button>
                       </div>
                     )}
                     {quizSubmittedResult && quizSubmittedResult.forfeited ? (
-                      <div className="border border-[#DC2626]/20 bg-[#DC2626]/5 rounded-xl p-6 space-y-5 text-center">
-                        <ShieldAlert size={48} className="text-[#DC2626] mx-auto" />
+                      <div className="border border-[#F0555D]/20 bg-[#F0555D]/5 rounded-xl p-6 space-y-5 text-center">
+                        <ShieldAlert size={48} className="text-[#F0555D] mx-auto" />
                         <div>
-                          <h4 className="font-bold text-sm text-[#DC2626]">Attempt Forfeited — Score: 0</h4>
-                          <p className="text-[#475569] text-xs mt-1">
+                          <h4 className="font-bold text-sm text-[#F0555D]">Attempt Forfeited — Score: 0</h4>
+                          <p className="text-[#C2C6D1] text-xs mt-1">
                             {({
                               fullscreen_exit: "You exited fullscreen mode during a proctored quiz.",
                               tab_switch: "You switched away from the quiz tab during a proctored quiz.",
@@ -2710,13 +2556,13 @@ export default function StudentConsole({
                           </p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto text-xs pt-2">
-                          <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
-                            <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wider">Score</span>
-                            <span className="font-bold text-xs text-[#DC2626]">{quizSubmittedResult.score} / {quizSubmittedResult.max_score}</span>
+                          <div className="bg-[#131418] p-3 border border-[#23252C] rounded-xl">
+                            <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wider">Score</span>
+                            <span className="font-bold text-xs text-[#F0555D]">{quizSubmittedResult.score} / {quizSubmittedResult.max_score}</span>
                           </div>
-                          <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
-                            <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Passed</span>
-                            <span className="font-bold text-xs uppercase text-[#DC2626]">No</span>
+                          <div className="bg-[#131418] p-3 border border-[#23252C] rounded-xl">
+                            <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Passed</span>
+                            <span className="font-bold text-xs uppercase text-[#F0555D]">No</span>
                           </div>
                         </div>
                         <button
@@ -2724,7 +2570,7 @@ export default function StudentConsole({
                             setQuizSubmittedResult(null);
                             setSelectedQuizActivity(null);
                           }}
-                          className="bg-white border border-[#E2E8F0] text-[#0F172A] px-4 py-2 rounded-lg font-bold hover:bg-slate-50 transition-all text-xs"
+                          className="bg-[#131418] border border-[#23252C] text-[#EDEFF5] px-4 py-2 rounded-lg font-bold hover:bg-[#16171D] transition-all text-xs"
                         >
                           Return to Quiz List
                         </button>
@@ -2733,20 +2579,20 @@ export default function StudentConsole({
                       <div className={`border rounded-xl p-6 space-y-5 text-center ${
                         quizDetails.show_results_immediately
                           ? quizSubmittedResult.passed
-                            ? "border-[#16A34A]/20 bg-[#16A34A]/5"
-                            : "border-[#DC2626]/20 bg-[#DC2626]/5"
-                          : "border-[#16A34A]/20 bg-[#16A34A]/5"
+                            ? "border-[#2FBF71]/20 bg-[#2FBF71]/5"
+                            : "border-[#F0555D]/20 bg-[#F0555D]/5"
+                          : "border-[#2FBF71]/20 bg-[#2FBF71]/5"
                       }`}>
                         {quizDetails.show_results_immediately ? (
                           <QuizResultBadge passed={!!quizSubmittedResult.passed} />
                         ) : (
-                          <Award size={48} className="text-[#16A34A] mx-auto" />
+                          <Award size={48} className="text-[#2FBF71] mx-auto" />
                         )}
                         <div>
                           <h4 className={`font-bold text-sm ${
                             quizDetails.show_results_immediately
-                              ? quizSubmittedResult.passed ? "text-[#16A34A]" : "text-[#DC2626]"
-                              : "text-[#0F172A]"
+                              ? quizSubmittedResult.passed ? "text-[#2FBF71]" : "text-[#F0555D]"
+                              : "text-[#EDEFF5]"
                           }`}>
                             {quizDetails.show_results_immediately
                               ? quizSubmittedResult.passed
@@ -2754,7 +2600,7 @@ export default function StudentConsole({
                                 : "Quiz Submitted — Not Passed"
                               : "Quiz Submitted Successfully!"}
                           </h4>
-                          <p className="text-[#475569] text-xs mt-1">
+                          <p className="text-[#C2C6D1] text-xs mt-1">
                             {quizDetails.show_results_immediately
                               ? "Your grading calculations have completed."
                               : "Your answers have been recorded. Grades will be released by the instructor."}
@@ -2763,19 +2609,19 @@ export default function StudentConsole({
 
                         {quizDetails.show_results_immediately && (
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-md mx-auto text-xs pt-2">
-                            <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
-                              <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wider">Score</span>
-                              <span className="font-bold text-xs text-[#0F172A]">{quizSubmittedResult.score} / {quizSubmittedResult.max_score}</span>
+                            <div className="bg-[#131418] p-3 border border-[#23252C] rounded-xl">
+                              <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wider">Score</span>
+                              <span className="font-bold text-xs text-[#EDEFF5]">{quizSubmittedResult.score} / {quizSubmittedResult.max_score}</span>
                             </div>
-                            <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
-                              <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Passed</span>
-                              <span className={`font-bold text-xs uppercase ${quizSubmittedResult.passed ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
+                            <div className="bg-[#131418] p-3 border border-[#23252C] rounded-xl">
+                              <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Passed</span>
+                              <span className={`font-bold text-xs uppercase ${quizSubmittedResult.passed ? "text-[#2FBF71]" : "text-[#F0555D]"}`}>
                                 {quizSubmittedResult.passed ? "Yes" : "No"}
                               </span>
                             </div>
-                            <div className="bg-white p-3 border border-[#E2E8F0] rounded-xl">
-                              <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wider">Duration</span>
-                              <span className="font-bold text-xs text-[#0F172A]">{quizSubmittedResult.time_spent_seconds ?? "—"} Secs</span>
+                            <div className="bg-[#131418] p-3 border border-[#23252C] rounded-xl">
+                              <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wider">Duration</span>
+                              <span className="font-bold text-xs text-[#EDEFF5]">{quizSubmittedResult.time_spent_seconds ?? "—"} Secs</span>
                             </div>
                           </div>
                         )}
@@ -2785,7 +2631,7 @@ export default function StudentConsole({
                             setQuizSubmittedResult(null);
                             setSelectedQuizActivity(null);
                           }}
-                          className="bg-white border border-[#E2E8F0] text-[#0F172A] px-4 py-2 rounded-lg font-bold hover:bg-slate-50 transition-all text-xs"
+                          className="bg-[#131418] border border-[#23252C] text-[#EDEFF5] px-4 py-2 rounded-lg font-bold hover:bg-[#16171D] transition-all text-xs"
                         >
                           Return to Quiz List
                         </button>
@@ -2797,7 +2643,7 @@ export default function StudentConsole({
                     <p>This quiz's details couldn't be loaded.</p>
                     <button
                       onClick={() => handleEnterQuiz(selectedQuizActivity)}
-                      className="text-[#2563EB] font-bold hover:underline cursor-pointer"
+                      className="text-[#6E79F4] font-bold hover:underline cursor-pointer"
                     >
                       Try Again
                     </button>
@@ -2810,28 +2656,28 @@ export default function StudentConsole({
 
         {/* TAB 4: PROJECTS */}
         {activeTab === "projects" && (
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 sm:p-6 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
+          <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-4 sm:p-6 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
             {!selectedProjectActivity ? (
               <>
-                <h3 className="text-sm font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-3 flex items-center gap-2">
-                  <FolderCode className="text-[#2563EB]" size={16} /> My Assigned Projects & Assignments
+                <h3 className="text-sm font-bold text-[#EDEFF5] border-b border-[#23252C] pb-3 flex items-center gap-2">
+                  <FolderCode className="text-[#6E79F4]" size={16} /> My Assigned Projects & Assignments
                 </h3>
                 {loadingActivities ? (
                   <div className="space-y-3">
-                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
-                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-[#1A1C22] animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-[#1A1C22] animate-pulse rounded-xl"></div>
                   </div>
                 ) : programActivities.filter(a => a.activity_type_code === "project" || a.activity_type_code === "assignment").length > 0 ? (
                   <div className="space-y-4">
                     {programActivities.filter(a => a.activity_type_code === "project" || a.activity_type_code === "assignment").map((act) => (
-                      <div key={act.id} className="border border-[#E2E8F0] rounded-xl p-4.5 bg-white flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:shadow-md hover:border-[#2563EB]/15 transition-all">
+                      <div key={act.id} className="border border-[#23252C] rounded-xl p-4.5 bg-[#131418] flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:shadow-md hover:border-[#6E79F4]/15 transition-all">
                         <div className="min-w-0">
-                          <h4 className="font-bold text-xs text-[#0F172A]">{act.title}</h4>
-                          <p className="text-[#475569] text-[10px] mt-1.5 max-w-xl leading-relaxed">{act.description || "No description provided."}</p>
+                          <h4 className="font-bold text-xs text-[#EDEFF5]">{act.title}</h4>
+                          <p className="text-[#C2C6D1] text-[10px] mt-1.5 max-w-xl leading-relaxed">{act.description || "No description provided."}</p>
                           <div className="flex flex-wrap items-center gap-2 mt-3 text-[9px]">
                             <StatusBadge status={act.progress?.status_code} size="sm" />
                             {act.progress?.score !== null && (
-                              <span className="bg-[#16A34A]/10 text-[#16A34A] px-2 py-0.5 rounded font-bold border border-[#16A34A]/15">
+                              <span className="bg-[#2FBF71]/10 text-[#2FBF71] px-2 py-0.5 rounded font-bold border border-[#2FBF71]/15">
                                 Score: {act.progress?.score} / {act.progress?.max_score || 100}
                               </span>
                             )}
@@ -2839,7 +2685,7 @@ export default function StudentConsole({
                         </div>
                         <button
                           onClick={() => handleEnterProject(act)}
-                          className="bg-[#2563EB] text-white px-3.5 py-2 sm:py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/95 transition-all flex items-center justify-center gap-1 text-[10px] shrink-0 w-full sm:w-auto min-h-[36px]"
+                          className="bg-[#6E79F4] text-white px-3.5 py-2 sm:py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-all flex items-center justify-center gap-1 text-[10px] shrink-0 w-full sm:w-auto min-h-[36px]"
                         >
                           Enter Project <ChevronRight size={12} />
                         </button>
@@ -2847,78 +2693,78 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-10 bg-slate-50/30 rounded-xl border border-dashed border-[#E2E8F0] text-[#475569] font-medium">
+                  <div className="text-center py-10 bg-[#16171D]/30 rounded-xl border border-dashed border-[#23252C] text-[#C2C6D1] font-medium">
                     No projects or assignments assigned to your group yet.
                   </div>
                 )}
               </>
             ) : (
               <div className="space-y-6">
-                <div className="flex items-center gap-2 text-xs border-b border-[#E2E8F0] pb-3">
+                <div className="flex items-center gap-2 text-xs border-b border-[#23252C] pb-3">
                   <button
                     onClick={() => {
                       setSelectedProjectActivity(null);
                       setProjectDetails(null);
                     }}
-                    className="text-[#2563EB] hover:underline flex items-center gap-1 font-bold"
+                    className="text-[#6E79F4] hover:underline flex items-center gap-1 font-bold"
                   >
                     <ChevronLeft size={14} /> Projects
                   </button>
                   <span className="text-slate-300">/</span>
-                  <span className="font-semibold text-[#0F172A]">{selectedProjectActivity.title}</span>
+                  <span className="font-semibold text-[#EDEFF5]">{selectedProjectActivity.title}</span>
                 </div>
 
                 {loading ? (
                   <div className="space-y-3">
-                    <div className="h-32 bg-slate-100 animate-pulse rounded-xl"></div>
-                    <div className="h-24 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-32 bg-[#1A1C22] animate-pulse rounded-xl"></div>
+                    <div className="h-24 bg-[#1A1C22] animate-pulse rounded-xl"></div>
                   </div>
                 ) : projectDetails && (
                   <div className="space-y-6">
-                    <div className="border border-[#E2E8F0] rounded-xl p-5 bg-slate-50/20 space-y-4 text-xs">
+                    <div className="border border-[#23252C] rounded-xl p-5 bg-[#16171D]/20 space-y-4 text-xs">
                       <div>
-                        <h4 className="font-bold text-[#0F172A] text-xs">Project Overview</h4>
-                        <p className="text-[#475569] leading-relaxed mt-1">{projectDetails.project_overview}</p>
+                        <h4 className="font-bold text-[#EDEFF5] text-xs">Project Overview</h4>
+                        <p className="text-[#C2C6D1] leading-relaxed mt-1">{projectDetails.project_overview}</p>
                       </div>
 
                       {projectDetails.requirements && (
                         <div>
-                          <h4 className="font-bold text-[#0F172A] text-xs">Requirements</h4>
-                          <p className="text-[#475569] leading-relaxed mt-1 whitespace-pre-line">{projectDetails.requirements}</p>
+                          <h4 className="font-bold text-[#EDEFF5] text-xs">Requirements</h4>
+                          <p className="text-[#C2C6D1] leading-relaxed mt-1 whitespace-pre-line">{projectDetails.requirements}</p>
                         </div>
                       )}
 
                       {projectDetails.deliverables && (
                         <div>
-                          <h4 className="font-bold text-[#0F172A] text-xs">Deliverables</h4>
-                          <p className="text-[#475569] leading-relaxed mt-1 whitespace-pre-line">{projectDetails.deliverables}</p>
+                          <h4 className="font-bold text-[#EDEFF5] text-xs">Deliverables</h4>
+                          <p className="text-[#C2C6D1] leading-relaxed mt-1 whitespace-pre-line">{projectDetails.deliverables}</p>
                         </div>
                       )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-2 border-t border-[#E2E8F0]">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-2 border-t border-[#23252C]">
                         <div>
-                          <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Difficulty</span>
-                          <span className="font-bold text-[#0F172A] text-xs capitalize">{projectDetails.difficulty_level || "intermediate"}</span>
+                          <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Difficulty</span>
+                          <span className="font-bold text-[#EDEFF5] text-xs capitalize">{projectDetails.difficulty_level || "intermediate"}</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Estimated Hours</span>
-                          <span className="font-bold text-[#0F172A] text-xs">{projectDetails.estimated_hours || 0} hrs</span>
+                          <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Estimated Hours</span>
+                          <span className="font-bold text-[#EDEFF5] text-xs">{projectDetails.estimated_hours || 0} hrs</span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-[#475569] font-bold block uppercase tracking-wide">Max Score</span>
-                          <span className="font-bold text-[#0F172A] text-xs">{projectDetails.max_score} pts</span>
+                          <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Max Score</span>
+                          <span className="font-bold text-[#EDEFF5] text-xs">{projectDetails.max_score} pts</span>
                         </div>
                       </div>
                     </div>
 
                     {/* GitHub submission module */}
-                    <div className="border border-[#E2E8F0] rounded-xl p-5 space-y-4">
-                      <h4 className="font-bold text-xs text-[#0f172a] flex items-center gap-1">
-                        <FolderCode className="text-[#2563EB]" size={14} /> Submission Form
+                    <div className="border border-[#23252C] rounded-xl p-5 space-y-4">
+                      <h4 className="font-bold text-xs text-[#EDEFF5] flex items-center gap-1">
+                        <FolderCode className="text-[#6E79F4]" size={14} /> Submission Form
                       </h4>
 
                       {projectSubmission && (
-                        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                        <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/20 text-[#2FBF71] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
                           <CheckCircle2 size={12} />
                           <span>Last Submitted: {new Date(projectSubmission.submitted_at).toLocaleString()}</span>
                         </div>
@@ -2935,7 +2781,7 @@ export default function StudentConsole({
                       )}
 
                       {projectReview?.review_status === "approved" && (
-                        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
+                        <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/20 text-[#2FBF71] rounded-lg p-3 text-[10px] font-semibold flex items-center gap-2">
                           <CheckCircle2 size={13} />
                           <span>This project has been approved — no resubmission needed.</span>
                         </div>
@@ -2953,7 +2799,7 @@ export default function StudentConsole({
                         return (
                           <div className="space-y-3 text-xs">
                             <div className="flex flex-col gap-1.5">
-                              <label htmlFor="project-github-url" className="font-bold text-[#0f172a]">GitHub Repository URL</label>
+                              <label htmlFor="project-github-url" className="font-bold text-[#EDEFF5]">GitHub Repository URL</label>
                               <input
                                 id="project-github-url"
                                 type="text"
@@ -2961,12 +2807,12 @@ export default function StudentConsole({
                                 onChange={(e) => setGithubUrl(e.target.value)}
                                 disabled={locked}
                                 placeholder="https://github.com/username/repository"
-                                className="bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#2563EB] transition-all disabled:bg-slate-50 disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+                                className="bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 w-full text-xs outline-none focus:border-[#6E79F4] transition-all disabled:bg-[#16171D] disabled:text-[#A3A9B6] disabled:cursor-not-allowed"
                               />
                             </div>
 
                             <div className="flex flex-col gap-1.5">
-                              <label htmlFor="project-submission-notes" className="font-bold text-[#0f172a]">Submission Notes (optional)</label>
+                              <label htmlFor="project-submission-notes" className="font-bold text-[#EDEFF5]">Submission Notes (optional)</label>
                               <textarea
                                 id="project-submission-notes"
                                 value={submissionNotes}
@@ -2974,14 +2820,14 @@ export default function StudentConsole({
                                 disabled={locked}
                                 placeholder="Write details or instructions for running the codebase here..."
                                 rows={3}
-                                className="bg-white border border-[#E2E8F0] rounded-lg p-3 w-full text-xs outline-none focus:border-[#2563EB] transition-all disabled:bg-slate-50 disabled:text-[#94A3B8] disabled:cursor-not-allowed"
+                                className="bg-[#131418] border border-[#23252C] rounded-lg p-3 w-full text-xs outline-none focus:border-[#6E79F4] transition-all disabled:bg-[#16171D] disabled:text-[#A3A9B6] disabled:cursor-not-allowed"
                               />
                             </div>
 
                             <button
                               onClick={handleSubmitProjectUrl}
                               disabled={actionLoading || locked}
-                              className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="bg-[#6E79F4] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#6E79F4]/95 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {locked ? "Submission Locked" : "Submit Project Repository"}
                             </button>
@@ -2993,26 +2839,26 @@ export default function StudentConsole({
                     {/* Mentor review block */}
                     {projectReview && (() => {
                       const reviewColor = projectReview.review_status === "approved"
-                        ? "#16A34A"
+                        ? "#2FBF71"
                         : projectReview.review_status === "rejected"
-                        ? "#DC2626"
-                        : "#F59E0B";
+                        ? "#F0555D"
+                        : "#F5B04A";
                       return (
                         <div className="border rounded-xl p-5 space-y-3" style={{ borderColor: `${reviewColor}33`, backgroundColor: `${reviewColor}0D` }}>
                           <h4 className="font-bold text-xs uppercase tracking-wide" style={{ color: reviewColor }}>Mentor Review Output</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
                             <div>
-                              <span className="text-[9px] text-[#475569] block">Review Status</span>
+                              <span className="text-[9px] text-[#C2C6D1] block">Review Status</span>
                               <span className="capitalize">{projectReview.review_status.replace(/_/g, " ")}</span>
                             </div>
                             <div>
-                              <span className="text-[9px] text-[#475569] block">Score Awarded</span>
+                              <span className="text-[9px] text-[#C2C6D1] block">Score Awarded</span>
                               <span>{projectReview.score !== null ? `${projectReview.score} / ${projectDetails.max_score}` : "Not Graded"}</span>
                             </div>
                           </div>
                           {projectReview.feedback && (
-                            <div className="bg-white p-3 rounded-lg border border-[#e2e8f0] text-[#475569] mt-2">
-                              <span className="text-[9px] font-bold text-[#0f172a] block mb-1">Mentor Feedback</span>
+                            <div className="bg-[#131418] p-3 rounded-lg border border-[#23252C] text-[#C2C6D1] mt-2">
+                              <span className="text-[9px] font-bold text-[#EDEFF5] block mb-1">Mentor Feedback</span>
                               <p className="italic">{projectReview.feedback}</p>
                             </div>
                           )}
@@ -3028,34 +2874,34 @@ export default function StudentConsole({
 
         {/* TAB 5: PROGRAMMING CHALLENGES */}
         {activeTab === "challenges" && (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 sm:p-6 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
+          <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 sm:p-6 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
             {!selectedChallengeActivity ? (
               <>
-                <h3 className="text-sm font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-3 flex items-center gap-2">
-                  <TerminalIcon className="text-[#2563EB]" size={16} /> My Assigned Coding Challenges
+                <h3 className="text-sm font-bold text-[#EDEFF5] border-b border-[#23252C] pb-3 flex items-center gap-2">
+                  <TerminalIcon className="text-[#6E79F4]" size={16} /> My Assigned Coding Challenges
                 </h3>
                 {loadingActivities ? (
                   <div className="space-y-3">
-                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
-                    <div className="h-16 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-[#1A1C22] animate-pulse rounded-xl"></div>
+                    <div className="h-16 bg-[#1A1C22] animate-pulse rounded-xl"></div>
                   </div>
                 ) : programActivities.filter(a => a.activity_type_code === "programming_challenge" || a.activity_type_code === "programming").length > 0 ? (
                   <div className="space-y-4">
                     {programActivities.filter(a => a.activity_type_code === "programming_challenge" || a.activity_type_code === "programming").map((act) => (
-                      <div key={act.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-slate-50/20 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:shadow-sm transition-all">
+                      <div key={act.id} className="border border-[#23252C] rounded-xl p-4 bg-[#16171D]/20 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:shadow-sm transition-all">
                         <div className="min-w-0">
-                          <h4 className="font-bold text-xs text-[#0F172A]">{act.title}</h4>
-                          <p className="text-[#475569] text-[10px] mt-1 line-clamp-1">{act.description}</p>
-                          <div className="flex flex-wrap gap-2 text-[9px] text-[#475569] font-semibold mt-2.5">
+                          <h4 className="font-bold text-xs text-[#EDEFF5]">{act.title}</h4>
+                          <p className="text-[#C2C6D1] text-[10px] mt-1 line-clamp-1">{act.description}</p>
+                          <div className="flex flex-wrap gap-2 text-[9px] text-[#C2C6D1] font-semibold mt-2.5">
                             <StatusBadge status={act.progress?.status_code} size="sm" />
                             {act.progress?.score !== null && (
-                              <span className="bg-[#16A34A]/10 text-[#16A34A] px-2 py-0.5 rounded font-bold border border-[#16A34A]/20">Score: {act.progress?.score} / {act.progress?.max_score || 100}</span>
+                              <span className="bg-[#2FBF71]/10 text-[#2FBF71] px-2 py-0.5 rounded font-bold border border-[#2FBF71]/20">Score: {act.progress?.score} / {act.progress?.max_score || 100}</span>
                             )}
                           </div>
                         </div>
                         <button
                           onClick={() => handleEnterChallenge(act)}
-                          className="bg-[#2563EB] text-white px-3.5 py-2 sm:py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#2563EB]/90 transition-all flex items-center justify-center gap-1 text-[10px] w-full sm:w-auto min-h-[36px]"
+                          className="bg-[#6E79F4] text-white px-3.5 py-2 sm:py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/90 transition-all flex items-center justify-center gap-1 text-[10px] w-full sm:w-auto min-h-[36px]"
                         >
                           Enter Challenge <ChevronRight size={12} />
                         </button>
@@ -3063,14 +2909,14 @@ export default function StudentConsole({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-10 bg-slate-50/30 rounded-xl border border-dashed border-[#E2E8F0] text-[#475569] font-medium">
+                  <div className="text-center py-10 bg-[#16171D]/30 rounded-xl border border-dashed border-[#23252C] text-[#C2C6D1] font-medium">
                     No coding challenges assigned to your group yet.
                   </div>
                 )}
               </>
             ) : (
               <div className="space-y-6">
-                <div className="flex items-center gap-2 text-xs border-b border-[#E2E8F0] pb-3">
+                <div className="flex items-center gap-2 text-xs border-b border-[#23252C] pb-3">
                   <button
                     onClick={() => {
                       setSelectedChallengeActivity(null);
@@ -3078,18 +2924,18 @@ export default function StudentConsole({
                       setSelectedSubmissionForResults(null);
                       setSubmissionResults(null);
                     }}
-                    className="text-[#2563EB] hover:underline flex items-center gap-1 font-bold"
+                    className="text-[#6E79F4] hover:underline flex items-center gap-1 font-bold"
                   >
                     <ChevronLeft size={14} /> Challenges
                   </button>
                   <span className="text-slate-300">/</span>
-                  <span className="font-semibold text-[#0F172A]">{selectedChallengeActivity.title}</span>
+                  <span className="font-semibold text-[#EDEFF5]">{selectedChallengeActivity.title}</span>
                 </div>
 
                 {/* Mobile: the code editor workspace needs a larger screen */}
                 <div className="lg:hidden bg-amber-50 border border-amber-200 rounded-xl p-6 text-center space-y-3">
                   <TerminalIcon className="mx-auto text-amber-600" size={28} />
-                  <p className="text-sm font-bold text-[#0F172A]">Desktop Required</p>
+                  <p className="text-sm font-bold text-[#EDEFF5]">Desktop Required</p>
                   <p className="text-xs text-amber-800 leading-relaxed max-w-xs mx-auto">
                     Coding challenges need a full code editor that isn't available on mobile yet. Please switch to a laptop or desktop to attempt this challenge.
                   </p>
@@ -3100,7 +2946,7 @@ export default function StudentConsole({
                       setSelectedSubmissionForResults(null);
                       setSubmissionResults(null);
                     }}
-                    className="inline-flex items-center gap-1 bg-white border border-amber-300 text-amber-800 font-bold text-xs px-4 py-2 rounded-lg hover:bg-amber-100 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1 bg-[#131418] border border-amber-300 text-amber-800 font-bold text-xs px-4 py-2 rounded-lg hover:bg-amber-100 transition-all cursor-pointer"
                   >
                     <ChevronLeft size={13} /> Back to Challenges
                   </button>
@@ -3109,50 +2955,50 @@ export default function StudentConsole({
                 <div className="hidden lg:block">
                 {loading ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="h-40 bg-slate-100 animate-pulse rounded-xl"></div>
-                    <div className="h-40 bg-slate-100 animate-pulse rounded-xl"></div>
+                    <div className="h-40 bg-[#1A1C22] animate-pulse rounded-xl"></div>
+                    <div className="h-40 bg-[#1A1C22] animate-pulse rounded-xl"></div>
                   </div>
                 ) : challengeDetails && (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
                     {/* Left: Problem statement & Examples */}
                     <div className="space-y-6">
-                      <div className="border border-[#E2E8F0] rounded-xl p-5 bg-slate-50/20 space-y-4">
+                      <div className="border border-[#23252C] rounded-xl p-5 bg-[#16171D]/20 space-y-4">
                         <div>
                           <div className="flex justify-between items-center">
-                            <h4 className="font-bold text-[#0F172A] text-xs">Problem Statement</h4>
-                            <span className="px-2 py-0.5 rounded font-bold uppercase text-[9px] bg-[#2563EB]/15 text-[#2563EB] border border-[#2563EB]/20">
+                            <h4 className="font-bold text-[#EDEFF5] text-xs">Problem Statement</h4>
+                            <span className="px-2 py-0.5 rounded font-bold uppercase text-[9px] bg-[#6E79F4]/15 text-[#6E79F4] border border-[#6E79F4]/20">
                               {challengeDetails.difficulty_level}
                             </span>
                           </div>
-                          <p className="text-[#475569] leading-relaxed mt-2 whitespace-pre-line">{challengeDetails.problem_statement}</p>
+                          <p className="text-[#C2C6D1] leading-relaxed mt-2 whitespace-pre-line">{challengeDetails.problem_statement}</p>
                         </div>
 
                         {challengeDetails.instructions && (
-                          <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-3 rounded-lg text-xs text-[#0f172a] space-y-1">
-                            <span className="font-bold text-[#2563EB] block text-[9px] uppercase tracking-wider">💡 Instructions & Hints</span>
+                          <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/15 p-3 rounded-lg text-xs text-[#EDEFF5] space-y-1">
+                            <span className="font-bold text-[#6E79F4] block text-[9px] uppercase tracking-wider">💡 Instructions & Hints</span>
                             <p className="leading-relaxed whitespace-pre-wrap">{challengeDetails.instructions}</p>
                           </div>
                         )}
 
                         {challengeDetails.input_format && (
                           <div>
-                            <h4 className="font-bold text-[#0F172A] text-xs">Input Format</h4>
-                            <p className="text-[#475569] leading-relaxed mt-1">{challengeDetails.input_format}</p>
+                            <h4 className="font-bold text-[#EDEFF5] text-xs">Input Format</h4>
+                            <p className="text-[#C2C6D1] leading-relaxed mt-1">{challengeDetails.input_format}</p>
                           </div>
                         )}
 
                         {challengeDetails.output_format && (
                           <div>
-                            <h4 className="font-bold text-[#0F172A] text-xs">Output Format</h4>
-                            <p className="text-[#475569] leading-relaxed mt-1">{challengeDetails.output_format}</p>
+                            <h4 className="font-bold text-[#EDEFF5] text-xs">Output Format</h4>
+                            <p className="text-[#C2C6D1] leading-relaxed mt-1">{challengeDetails.output_format}</p>
                           </div>
                         )}
 
                         {challengeDetails.constraints_text && (
                           <div>
-                            <h4 className="font-bold text-[#0F172A] text-xs">Constraints</h4>
-                            <p className="text-[#475569] font-mono leading-relaxed mt-1 text-[10px] bg-slate-100 p-2 rounded">{challengeDetails.constraints_text}</p>
+                            <h4 className="font-bold text-[#EDEFF5] text-xs">Constraints</h4>
+                            <p className="text-[#C2C6D1] font-mono leading-relaxed mt-1 text-[10px] bg-[#1A1C22] p-2 rounded">{challengeDetails.constraints_text}</p>
                           </div>
                         )}
                       </div>
@@ -3160,21 +3006,21 @@ export default function StudentConsole({
                       {/* Examples */}
                       {challengeExamples.length > 0 && (
                         <div className="space-y-4">
-                          <h4 className="font-bold text-xs text-[#0F172A] uppercase tracking-wide">Visible Examples</h4>
+                          <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wide">Visible Examples</h4>
                           {challengeExamples.map((ex) => (
-                            <div key={ex.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-white space-y-2">
-                              <p className="font-bold text-[#2563EB] text-[10px]">Example {ex.example_number}</p>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[10px] font-mono bg-slate-50 p-2 rounded border border-[#E2E8F0] overflow-x-auto">
+                            <div key={ex.id} className="border border-[#23252C] rounded-xl p-4 bg-[#131418] space-y-2">
+                              <p className="font-bold text-[#6E79F4] text-[10px]">Example {ex.example_number}</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[10px] font-mono bg-[#16171D] p-2 rounded border border-[#23252C] overflow-x-auto">
                                 <div>
-                                  <span className="font-bold text-[#0f172a] block mb-0.5">Input</span>
-                                  <span className="text-[#475569]">{ex.input_example}</span>
+                                  <span className="font-bold text-[#EDEFF5] block mb-0.5">Input</span>
+                                  <span className="text-[#C2C6D1]">{ex.input_example}</span>
                                 </div>
                                 <div>
-                                  <span className="font-bold text-[#0f172a] block mb-0.5">Output</span>
-                                  <span className="text-[#475569]">{ex.output_example}</span>
+                                  <span className="font-bold text-[#EDEFF5] block mb-0.5">Output</span>
+                                  <span className="text-[#C2C6D1]">{ex.output_example}</span>
                                 </div>
                               </div>
-                              {ex.explanation && <p className="text-[10px] text-[#475569] italic">Explanation: {ex.explanation}</p>}
+                              {ex.explanation && <p className="text-[10px] text-[#C2C6D1] italic">Explanation: {ex.explanation}</p>}
                             </div>
                           ))}
                         </div>
@@ -3183,16 +3029,16 @@ export default function StudentConsole({
 
                     {/* Right: Code editor & submissions list */}
                     <div className="space-y-6">
-                      <div className="border border-[#E2E8F0] rounded-xl p-5 bg-white space-y-4">
-                        <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-3">
-                          <h4 className="font-bold text-xs text-[#0f172a] flex items-center gap-1">
-                            <Code size={14} className="text-[#2563EB]" /> Code Editor
+                      <div className="border border-[#23252C] rounded-xl p-5 bg-[#131418] space-y-4">
+                        <div className="flex justify-between items-center border-b border-[#23252C] pb-3">
+                          <h4 className="font-bold text-xs text-[#EDEFF5] flex items-center gap-1">
+                            <Code size={14} className="text-[#6E79F4]" /> Code Editor
                           </h4>
                           <select
                             value={editorLanguage}
                             onChange={(e) => setEditorLanguage(e.target.value)}
                             aria-label="Programming language"
-                            className="bg-white border border-[#E2E8F0] hover:border-[#2563EB]/30 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-[#0F172A] outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/15 transition-all cursor-pointer"
+                            className="bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/30 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-[#EDEFF5] outline-none focus:border-[#6E79F4] focus:ring-2 focus:ring-[#6E79F4]/15 transition-all cursor-pointer"
                           >
                             <option value="javascript">JavaScript (Node.js)</option>
                             <option value="python">Python 3</option>
@@ -3206,7 +3052,7 @@ export default function StudentConsole({
                           <div
                             ref={codeEditorGutterRef}
                             aria-hidden="true"
-                            className="bg-[#0F172A] text-slate-600 font-mono text-[10px] leading-normal py-4 pl-3 pr-2 text-right select-none overflow-hidden shrink-0"
+                            className="bg-[#6E79F4] text-[#C2C6D1] font-mono text-[10px] leading-normal py-4 pl-3 pr-2 text-right select-none overflow-hidden shrink-0"
                             style={{ height: "18rem" }}
                           >
                             {Array.from({ length: Math.max(editorCode.split("\n").length, 12) }, (_, i) => (
@@ -3218,7 +3064,7 @@ export default function StudentConsole({
                             onChange={(e) => setEditorCode(e.target.value)}
                             onScroll={handleCodeEditorScroll}
                             spellCheck={false}
-                            className="bg-[#0F172A] text-emerald-400 font-mono p-4 w-full text-[10px] outline-none leading-normal resize-none"
+                            className="bg-[#6E79F4] text-emerald-400 font-mono p-4 w-full text-[10px] outline-none leading-normal resize-none"
                             style={{ height: "18rem" }}
                             placeholder="// Write your code solution here..."
                           />
@@ -3227,31 +3073,31 @@ export default function StudentConsole({
                         <button
                           onClick={handleSubmitChallenge}
                           disabled={actionLoading}
-                          className="bg-[#2563EB] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2563EB]/95 transition-all text-xs disabled:opacity-50 w-full flex justify-center items-center gap-1.5"
+                          className="bg-[#6E79F4] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#6E79F4]/95 transition-all text-xs disabled:opacity-50 w-full flex justify-center items-center gap-1.5"
                         >
                           <Send size={12} /> Submit Solution
                         </button>
                       </div>
 
                       {/* Submissions list */}
-                      <div className="border border-[#E2E8F0] rounded-xl p-5 bg-white space-y-4">
-                        <h4 className="font-bold text-xs text-[#0f172a] flex items-center gap-1">
-                          <History size={14} className="text-[#2563EB]" /> Submission History ({challengeSubmissions.length})
+                      <div className="border border-[#23252C] rounded-xl p-5 bg-[#131418] space-y-4">
+                        <h4 className="font-bold text-xs text-[#EDEFF5] flex items-center gap-1">
+                          <History size={14} className="text-[#6E79F4]" /> Submission History ({challengeSubmissions.length})
                         </h4>
 
-                        <div className="divide-y divide-[#E2E8F0] max-h-48 overflow-y-auto pr-1">
+                        <div className="divide-y divide-[#23252C] max-h-48 overflow-y-auto pr-1">
                           {challengeSubmissions.map((sub) => (
                             <div key={sub.id} className="py-2.5 flex flex-col sm:flex-row justify-between sm:items-center gap-2 text-xs">
                               <div>
-                                <span className="font-bold capitalize text-[#0F172A]">{sub.language}</span>
-                                <span className="text-[10px] text-[#475569] ml-2">{new Date(sub.submitted_at).toLocaleTimeString()}</span>
+                                <span className="font-bold capitalize text-[#EDEFF5]">{sub.language}</span>
+                                <span className="text-[10px] text-[#C2C6D1] ml-2">{new Date(sub.submitted_at).toLocaleTimeString()}</span>
                                 <div className="mt-1 flex gap-2">
                                   <StatusBadge status={sub.submission_status_code} />
                                 </div>
                               </div>
                               <button
                                 onClick={() => handleViewSubmissionResults(sub)}
-                                className="text-[#2563EB] hover:underline font-bold text-[10px]"
+                                className="text-[#6E79F4] hover:underline font-bold text-[10px]"
                               >
                                 View Results
                               </button>
@@ -3262,33 +3108,33 @@ export default function StudentConsole({
 
                       {/* Detailed submission results */}
                       {selectedSubmissionForResults && submissionResults && (
-                        <div className="border border-[#E2E8F0] bg-slate-50/50 rounded-xl p-5 space-y-4 text-xs">
-                          <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-2">
-                            <h4 className="font-bold text-[#0F172A] text-xs">Grading & Execution Report</h4>
-                            <span className="font-mono text-[9px] text-[#475569]">ID: {selectedSubmissionForResults.id.substring(0, 8)}</span>
+                        <div className="border border-[#23252C] bg-[#16171D]/50 rounded-xl p-5 space-y-4 text-xs">
+                          <div className="flex justify-between items-center border-b border-[#23252C] pb-2">
+                            <h4 className="font-bold text-[#EDEFF5] text-xs">Grading & Execution Report</h4>
+                            <span className="font-mono text-[9px] text-[#C2C6D1]">ID: {selectedSubmissionForResults.id.substring(0, 8)}</span>
                           </div>
 
                           {submissionResults.result ? (
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-                              <div className="bg-white p-2 border border-[#E2E8F0] rounded-lg">
-                                <span className="text-[9px] text-[#475569] block">Passed Cases</span>
-                                <span className="font-bold text-[#16A34A]">{submissionResults.result.passed_test_cases} / {submissionResults.result.total_test_cases}</span>
+                              <div className="bg-[#131418] p-2 border border-[#23252C] rounded-lg">
+                                <span className="text-[9px] text-[#C2C6D1] block">Passed Cases</span>
+                                <span className="font-bold text-[#2FBF71]">{submissionResults.result.passed_test_cases} / {submissionResults.result.total_test_cases}</span>
                               </div>
-                              <div className="bg-white p-2 border border-[#E2E8F0] rounded-lg">
-                                <span className="text-[9px] text-[#475569] block">Time Spent</span>
+                              <div className="bg-[#131418] p-2 border border-[#23252C] rounded-lg">
+                                <span className="text-[9px] text-[#C2C6D1] block">Time Spent</span>
                                 <span className="font-bold">{submissionResults.result.execution_time_ms ?? 0} ms</span>
                               </div>
-                              <div className="bg-white p-2 border border-[#E2E8F0] rounded-lg">
-                                <span className="text-[9px] text-[#475569] block">Memory Used</span>
+                              <div className="bg-[#131418] p-2 border border-[#23252C] rounded-lg">
+                                <span className="text-[9px] text-[#C2C6D1] block">Memory Used</span>
                                 <span className="font-bold">{submissionResults.result.memory_used_kb ?? 0} KB</span>
                               </div>
-                              <div className="bg-white p-2 border border-[#E2E8F0] rounded-lg">
-                                <span className="text-[9px] text-[#475569] block">Score</span>
-                                <span className="font-bold text-[#2563EB]">{submissionResults.result.score ?? 0} pts</span>
+                              <div className="bg-[#131418] p-2 border border-[#23252C] rounded-lg">
+                                <span className="text-[9px] text-[#C2C6D1] block">Score</span>
+                                <span className="font-bold text-[#6E79F4]">{submissionResults.result.score ?? 0} pts</span>
                               </div>
                             </div>
                           ) : (
-                            <div className="bg-[#F59E0B]/5 border border-[#F59E0B]/20 text-[#F59E0B] p-3 rounded-lg flex items-center gap-1.5 font-semibold">
+                            <div className="bg-[#F5B04A]/5 border border-[#F5B04A]/20 text-[#F5B04A] p-3 rounded-lg flex items-center gap-1.5 font-semibold">
                               <AlertTriangle size={14} />
                               <span>Submission is currently: {selectedSubmissionForResults.submission_status_code}. Grading results will update automatically.</span>
                             </div>
@@ -3297,8 +3143,8 @@ export default function StudentConsole({
                           {/* Logs list */}
                           {submissionResults.logs?.length > 0 && (
                             <div className="space-y-2">
-                              <span className="font-bold text-[#0F172A] block">Execution Output Logs</span>
-                              <div className="bg-[#0F172A] text-[#E2E8F0] p-3 rounded-xl font-mono text-[9px] max-h-32 overflow-y-auto space-y-1">
+                              <span className="font-bold text-[#EDEFF5] block">Execution Output Logs</span>
+                              <div className="bg-[#0E0F13] border border-[#23252C] text-[#C2C6D1] p-3 rounded-xl font-mono text-[9px] max-h-32 overflow-y-auto space-y-1">
                                 {submissionResults.logs.map((log: any) => (
                                   <div key={log.id}>
                                     <span className="text-amber-400">[{log.log_type}]</span> {log.log_message}
@@ -3319,10 +3165,9 @@ export default function StudentConsole({
             )}
           </div>
         )}
-      </div>
-
-    </div>
-  </div>
+        </div>
+        </div>
+      </AppShell>
     </>
   );
 }

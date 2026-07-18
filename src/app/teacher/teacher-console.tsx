@@ -1330,36 +1330,36 @@ export default function TeacherConsole({
         {/* Drawer backdrop */}
         <div 
           onClick={() => setSelectedActivity(null)}
-          className="fixed inset-0 z-40 bg-[#0F172A]/30 backdrop-blur-xs transition-opacity duration-300"
+          className="fixed inset-0 z-40 bg-[#6E79F4]/30 backdrop-blur-xs transition-opacity duration-300"
         />
 
         {/* Slide-over Drawer */}
-        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-white border-l border-[#E2E8F0] shadow-2xl flex flex-col text-xs text-[#0F172A]">
+        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col text-xs text-[#EDEFF5]">
           
           {/* Header */}
-          <div className="bg-slate-50 px-6 py-5 border-b border-[#E2E8F0] flex justify-between items-center shrink-0">
+          <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex justify-between items-center shrink-0">
             <div>
-              <h3 className="font-bold text-sm text-[#0F172A] flex items-center gap-1.5">
-                <Award size={16} className="text-[#2563EB]" /> Activity Console
+              <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
+                <Award size={16} className="text-[#6E79F4]" /> Activity Console
               </h3>
-              <p className="text-[10px] text-[#475569] mt-0.5">{selectedActivity.title}</p>
+              <p className="text-[10px] text-[#C2C6D1] mt-0.5">{selectedActivity.title}</p>
             </div>
             <button 
               onClick={() => setSelectedActivity(null)}
-              className="p-1.5 hover:bg-slate-100 rounded-lg text-[#475569] hover:text-[#0F172A] transition-colors font-bold"
+              className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors font-bold"
             >
               ✕
             </button>
           </div>
 
           {/* Tab navigation inside drawer */}
-          <div className="flex border-b border-[#E2E8F0] shrink-0 bg-slate-50/30">
+          <div className="flex border-b border-[#23252C] shrink-0 bg-[#16171D]/30">
             <button
               onClick={() => setActiveDrawerTab("config")}
               className={`flex-1 py-3 text-center font-bold border-b-2 transition-all ${
                 activeDrawerTab === "config" 
-                  ? "border-[#2563EB] text-[#2563EB]" 
-                  : "border-transparent text-[#475569] hover:text-[#0F172A]"
+                  ? "border-[#6E79F4] text-[#6E79F4]" 
+                  : "border-transparent text-[#C2C6D1] hover:text-[#EDEFF5]"
               }`}
             >
               Configuration Details
@@ -1375,55 +1375,55 @@ export default function TeacherConsole({
                 // EDIT FORM
                 <form onSubmit={handleEditSubmit} className="space-y-4">
                   <div className="space-y-1">
-                    <label className="block font-bold text-[#475569] uppercase text-[9px]">Activity Title *</label>
+                    <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Activity Title *</label>
                     <input
                       type="text"
                       required
                       value={editForm.title}
                       onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-semibold"
+                      className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-semibold"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block font-bold text-[#475569] uppercase text-[9px]">Description</label>
+                    <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Description</label>
                     <textarea
                       rows={3}
                       value={editForm.description}
                       onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm"
+                      className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="block font-bold text-[#475569] uppercase text-[9px]">Guidelines / Hint</label>
+                    <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Guidelines / Hint</label>
                     <textarea
                       rows={3}
                       value={editForm.instructions}
                       onChange={(e) => setEditForm({ ...editForm, instructions: e.target.value })}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                      className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="block font-bold text-[#475569] uppercase text-[9px]">Max Score *</label>
+                      <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Max Score *</label>
                       <input
                         type="number"
                         required
                         value={editForm.max_score}
                         onChange={(e) => setEditForm({ ...editForm, max_score: Number(e.target.value) })}
-                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                        className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="block font-bold text-[#475569] uppercase text-[9px]">Passing Score *</label>
+                      <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Passing Score *</label>
                       <input
                         type="number"
                         required
                         value={editForm.passing_score}
                         onChange={(e) => setEditForm({ ...editForm, passing_score: Number(e.target.value) })}
-                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                        className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                       />
                     </div>
                   </div>
@@ -1434,61 +1434,61 @@ export default function TeacherConsole({
                       id="edit_is_mandatory"
                       checked={editForm.is_mandatory}
                       onChange={(e) => setEditForm({ ...editForm, is_mandatory: e.target.checked })}
-                      className="rounded text-[#2563EB] focus:ring-[#2563EB] border-[#E2E8F0]"
+                      className="rounded text-[#6E79F4] focus:ring-[#6E79F4] border-[#23252C]"
                     />
-                    <label htmlFor="edit_is_mandatory" className="font-semibold text-xs text-[#0F172A]">Mandatory Required Activity</label>
+                    <label htmlFor="edit_is_mandatory" className="font-semibold text-xs text-[#EDEFF5]">Mandatory Required Activity</label>
                   </div>
 
                   {/* Subclass: Coding Challenge */}
                   {selectedActivity.activity_type_code === "programming" && (
-                    <div className="border-t border-[#E2E8F0] pt-4 space-y-4">
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-[#475569]">Coding Challenge Configuration</h4>
+                    <div className="border-t border-[#23252C] pt-4 space-y-4">
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-[#C2C6D1]">Coding Challenge Configuration</h4>
                       <div className="space-y-1">
-                        <label className="block font-bold text-[#475569] uppercase text-[9px]">Problem Statement *</label>
+                        <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Problem Statement *</label>
                         <textarea
                           rows={4}
                           required
                           value={editForm.chal_problem_statement}
                           onChange={(e) => setEditForm({ ...editForm, chal_problem_statement: e.target.value })}
-                          className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                          className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                         />
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="block font-bold text-[#475569] uppercase text-[9px]">Input Format</label>
+                          <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Input Format</label>
                           <textarea
                             rows={2}
                             value={editForm.chal_input_format}
                             onChange={(e) => setEditForm({ ...editForm, chal_input_format: e.target.value })}
-                            className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                            className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="block font-bold text-[#475569] uppercase text-[9px]">Output Format</label>
+                          <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Output Format</label>
                           <textarea
                             rows={2}
                             value={editForm.chal_output_format}
                             onChange={(e) => setEditForm({ ...editForm, chal_output_format: e.target.value })}
-                            className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                            className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                           />
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <label className="block font-bold text-[#475569] uppercase text-[9px]">Constraints</label>
+                        <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Constraints</label>
                         <textarea
                           rows={2}
                           value={editForm.chal_constraints}
                           onChange={(e) => setEditForm({ ...editForm, chal_constraints: e.target.value })}
-                          className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                          className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="block font-bold text-[#475569] uppercase text-[9px]">Legacy Starter Code (fallback, language-agnostic)</label>
+                        <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Legacy Starter Code (fallback, language-agnostic)</label>
                         <textarea
                           rows={3}
                           value={editForm.chal_starter_code}
                           onChange={(e) => setEditForm({ ...editForm, chal_starter_code: e.target.value })}
-                          className="w-full bg-slate-900 text-slate-100 border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
+                          className="w-full bg-slate-900 text-slate-100 border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none font-mono"
                         />
                       </div>
                       {createdChallengeId && (
@@ -1501,11 +1501,11 @@ export default function TeacherConsole({
                       )}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-1">
-                          <label className="block font-bold text-[#475569] uppercase text-[9px]">Difficulty</label>
+                          <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Difficulty</label>
                           <select
                             value={editForm.chal_difficulty}
                             onChange={(e) => setEditForm({ ...editForm, chal_difficulty: e.target.value })}
-                            className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-semibold"
+                            className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-semibold"
                           >
                             <option value="easy">Easy</option>
                             <option value="medium">Medium</option>
@@ -1513,21 +1513,21 @@ export default function TeacherConsole({
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="block font-bold text-[#475569] uppercase text-[9px]">Time Limit (ms)</label>
+                          <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Time Limit (ms)</label>
                           <input
                             type="number"
                             value={editForm.chal_time_limit}
                             onChange={(e) => setEditForm({ ...editForm, chal_time_limit: Number(e.target.value) })}
-                            className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                            className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="block font-bold text-[#475569] uppercase text-[9px]">Memory Limit (MB)</label>
+                          <label className="block font-bold text-[#C2C6D1] uppercase text-[9px]">Memory Limit (MB)</label>
                           <input
                             type="number"
                             value={editForm.chal_memory_limit}
                             onChange={(e) => setEditForm({ ...editForm, chal_memory_limit: Number(e.target.value) })}
-                            className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#2563EB] shadow-sm font-mono"
+                            className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono"
                           />
                         </div>
                       </div>
@@ -1539,32 +1539,32 @@ export default function TeacherConsole({
               ) : (
                 // VIEW MODE
                 <div className="space-y-5">
-                  <div className="bg-slate-50 border border-[#E2E8F0] p-4 rounded-xl space-y-3.5">
-                    <h4 className="font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-1.5 text-xs">General Metrics</h4>
+                  <div className="bg-[#16171D] border border-[#23252C] p-4 rounded-xl space-y-3.5">
+                    <h4 className="font-bold text-[#EDEFF5] border-b border-[#23252C] pb-1.5 text-xs">General Metrics</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <span className="text-[10px] text-[#475569] block">Max Score</span>
-                        <strong className="text-xs font-mono text-[#0F172A]">{selectedActivity.max_score} Points</strong>
+                        <span className="text-[10px] text-[#C2C6D1] block">Max Score</span>
+                        <strong className="text-xs font-mono text-[#EDEFF5]">{selectedActivity.max_score} Points</strong>
                       </div>
                       <div>
-                        <span className="text-[10px] text-[#475569] block">Passing Threshold</span>
-                        <strong className="text-xs font-mono text-[#0F172A]">{selectedActivity.passing_score} Points</strong>
+                        <span className="text-[10px] text-[#C2C6D1] block">Passing Threshold</span>
+                        <strong className="text-xs font-mono text-[#EDEFF5]">{selectedActivity.passing_score} Points</strong>
                       </div>
                       <div>
-                        <span className="text-[10px] text-[#475569] block">Mandatory Required</span>
-                        <strong className="text-xs text-[#0F172A]">{selectedActivity.is_mandatory ? "Yes" : "No (Optional)"}</strong>
+                        <span className="text-[10px] text-[#C2C6D1] block">Mandatory Required</span>
+                        <strong className="text-xs text-[#EDEFF5]">{selectedActivity.is_mandatory ? "Yes" : "No (Optional)"}</strong>
                       </div>
                       <div>
-                        <span className="text-[10px] text-[#475569] block">Activity Engine</span>
-                        <strong className="text-xs uppercase text-[#0F172A]">{selectedActivity.activity_type_code}</strong>
+                        <span className="text-[10px] text-[#C2C6D1] block">Activity Engine</span>
+                        <strong className="text-xs uppercase text-[#EDEFF5]">{selectedActivity.activity_type_code}</strong>
                       </div>
                     </div>
                   </div>
 
                   {selectedActivity.description && (
                     <div className="space-y-1">
-                      <span className="font-bold text-[#475569] uppercase text-[9px] tracking-wider block">Description</span>
-                      <p className="bg-slate-50/50 p-2.5 border border-[#E2E8F0] rounded-lg text-[#0F172A] leading-relaxed">
+                      <span className="font-bold text-[#C2C6D1] uppercase text-[9px] tracking-wider block">Description</span>
+                      <p className="bg-[#16171D]/50 p-2.5 border border-[#23252C] rounded-lg text-[#EDEFF5] leading-relaxed">
                         {selectedActivity.description}
                       </p>
                     </div>
@@ -1572,8 +1572,8 @@ export default function TeacherConsole({
 
                   {selectedActivity.instructions && (
                     <div className="space-y-1">
-                      <span className="font-bold text-[#475569] uppercase text-[9px] tracking-wider block">Guidelines & Hint</span>
-                      <p className="bg-slate-50/50 p-2.5 border border-[#E2E8F0] rounded-lg text-[#0F172A] font-mono leading-relaxed whitespace-pre-wrap">
+                      <span className="font-bold text-[#C2C6D1] uppercase text-[9px] tracking-wider block">Guidelines & Hint</span>
+                      <p className="bg-[#16171D]/50 p-2.5 border border-[#23252C] rounded-lg text-[#EDEFF5] font-mono leading-relaxed whitespace-pre-wrap">
                         {selectedActivity.instructions}
                       </p>
                     </div>
@@ -1582,15 +1582,15 @@ export default function TeacherConsole({
                   {selectedActivity.activity_type_code === "programming" && activityDetails?.challenge && (
                     <div className="space-y-4 pt-2">
                       <div className="space-y-1">
-                        <span className="font-bold text-[#475569] uppercase text-[9px] tracking-wider block">Problem Statement</span>
-                        <p className="bg-slate-50/50 p-2.5 border border-[#E2E8F0] rounded-lg text-[#0F172A] font-mono leading-relaxed whitespace-pre-wrap">
+                        <span className="font-bold text-[#C2C6D1] uppercase text-[9px] tracking-wider block">Problem Statement</span>
+                        <p className="bg-[#16171D]/50 p-2.5 border border-[#23252C] rounded-lg text-[#EDEFF5] font-mono leading-relaxed whitespace-pre-wrap">
                           {activityDetails.challenge.problem_statement}
                         </p>
                       </div>
 
                       {activityDetails.challenge.starter_code && (
                         <div className="space-y-1">
-                          <span className="font-bold text-[#475569] uppercase text-[9px] tracking-wider block">Starter Template Outline</span>
+                          <span className="font-bold text-[#C2C6D1] uppercase text-[9px] tracking-wider block">Starter Template Outline</span>
                           <pre className="bg-slate-900 text-slate-100 p-3 rounded-lg text-[10px] font-mono overflow-x-auto leading-relaxed">
                             {activityDetails.challenge.starter_code}
                           </pre>
@@ -1599,12 +1599,12 @@ export default function TeacherConsole({
 
                       {activityDetails.examples && activityDetails.examples.length > 0 && (
                         <div className="space-y-2">
-                          <span className="font-bold text-[#475569] uppercase text-[9px] tracking-wider block">Visible Examples</span>
+                          <span className="font-bold text-[#C2C6D1] uppercase text-[9px] tracking-wider block">Visible Examples</span>
                           {activityDetails.examples.map((ex: any) => (
-                            <div key={ex.id} className="border border-[#E2E8F0] rounded-lg p-2.5 bg-slate-50/30 font-mono text-[10px] space-y-1">
-                              <div><span className="text-[#86868b]">Input:</span> {ex.input_example}</div>
-                              <div><span className="text-[#86868b]">Output:</span> {ex.output_example}</div>
-                              {ex.explanation && <div><span className="text-[#86868b]">Explanation:</span> {ex.explanation}</div>}
+                            <div key={ex.id} className="border border-[#23252C] rounded-lg p-2.5 bg-[#16171D]/30 font-mono text-[10px] space-y-1">
+                              <div><span className="text-[#C2C6D1]">Input:</span> {ex.input_example}</div>
+                              <div><span className="text-[#C2C6D1]">Output:</span> {ex.output_example}</div>
+                              {ex.explanation && <div><span className="text-[#C2C6D1]">Explanation:</span> {ex.explanation}</div>}
                             </div>
                           ))}
                         </div>
@@ -1617,25 +1617,25 @@ export default function TeacherConsole({
 
             {/* In Edit mode, show coding challenge extra components */}
             {isEditing && selectedActivity.activity_type_code === "programming" && (
-              <div className="border-t border-[#E2E8F0] pt-4 mt-6 space-y-6">
+              <div className="border-t border-[#23252C] pt-4 mt-6 space-y-6">
                 {/* Examples Section */}
                 <div className="space-y-3">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                    <Eye size={14} className="text-[#2563EB]" /> Modify Examples ({examplesList.length})
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5">
+                    <Eye size={14} className="text-[#6E79F4]" /> Modify Examples ({examplesList.length})
                   </h4>
                   {examplesList.length > 0 && (
                     <div className="space-y-2">
                       {examplesList.map((ex, index) => (
-                        <div key={ex.id || index} className="p-3 bg-slate-50 border border-[#E2E8F0] rounded-xl flex justify-between items-start gap-4 text-[10px]">
+                        <div key={ex.id || index} className="p-3 bg-[#16171D] border border-[#23252C] rounded-xl flex justify-between items-start gap-4 text-[10px]">
                           <div className="font-mono space-y-1">
-                            <div><span className="text-[#86868b] font-semibold">Ex {ex.example_number}:</span> Input: {ex.input_example}</div>
-                            <div><span className="text-[#86868b] font-semibold">Output:</span> {ex.output_example}</div>
-                            {ex.explanation && <div><span className="text-[#86868b] font-semibold">Exp:</span> {ex.explanation}</div>}
+                            <div><span className="text-[#C2C6D1] font-semibold">Ex {ex.example_number}:</span> Input: {ex.input_example}</div>
+                            <div><span className="text-[#C2C6D1] font-semibold">Output:</span> {ex.output_example}</div>
+                            {ex.explanation && <div><span className="text-[#C2C6D1] font-semibold">Exp:</span> {ex.explanation}</div>}
                           </div>
                           <button
                             type="button"
                             onClick={() => handleDeleteExample(ex.id)}
-                            className="p-1.5 bg-red-50 border border-red-100 hover:bg-red-100 text-[#DC2626] rounded-lg transition-all"
+                            className="p-1.5 bg-red-50 border border-red-100 hover:bg-red-100 text-[#F0555D] rounded-lg transition-all"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -1643,22 +1643,22 @@ export default function TeacherConsole({
                       ))}
                     </div>
                   )}
-                  <div className="bg-slate-50/50 p-4 border border-[#E2E8F0] rounded-xl space-y-3">
-                    <span className="font-bold text-[9px] uppercase text-[#475569] tracking-wider block">Add New Example</span>
+                  <div className="bg-[#16171D]/50 p-4 border border-[#23252C] rounded-xl space-y-3">
+                    <span className="font-bold text-[9px] uppercase text-[#C2C6D1] tracking-wider block">Add New Example</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input
                         type="text"
                         placeholder="Input Example"
                         value={newExInput}
                         onChange={(e) => setNewExInput(e.target.value)}
-                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
+                        className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
                       />
                       <input
                         type="text"
                         placeholder="Output Example"
                         value={newExOutput}
                         onChange={(e) => setNewExOutput(e.target.value)}
-                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
+                        className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
                       />
                     </div>
                     <input
@@ -1666,12 +1666,12 @@ export default function TeacherConsole({
                       placeholder="Explanation"
                       value={newExExpl}
                       onChange={(e) => setNewExExpl(e.target.value)}
-                      className="w-full bg-white border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
+                      className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={handleAddExample}
-                      className="bg-[#2563EB] text-white px-3 py-1.5 rounded-lg font-bold text-xs"
+                      className="bg-[#6E79F4] text-white px-3 py-1.5 rounded-lg font-bold text-xs"
                     >
                       Add Example
                     </button>
@@ -1680,22 +1680,22 @@ export default function TeacherConsole({
 
                 {/* Test Cases Section */}
                 <div className="space-y-3">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                    <Layers size={14} className="text-[#2563EB]" /> Modify Test Cases ({testCasesList.length})
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5">
+                    <Layers size={14} className="text-[#6E79F4]" /> Modify Test Cases ({testCasesList.length})
                   </h4>
                   {testCasesList.length > 0 && (
                     <div className="space-y-2">
                       {testCasesList.map((tc, index) => (
-                        <div key={tc.id || index} className="p-3 bg-slate-50 border border-[#E2E8F0] rounded-xl flex justify-between items-start gap-4 text-[10px]">
+                        <div key={tc.id || index} className="p-3 bg-[#16171D] border border-[#23252C] rounded-xl flex justify-between items-start gap-4 text-[10px]">
                           <div className="font-mono space-y-1">
-                            <div><span className="text-[#86868b] font-semibold">Test {index + 1}:</span> Input: {tc.input_data}</div>
-                            <div><span className="text-[#86868b] font-semibold">Expected:</span> {tc.expected_output}</div>
-                            <div><span className="text-[#86868b] font-semibold">Hidden:</span> {tc.is_hidden ? "Yes" : "No"}</div>
+                            <div><span className="text-[#C2C6D1] font-semibold">Test {index + 1}:</span> Input: {tc.input_data}</div>
+                            <div><span className="text-[#C2C6D1] font-semibold">Expected:</span> {tc.expected_output}</div>
+                            <div><span className="text-[#C2C6D1] font-semibold">Hidden:</span> {tc.is_hidden ? "Yes" : "No"}</div>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleDeleteTestCase(tc.id)}
-                            className="p-1.5 bg-red-50 border border-red-100 hover:bg-red-100 text-[#DC2626] rounded-lg transition-all"
+                            className="p-1.5 bg-red-50 border border-red-100 hover:bg-red-100 text-[#F0555D] rounded-lg transition-all"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -1703,20 +1703,20 @@ export default function TeacherConsole({
                       ))}
                     </div>
                   )}
-                  <div className="bg-slate-50/50 p-4 border border-[#E2E8F0] rounded-xl space-y-3">
-                    <span className="font-bold text-[9px] uppercase text-[#475569] tracking-wider block">Add New Test Case</span>
+                  <div className="bg-[#16171D]/50 p-4 border border-[#23252C] rounded-xl space-y-3">
+                    <span className="font-bold text-[9px] uppercase text-[#C2C6D1] tracking-wider block">Add New Test Case</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <textarea
                         placeholder="Input Data"
                         value={newTcInput}
                         onChange={(e) => setNewTcInput(e.target.value)}
-                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none font-mono font-medium"
+                        className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none font-mono font-medium"
                       />
                       <textarea
                         placeholder="Expected Output"
                         value={newTcOutput}
                         onChange={(e) => setNewTcOutput(e.target.value)}
-                        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none font-mono font-medium"
+                        className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none font-mono font-medium"
                       />
                     </div>
                     <div className="flex items-center gap-2">
@@ -1725,14 +1725,14 @@ export default function TeacherConsole({
                         id="edit_tc_is_hidden_teacher"
                         checked={newTcHidden}
                         onChange={(e) => setNewTcHidden(e.target.checked)}
-                        className="rounded text-[#2563EB] focus:ring-[#2563EB] border-[#E2E8F0]"
+                        className="rounded text-[#6E79F4] focus:ring-[#6E79F4] border-[#23252C]"
                       />
-                      <label htmlFor="edit_tc_is_hidden_teacher" className="font-semibold text-xs text-[#475569]">Hidden Test Case</label>
+                      <label htmlFor="edit_tc_is_hidden_teacher" className="font-semibold text-xs text-[#C2C6D1]">Hidden Test Case</label>
                     </div>
                     <button
                       type="button"
                       onClick={handleAddTestCase}
-                      className="bg-[#2563EB] text-white px-3 py-1.5 rounded-lg font-bold text-xs"
+                      className="bg-[#6E79F4] text-white px-3 py-1.5 rounded-lg font-bold text-xs"
                     >
                       Add Test Case
                     </button>
@@ -1743,13 +1743,13 @@ export default function TeacherConsole({
           </div>
 
           {/* Actions footer inside drawer */}
-          <div className="bg-slate-50 border-t border-[#E2E8F0] p-5 flex justify-between shrink-0">
+          <div className="bg-[#16171D] border-t border-[#23252C] p-5 flex justify-between shrink-0">
             {isEditing ? (
               <>
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="border border-[#E2E8F0] hover:bg-slate-100 text-[#475569] px-4 py-2 rounded-lg font-semibold cursor-pointer"
+                  className="border border-[#23252C] hover:bg-[#1A1C22] text-[#C2C6D1] px-4 py-2 rounded-lg font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1758,7 +1758,7 @@ export default function TeacherConsole({
                     const btn = document.getElementById("edit-activity-form-submit-teacher");
                     if (btn) btn.click();
                   }}
-                  className="bg-[#2563EB] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#2563EB]/90 flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  className="bg-[#6E79F4] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#6E79F4]/90 flex items-center gap-1.5 cursor-pointer shadow-sm"
                 >
                   <Save size={14} /> Save Changes
                 </button>
@@ -1768,7 +1768,7 @@ export default function TeacherConsole({
                 {activeDrawerTab === "config" ? (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="border border-[#E2E8F0] hover:bg-slate-100 text-[#2563EB] px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer"
+                    className="border border-[#23252C] hover:bg-[#1A1C22] text-[#6E79F4] px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer"
                   >
                     <Edit size={14} /> Edit Blueprint
                   </button>
@@ -1777,7 +1777,7 @@ export default function TeacherConsole({
                 )}
                 <button 
                   onClick={() => setSelectedActivity(null)}
-                  className="bg-[#0F172A] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#0F172A]/90 cursor-pointer"
+                  className="bg-[#6E79F4] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#6E79F4]/90 cursor-pointer"
                 >
                   Close Console
                 </button>
@@ -1844,51 +1844,51 @@ export default function TeacherConsole({
     });
 
     return (
-      <div className="fixed inset-0 bg-[#0F172A]/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
+      <div className="fixed inset-0 bg-[#6E79F4]/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
         {/* Backdrop click closer */}
         <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedStudent(null)} />
         
         {/* Drawer container */}
-        <div className="relative w-full max-w-3xl bg-white h-full shadow-2xl flex flex-col z-50 animate-slideOver overflow-hidden">
+        <div className="relative w-full max-w-3xl bg-[#131418] h-full shadow-2xl flex flex-col z-50 animate-slideOver overflow-hidden">
           
           {/* Drawer Header */}
-          <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-start gap-4 bg-slate-50">
+          <div className="p-6 border-b border-[#23252C] flex justify-between items-start gap-4 bg-[#16171D]">
             <div className="flex gap-3 items-center">
-              <div className="w-12 h-12 rounded-2xl bg-[#2563EB] text-white flex items-center justify-center font-bold text-lg uppercase shadow-md border border-[#2563EB]/10">
+              <div className="w-12 h-12 rounded-2xl bg-[#6E79F4] text-white flex items-center justify-center font-bold text-lg uppercase shadow-md border border-[#6E79F4]/10">
                 {(selectedStudent.student?.full_name || selectedStudent.student?.email || "S").substring(0, 2)}
               </div>
               <div>
-                <h3 className="text-base font-bold text-[#0F172A]">{selectedStudent.student?.full_name || "Invited Candidate"}</h3>
-                <p className="text-xs text-[#475569]">{selectedStudent.student?.email}</p>
+                <h3 className="text-base font-bold text-[#EDEFF5]">{selectedStudent.student?.full_name || "Invited Candidate"}</h3>
+                <p className="text-xs text-[#C2C6D1]">{selectedStudent.student?.email}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/20">
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
                     {selectedStudent.cohort?.name || "No cohort"}
                   </span>
-                  <span className="text-[10px] text-[#475569]">• Enrolled on {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
+                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
             
             <button 
               onClick={() => setSelectedStudent(null)}
-              className="p-1.5 hover:bg-slate-200 rounded-xl transition-all border border-transparent hover:border-[#E2E8F0]"
+              className="p-1.5 hover:bg-[#23252C] rounded-xl transition-all border border-transparent hover:border-[#23252C]"
             >
-              <svg className="w-5 h-5 text-[#475569]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-[#C2C6D1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
           {/* Drawer Tab Navigation */}
-          <div className="flex border-b border-[#E2E8F0] px-6 bg-white shrink-0">
+          <div className="flex border-b border-[#23252C] px-6 bg-[#131418] shrink-0">
             {(["overview", "syllabus", "quizzes", "projects", "challenges"] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setStudentDetailTab(tab)}
                 className={`py-3 px-4 text-xs font-bold border-b-2 transition-all capitalize ${
                   studentDetailTab === tab 
-                    ? "border-[#2563EB] text-[#2563EB] font-bold" 
-                    : "border-transparent text-[#475569] hover:text-[#0F172A]"
+                    ? "border-[#6E79F4] text-[#6E79F4] font-bold" 
+                    : "border-transparent text-[#C2C6D1] hover:text-[#EDEFF5]"
                 }`}
               >
                 {tab}
@@ -1904,64 +1904,64 @@ export default function TeacherConsole({
               <div className="space-y-6 animate-fadeIn">
                 {/* Performance Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-[#2563EB]/5 border border-[#2563EB]/10 rounded-2xl p-4 text-center">
-                    <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Course Progress</span>
-                    <div className="text-xl font-black text-[#2563EB] mt-1">{progressPercentage}%</div>
-                    <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full mt-2 overflow-hidden">
-                      <div className="bg-[#2563EB] h-full" style={{ width: `${progressPercentage}%` }}></div>
+                  <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/10 rounded-2xl p-4 text-center">
+                    <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block tracking-wider">Course Progress</span>
+                    <div className="text-xl font-black text-[#6E79F4] mt-1">{progressPercentage}%</div>
+                    <div className="w-full bg-[#23252C] h-1.5 rounded-full mt-2 overflow-hidden">
+                      <div className="bg-[#6E79F4] h-full" style={{ width: `${progressPercentage}%` }}></div>
                     </div>
                   </div>
 
-                  <div className="bg-[#16A34A]/5 border border-[#16A34A]/10 rounded-2xl p-4 text-center">
-                    <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Quizzes Completed</span>
-                    <div className="text-xl font-black text-[#16A34A] mt-1">
+                  <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/10 rounded-2xl p-4 text-center">
+                    <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block tracking-wider">Quizzes Completed</span>
+                    <div className="text-xl font-black text-[#2FBF71] mt-1">
                       {studentQuizAttempts.filter(q => q.attempted).length} / {quizzes.length}
                     </div>
-                    <span className="text-[8px] text-[#475569] block mt-2">Avg Score: {
+                    <span className="text-[8px] text-[#C2C6D1] block mt-2">Avg Score: {
                       studentQuizAttempts.filter(q => q.attempted).length > 0 
                         ? Math.round(studentQuizAttempts.reduce((acc, curr) => acc + curr.score, 0) / studentQuizAttempts.filter(q => q.attempted).length) 
                         : 0
                     }%</span>
                   </div>
 
-                  <div className="bg-[#F59E0B]/5 border border-[#F59E0B]/10 rounded-2xl p-4 text-center">
-                    <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Projects Validated</span>
-                    <div className="text-xl font-black text-[#F59E0B] mt-1">
+                  <div className="bg-[#F5B04A]/5 border border-[#F5B04A]/10 rounded-2xl p-4 text-center">
+                    <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block tracking-wider">Projects Validated</span>
+                    <div className="text-xl font-black text-[#F5B04A] mt-1">
                       {studentProjSubs.filter(p => p.review?.review_status === "approved").length} / {projects.length}
                     </div>
-                    <span className="text-[8px] text-[#475569] block mt-2">{studentProjSubs.length} total uploads</span>
+                    <span className="text-[8px] text-[#C2C6D1] block mt-2">{studentProjSubs.length} total uploads</span>
                   </div>
 
-                  <div className="bg-[#06B6D4]/5 border border-[#06B6D4]/10 rounded-2xl p-4 text-center">
-                    <span className="text-[10px] font-bold text-[#475569] uppercase block tracking-wider">Coding Runs</span>
-                    <div className="text-xl font-black text-[#06B6D4] mt-1">
+                  <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/10 rounded-2xl p-4 text-center">
+                    <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block tracking-wider">Coding Runs</span>
+                    <div className="text-xl font-black text-[#22D3EE] mt-1">
                       {studentChalSubs.filter(c => c.submission_status_code === "accepted").length} / {challenges.length}
                     </div>
-                    <span className="text-[8px] text-[#475569] block mt-2">{studentChalSubs.length} total submits</span>
+                    <span className="text-[8px] text-[#C2C6D1] block mt-2">{studentChalSubs.length} total submits</span>
                   </div>
                 </div>
 
                 {/* Progress Detail List */}
-                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 space-y-4 shadow-sm">
-                  <h4 className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 pb-3 border-b border-[#E2E8F0]">
-                    <TrendingUp size={14} className="text-[#2563EB]" /> Core Curricular Activity Overview
+                <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 space-y-4 shadow-sm">
+                  <h4 className="text-xs font-bold text-[#EDEFF5] flex items-center gap-1.5 pb-3 border-b border-[#23252C]">
+                    <TrendingUp size={14} className="text-[#6E79F4]" /> Core Curricular Activity Overview
                   </h4>
-                  <div className="divide-y divide-[#E2E8F0] text-xs">
+                  <div className="divide-y divide-[#23252C] text-xs">
                     <div className="py-3 flex justify-between">
-                      <span className="text-[#475569] font-medium">Active Student status</span>
-                      <span className="font-bold text-[#16A34A] flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-[#16A34A] rounded-full animate-ping"></span> Active in Portal
+                      <span className="text-[#C2C6D1] font-medium">Active Student status</span>
+                      <span className="font-bold text-[#2FBF71] flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-[#2FBF71] rounded-full animate-ping"></span> Active in Portal
                       </span>
                     </div>
                     <div className="py-3 flex justify-between">
-                      <span className="text-[#475569] font-medium">Program title</span>
-                      <span className="font-bold text-[#0F172A]">
+                      <span className="text-[#C2C6D1] font-medium">Program title</span>
+                      <span className="font-bold text-[#EDEFF5]">
                         {programsList.find(p => p.id === selectedProgramId)?.title || "Standard Curriculum"}
                       </span>
                     </div>
                     <div className="py-3 flex justify-between">
-                      <span className="text-[#475569] font-medium">Lessons finished</span>
-                      <span className="font-bold text-[#0F172A]">
+                      <span className="text-[#C2C6D1] font-medium">Lessons finished</span>
+                      <span className="font-bold text-[#EDEFF5]">
                         {activeStudentLessonsProgress.filter(p => p.status_code === "completed").length} Lessons Completed
                       </span>
                     </div>
@@ -1974,54 +1974,54 @@ export default function TeacherConsole({
             {studentDetailTab === "syllabus" && (
               <div className="space-y-6 animate-fadeIn">
                 {studentSyllabus.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
                     No syllabus lessons found for this program.
                   </div>
                 ) : (
                   studentSyllabus.map(course => {
                     const isExpanded = expandedCourseId === course.id;
                     return (
-                      <div key={course.id} className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden">
+                      <div key={course.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden">
                         {/* Collapsible Header */}
                         <div 
                           onClick={() => setExpandedCourseId(isExpanded ? null : course.id)}
-                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-slate-50/80 transition-colors select-none"
+                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-[#16171D]/80 transition-colors select-none"
                         >
                           <div className="flex items-center gap-2.5">
                             <svg 
-                              className={`w-4 h-4 text-[#475569] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
+                              className={`w-4 h-4 text-[#C2C6D1] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
                               fill="none" 
                               stroke="currentColor" 
                               viewBox="0 0 24 24"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                             </svg>
-                            <h4 className="text-xs font-extrabold text-[#0F172A] hover:text-[#2563EB] transition-colors">{course.title}</h4>
+                            <h4 className="text-xs font-extrabold text-[#EDEFF5] hover:text-[#6E79F4] transition-colors">{course.title}</h4>
                           </div>
-                          <span className="text-[10px] font-bold text-[#2563EB] bg-[#2563EB]/10 px-2 py-0.5 rounded-full border border-[#2563EB]/20 shrink-0">Course</span>
+                          <span className="text-[10px] font-bold text-[#6E79F4] bg-[#6E79F4]/10 px-2 py-0.5 rounded-full border border-[#6E79F4]/20 shrink-0">Course</span>
                         </div>
 
                         {/* Collapsible content (lessons list) */}
                         {isExpanded && (
-                          <div className="p-5 border-t border-[#E2E8F0] space-y-2.5 bg-slate-50/30">
+                          <div className="p-5 border-t border-[#23252C] space-y-2.5 bg-[#16171D]/30">
                             {course.lessons.map(lesson => (
-                              <div key={lesson.id} className="flex justify-between items-center text-xs p-2.5 bg-white border border-[#E2E8F0] rounded-xl hover:bg-slate-50 transition-all shadow-sm">
+                              <div key={lesson.id} className="flex justify-between items-center text-xs p-2.5 bg-[#131418] border border-[#23252C] rounded-xl hover:bg-[#16171D] transition-all shadow-sm">
                                 <div className="flex items-center gap-2.5">
                                   {lesson.status === "completed" ? (
-                                    <div className="w-5 h-5 rounded-full bg-[#16A34A]/10 text-[#16A34A] flex items-center justify-center font-bold text-[10px] border border-[#16A34A]/20">✓</div>
+                                    <div className="w-5 h-5 rounded-full bg-[#2FBF71]/10 text-[#2FBF71] flex items-center justify-center font-bold text-[10px] border border-[#2FBF71]/20">✓</div>
                                   ) : lesson.status === "in_progress" ? (
-                                    <div className="w-5 h-5 rounded-full bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center font-bold text-[10px] border border-[#F59E0B]/20">⏳</div>
+                                    <div className="w-5 h-5 rounded-full bg-[#F5B04A]/10 text-[#F5B04A] flex items-center justify-center font-bold text-[10px] border border-[#F5B04A]/20">⏳</div>
                                   ) : (
-                                    <div className="w-5 h-5 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold text-[10px] border border-slate-200">•</div>
+                                    <div className="w-5 h-5 rounded-full bg-[#1A1C22] text-[#A3A9B6] flex items-center justify-center font-bold text-[10px] border border-[#23252C]">•</div>
                                   )}
-                                  <span className="font-semibold text-[#0F172A]">{lesson.title}</span>
+                                  <span className="font-semibold text-[#EDEFF5]">{lesson.title}</span>
                                 </div>
                                 <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-lg shrink-0 ${
                                   lesson.status === "completed" 
-                                    ? "bg-[#16A34A]/10 text-[#16A34A]" 
+                                    ? "bg-[#2FBF71]/10 text-[#2FBF71]" 
                                     : lesson.status === "in_progress"
-                                    ? "bg-[#F59E0B]/10 text-[#F59E0B]"
-                                    : "bg-slate-100 text-slate-500"
+                                    ? "bg-[#F5B04A]/10 text-[#F5B04A]"
+                                    : "bg-[#1A1C22] text-[#C2C6D1]"
                                 }`}>
                                   {lesson.status.replace(/_/g, " ")}
                                 </span>
@@ -2040,22 +2040,22 @@ export default function TeacherConsole({
             {studentDetailTab === "quizzes" && (
               <div className="space-y-6 animate-fadeIn">
                 {studentQuizAttempts.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
                     No quizzes assigned for this program.
                   </div>
                 ) : (
                   studentQuizAttempts.map(attempt => {
                     const isExpanded = expandedQuizId === attempt.id;
                     return (
-                      <div key={attempt.id} className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden">
+                      <div key={attempt.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden">
                         {/* Collapsible Header */}
                         <div 
                           onClick={() => setExpandedQuizId(isExpanded ? null : attempt.id)}
-                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-slate-50/80 transition-colors select-none"
+                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-[#16171D]/80 transition-colors select-none"
                         >
                           <div className="flex items-center gap-2.5">
                             <svg 
-                              className={`w-4 h-4 text-[#475569] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
+                              className={`w-4 h-4 text-[#C2C6D1] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
                               fill="none" 
                               stroke="currentColor" 
                               viewBox="0 0 24 24"
@@ -2063,8 +2063,8 @@ export default function TeacherConsole({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                             </svg>
                             <div>
-                              <h4 className="text-xs font-bold text-[#0F172A] hover:text-[#2563EB] transition-colors">{attempt.title}</h4>
-                              <p className="text-[9px] text-[#475569] mt-0.5">Attempted on {attempt.submittedAt}</p>
+                              <h4 className="text-xs font-bold text-[#EDEFF5] hover:text-[#6E79F4] transition-colors">{attempt.title}</h4>
+                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Attempted on {attempt.submittedAt}</p>
                             </div>
                           </div>
                           
@@ -2073,15 +2073,15 @@ export default function TeacherConsole({
                               <>
                                 <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase ${
                                   attempt.passed 
-                                    ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20" 
-                                    : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
+                                    ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20" 
+                                    : "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20"
                                 }`}>
                                   {attempt.passed ? "Passed" : "Failed"}
                                 </span>
-                                <div className="text-xs font-black text-[#0F172A]">{attempt.score} / {attempt.maxScore} pts</div>
+                                <div className="text-xs font-black text-[#EDEFF5]">{attempt.score} / {attempt.maxScore} pts</div>
                               </>
                             ) : (
-                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 text-slate-400 border uppercase">
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#1A1C22] text-[#A3A9B6] border uppercase">
                                 Unattempted
                               </span>
                             )}
@@ -2090,16 +2090,16 @@ export default function TeacherConsole({
 
                         {/* Collapsible Details Content */}
                         {isExpanded && attempt.attempted && (
-                          <div className="p-5 border-t border-[#E2E8F0] space-y-4 bg-slate-50/30">
-                            <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wide block">Auditing Submitted Answers:</span>
+                          <div className="p-5 border-t border-[#23252C] space-y-4 bg-[#16171D]/30">
+                            <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block">Auditing Submitted Answers:</span>
                             <div className="space-y-3">
                               {attempt.questions.map((q: any, qIdx: number) => {
                                 const isCorrect = q.selectedIndex === q.correctIndex;
                                 return (
-                                  <div key={qIdx} className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-xs space-y-2">
-                                    <div className="font-semibold text-[#0F172A] flex justify-between gap-4">
+                                  <div key={qIdx} className="p-3.5 bg-[#131418] border border-[#23252C] rounded-xl text-xs space-y-2">
+                                    <div className="font-semibold text-[#EDEFF5] flex justify-between gap-4">
                                       <span>Q{qIdx + 1}: {q.text}</span>
-                                      <span className={`font-black shrink-0 ${isCorrect ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
+                                      <span className={`font-black shrink-0 ${isCorrect ? "text-[#2FBF71]" : "text-[#F0555D]"}`}>
                                         {isCorrect ? `+${q.points} pts` : "0 pts"}
                                       </span>
                                     </div>
@@ -2114,24 +2114,24 @@ export default function TeacherConsole({
                                             key={oIdx} 
                                             className={`p-2 rounded-lg border flex items-center gap-2 text-[11px] ${
                                               isAnsCorrect 
-                                                ? "bg-[#16A34A]/10 border-[#16A34A]/30 text-[#16A34A] font-bold" 
+                                                ? "bg-[#2FBF71]/10 border-[#2FBF71]/30 text-[#2FBF71] font-bold" 
                                                 : isSelected 
-                                                ? "bg-[#DC2626]/10 border-[#DC2626]/30 text-[#DC2626] font-semibold" 
-                                                : "bg-white border-[#E2E8F0] text-[#475569]"
+                                                ? "bg-[#F0555D]/10 border-[#F0555D]/30 text-[#F0555D] font-semibold" 
+                                                : "bg-[#131418] border-[#23252C] text-[#C2C6D1]"
                                             }`}
                                           >
                                             <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[8px] font-black shrink-0 ${
                                               isAnsCorrect 
-                                                ? "bg-[#16A34A] border-transparent text-white" 
+                                                ? "bg-[#2FBF71] border-transparent text-white" 
                                                 : isSelected 
-                                                ? "bg-[#DC2626] border-transparent text-white" 
-                                                : "border-slate-300"
+                                                ? "bg-[#F0555D] border-transparent text-white" 
+                                                : "border-[#2E313A]"
                                               }`}>
                                               {oIdx === 0 ? "A" : oIdx === 1 ? "B" : oIdx === 2 ? "C" : "D"}
                                             </div>
                                             <span>{(opt as any).option_text || opt}</span>
-                                            {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#16A34A]/20 px-1.5 py-0.5 rounded text-[#16A34A]">Correct Option</span>}
-                                            {isSelected && !isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#DC2626]/20 px-1.5 py-0.5 rounded text-[#DC2626]">Submitted Answer</span>}
+                                            {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#2FBF71]/20 px-1.5 py-0.5 rounded text-[#2FBF71]">Correct Option</span>}
+                                            {isSelected && !isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#F0555D]/20 px-1.5 py-0.5 rounded text-[#F0555D]">Submitted Answer</span>}
                                           </div>
                                         );
                                       })}
@@ -2153,7 +2153,7 @@ export default function TeacherConsole({
             {studentDetailTab === "projects" && (
               <div className="space-y-6 animate-fadeIn">
                 {studentProjSubs.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
                     No project repository uploads submitted yet by this student.
                   </div>
                 ) : (
@@ -2161,15 +2161,15 @@ export default function TeacherConsole({
                     const hasReview = !!sub.review;
                     const isExpanded = expandedProjectId === sub.id;
                     return (
-                      <div key={sub.id} className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden text-xs">
+                      <div key={sub.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden text-xs">
                         {/* Collapsible Header */}
                         <div 
                           onClick={() => setExpandedProjectId(isExpanded ? null : sub.id)}
-                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-slate-50/80 transition-colors select-none"
+                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-[#16171D]/80 transition-colors select-none"
                         >
                           <div className="flex items-center gap-2.5">
                             <svg 
-                              className={`w-4 h-4 text-[#475569] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
+                              className={`w-4 h-4 text-[#C2C6D1] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
                               fill="none" 
                               stroke="currentColor" 
                               viewBox="0 0 24 24"
@@ -2177,17 +2177,17 @@ export default function TeacherConsole({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                             </svg>
                             <div>
-                              <h4 className="text-xs font-bold text-[#0F172A] hover:text-[#2563EB] transition-colors">{sub.project_title}</h4>
-                              <p className="text-[9px] text-[#475569] mt-0.5">Submitted on {new Date(sub.submitted_at).toLocaleDateString()}</p>
+                              <h4 className="text-xs font-bold text-[#EDEFF5] hover:text-[#6E79F4] transition-colors">{sub.project_title}</h4>
+                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Submitted on {new Date(sub.submitted_at).toLocaleDateString()}</p>
                             </div>
                           </div>
                           
                           <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase shrink-0 ${
                             !hasReview || sub.review.review_status === "pending"
-                              ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
+                              ? "bg-[#F5B04A]/10 text-[#F5B04A] border-[#F5B04A]/20"
                               : sub.review.review_status === "approved"
-                              ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                              : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
+                              ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20"
+                              : "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20"
                           }`}>
                             {!hasReview ? "Pending Review" : sub.review.review_status}
                           </span>
@@ -2195,14 +2195,14 @@ export default function TeacherConsole({
 
                         {/* Collapsible Content */}
                         {isExpanded && (
-                          <div className="p-5 border-t border-[#E2E8F0] space-y-3 bg-slate-50/30">
+                          <div className="p-5 border-t border-[#23252C] space-y-3 bg-[#16171D]/30">
                             <div>
-                              <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wide block mb-1">GitHub Submission Link</span>
+                              <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-1">GitHub Submission Link</span>
                               <a 
                                 href={sub.github_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="text-xs text-[#2563EB] font-bold break-all hover:underline flex items-center gap-1 w-fit"
+                                className="text-xs text-[#6E79F4] font-bold break-all hover:underline flex items-center gap-1 w-fit"
                               >
                                 {sub.github_url}
                                 <ExternalLink size={12} />
@@ -2211,31 +2211,31 @@ export default function TeacherConsole({
 
                             {sub.submission_notes && (
                               <div>
-                                <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wide block mb-1">Student Notes</span>
-                                <p className="p-3 bg-white border border-[#E2E8F0] rounded-xl text-[#0F172A] italic">
+                                <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-1">Student Notes</span>
+                                <p className="p-3 bg-[#131418] border border-[#23252C] rounded-xl text-[#EDEFF5] italic">
                                   "{sub.submission_notes}"
                                 </p>
                               </div>
                             )}
 
-                            <div className="pt-3 border-t border-[#E2E8F0]">
-                              <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wide block mb-2">Review Summary & Grading</span>
+                            <div className="pt-3 border-t border-[#23252C]">
+                              <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-2">Review Summary & Grading</span>
                               {hasReview ? (
-                                <div className="p-3 bg-[#2563EB]/5 border border-[#2563EB]/10 rounded-xl space-y-2">
+                                <div className="p-3 bg-[#6E79F4]/5 border border-[#6E79F4]/10 rounded-xl space-y-2">
                                   <div className="flex justify-between items-center text-[10px]">
-                                    <span className="text-[#475569] font-medium">Assigned Score:</span>
-                                    <strong className="text-sm font-black text-[#2563EB]">{sub.review.score} / {sub.max_score} pts</strong>
+                                    <span className="text-[#C2C6D1] font-medium">Assigned Score:</span>
+                                    <strong className="text-sm font-black text-[#6E79F4]">{sub.review.score} / {sub.max_score} pts</strong>
                                   </div>
                                   {sub.review.feedback && (
-                                    <div className="text-[10px] text-[#0F172A] mt-1 pt-1.5 border-t border-[#2563EB]/10">
-                                      <strong className="block text-[#475569] uppercase text-[8px] tracking-wide mb-0.5">Instructor Feedback:</strong>
+                                    <div className="text-[10px] text-[#EDEFF5] mt-1 pt-1.5 border-t border-[#6E79F4]/10">
+                                      <strong className="block text-[#C2C6D1] uppercase text-[8px] tracking-wide mb-0.5">Instructor Feedback:</strong>
                                       {sub.review.feedback}
                                     </div>
                                   )}
                                 </div>
                               ) : (
-                                <div className="p-3 border border-dashed border-[#E2E8F0] rounded-xl flex items-center justify-between">
-                                  <span className="text-[#475569] text-[10px]">No grading has been registered for this submission.</span>
+                                <div className="p-3 border border-dashed border-[#23252C] rounded-xl flex items-center justify-between">
+                                  <span className="text-[#C2C6D1] text-[10px]">No grading has been registered for this submission.</span>
                                   <button 
                                     onClick={() => {
                                       setSelectedProjectSub(sub);
@@ -2243,7 +2243,7 @@ export default function TeacherConsole({
                                       setActiveTab("projects");
                                       setSelectedStudent(null);
                                     }}
-                                    className="bg-[#2563EB] text-white font-bold text-[10px] px-3 py-1.5 rounded-lg hover:bg-[#1D4ED8]"
+                                    className="bg-[#6E79F4] text-white font-bold text-[10px] px-3 py-1.5 rounded-lg hover:bg-[#5A66F0]"
                                   >
                                     Grade Now
                                   </button>
@@ -2263,22 +2263,22 @@ export default function TeacherConsole({
             {studentDetailTab === "challenges" && (
               <div className="space-y-6 animate-fadeIn">
                 {studentChalSubs.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
                     No programming challenge attempts logged yet by this student.
                   </div>
                 ) : (
                   studentChalSubs.map(sub => {
                     const isExpanded = expandedChallengeId === sub.id;
                     return (
-                      <div key={sub.id} className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm overflow-hidden text-xs">
+                      <div key={sub.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden text-xs">
                         {/* Collapsible Header */}
                         <div 
                           onClick={() => setExpandedChallengeId(isExpanded ? null : sub.id)}
-                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-slate-50/80 transition-colors select-none"
+                          className="p-5 flex justify-between items-center gap-4 cursor-pointer hover:bg-[#16171D]/80 transition-colors select-none"
                         >
                           <div className="flex items-center gap-2.5">
                             <svg 
-                              className={`w-4 h-4 text-[#475569] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
+                              className={`w-4 h-4 text-[#C2C6D1] transition-transform duration-200 ${isExpanded ? "transform rotate-90" : ""}`} 
                               fill="none" 
                               stroke="currentColor" 
                               viewBox="0 0 24 24"
@@ -2286,15 +2286,15 @@ export default function TeacherConsole({
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                             </svg>
                             <div>
-                              <h4 className="text-xs font-bold text-[#0F172A] hover:text-[#2563EB] transition-colors">{sub.challenge_title}</h4>
-                              <p className="text-[9px] text-[#475569] mt-0.5">Submitted runtime: {sub.language} • {new Date(sub.submitted_at).toLocaleString()}</p>
+                              <h4 className="text-xs font-bold text-[#EDEFF5] hover:text-[#6E79F4] transition-colors">{sub.challenge_title}</h4>
+                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Submitted runtime: {sub.language} • {new Date(sub.submitted_at).toLocaleString()}</p>
                             </div>
                           </div>
                           
                           <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border uppercase shrink-0 ${
                             sub.submission_status_code === "accepted"
-                              ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                              : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
+                              ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20"
+                              : "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20"
                           }`}>
                             {sub.submission_status_code}
                           </span>
@@ -2302,24 +2302,24 @@ export default function TeacherConsole({
 
                         {/* Collapsible Content */}
                         {isExpanded && (
-                          <div className="p-5 border-t border-[#E2E8F0] space-y-3 bg-slate-50/30">
+                          <div className="p-5 border-t border-[#23252C] space-y-3 bg-[#16171D]/30">
                             <div>
-                              <span className="text-[9px] font-bold text-[#475569] uppercase tracking-wide block mb-1">Submitted Source Code</span>
-                              <pre className="p-3.5 bg-[#0F172A] text-white text-[10px] font-mono rounded-xl overflow-x-auto max-h-48">
+                              <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-1">Submitted Source Code</span>
+                              <pre className="p-3.5 bg-[#6E79F4] text-white text-[10px] font-mono rounded-xl overflow-x-auto max-h-48">
                                 <code>{sub.source_code}</code>
                               </pre>
                             </div>
 
                             {sub.result && (
-                              <div className="bg-white border border-[#E2E8F0] rounded-xl p-3 space-y-1.5 text-[10px] shadow-sm">
-                                <span className="font-bold text-[#0F172A] block uppercase tracking-wider text-[8px]">Compiler / Tester Execution Logs:</span>
+                              <div className="bg-[#131418] border border-[#23252C] rounded-xl p-3 space-y-1.5 text-[10px] shadow-sm">
+                                <span className="font-bold text-[#EDEFF5] block uppercase tracking-wider text-[8px]">Compiler / Tester Execution Logs:</span>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                                  <div className="flex justify-between border-r pr-2 border-[#E2E8F0]">
-                                    <span className="text-[#475569]">Validation Cases:</span>
-                                    <strong className="text-[#16A34A]">{sub.result.passed_test_cases} / {sub.result.total_test_cases}</strong>
+                                  <div className="flex justify-between border-r pr-2 border-[#23252C]">
+                                    <span className="text-[#C2C6D1]">Validation Cases:</span>
+                                    <strong className="text-[#2FBF71]">{sub.result.passed_test_cases} / {sub.result.total_test_cases}</strong>
                                   </div>
                                   <div className="flex justify-between pl-1">
-                                    <span className="text-[#475569]">Performance runtime:</span>
+                                    <span className="text-[#C2C6D1]">Performance runtime:</span>
                                     <strong>{sub.result.execution_time_ms} ms</strong>
                                   </div>
                                 </div>
@@ -2337,10 +2337,10 @@ export default function TeacherConsole({
           </div>
           
           {/* Drawer Footer closer */}
-          <div className="p-4 border-t border-[#E2E8F0] bg-slate-50 flex justify-end shrink-0">
+          <div className="p-4 border-t border-[#23252C] bg-[#16171D] flex justify-end shrink-0">
             <button 
               onClick={() => setSelectedStudent(null)}
-              className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-slate-100 font-bold text-xs py-2 px-5 rounded-xl transition-all"
+              className="bg-[#131418] border border-[#23252C] text-[#EDEFF5] hover:bg-[#1A1C22] font-bold text-xs py-2 px-5 rounded-xl transition-all"
             >
               Close Profile
             </button>
@@ -2356,19 +2356,19 @@ export default function TeacherConsole({
     
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
-        <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-slideOver">
+        <div className="w-full max-w-2xl bg-[#131418] h-full shadow-2xl flex flex-col animate-slideOver">
           
           {/* Drawer Header */}
-          <div className="p-6 border-b border-[#E2E8F0] flex items-center justify-between bg-slate-50 shrink-0">
+          <div className="p-6 border-b border-[#23252C] flex items-center justify-between bg-[#16171D] shrink-0">
             <div>
-              <h3 className="text-sm font-bold text-[#0F172A]">Quiz Attempt Details</h3>
-              <p className="text-xs text-[#475569]">
-                Student: <strong className="text-[#0F172A]">{selectedQuizAttempt.student?.full_name || selectedQuizAttempt.student?.email}</strong>
+              <h3 className="text-sm font-bold text-[#EDEFF5]">Quiz Attempt Details</h3>
+              <p className="text-xs text-[#C2C6D1]">
+                Student: <strong className="text-[#EDEFF5]">{selectedQuizAttempt.student?.full_name || selectedQuizAttempt.student?.email}</strong>
               </p>
             </div>
             <button 
               onClick={() => setSelectedQuizAttempt(null)}
-              className="text-[#475569] hover:text-[#0F172A] p-2 hover:bg-slate-200/50 rounded-lg transition-all"
+              className="text-[#C2C6D1] hover:text-[#EDEFF5] p-2 hover:bg-[#23252C]/50 rounded-lg transition-all"
             >
               <X size={18} />
             </button>
@@ -2376,22 +2376,22 @@ export default function TeacherConsole({
 
           {/* Drawer Content */}
           <div className="p-6 overflow-y-auto flex-1 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0B0C0F] p-4 border border-[#23252C] rounded-xl text-xs">
               <div>
-                <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Quiz Activity</span>
-                <span className="font-bold text-[#0F172A]">{selectedQuizAttempt.quiz_title}</span>
+                <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Quiz Activity</span>
+                <span className="font-bold text-[#EDEFF5]">{selectedQuizAttempt.quiz_title}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Scored Points</span>
-                <span className="font-bold text-[#2563EB] text-sm">{selectedQuizAttempt.score} / {selectedQuizAttempt.max_score} pts</span>
+                <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Scored Points</span>
+                <span className="font-bold text-[#6E79F4] text-sm">{selectedQuizAttempt.score} / {selectedQuizAttempt.max_score} pts</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Attempt Number</span>
-                <span className="font-semibold text-[#0F172A]">Attempt #{selectedQuizAttempt.attempt_number}</span>
+                <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Attempt Number</span>
+                <span className="font-semibold text-[#EDEFF5]">Attempt #{selectedQuizAttempt.attempt_number}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Submission Date</span>
-                <span className="font-semibold text-[#0F172A]">
+                <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Submission Date</span>
+                <span className="font-semibold text-[#EDEFF5]">
                   {selectedQuizAttempt.submitted_at 
                     ? new Date(selectedQuizAttempt.submitted_at).toLocaleString() 
                     : "In Progress"}
@@ -2399,15 +2399,15 @@ export default function TeacherConsole({
               </div>
             </div>
 
-            <hr className="border-[#E2E8F0]" />
+            <hr className="border-[#23252C]" />
 
             <div>
-              <h4 className="text-xs font-bold text-[#0F172A] uppercase mb-3 tracking-wider">Submitted Answers Verification</h4>
+              <h4 className="text-xs font-bold text-[#EDEFF5] uppercase mb-3 tracking-wider">Submitted Answers Verification</h4>
               
               {loadingQuizSession ? (
                 <SecondaryLoader variant="skeleton" message="Retrieving session questions and selected answers..." className="!border-0 !p-0 shadow-none" />
               ) : !quizAttemptSession || !quizAttemptSession.questions ? (
-                <div className="text-center py-6 text-xs text-[#475569] border border-dashed border-[#E2E8F0] rounded-xl">
+                <div className="text-center py-6 text-xs text-[#C2C6D1] border border-dashed border-[#23252C] rounded-xl">
                   No responses logged for this quiz session.
                 </div>
               ) : (
@@ -2415,10 +2415,10 @@ export default function TeacherConsole({
                   {quizAttemptSession.questions.map((q: any, qIdx: number) => {
                     const isCorrect = q.selectedIndex === q.correctIndex;
                     return (
-                      <div key={q.id || qIdx} className="p-4 bg-white border border-[#E2E8F0] rounded-xl text-xs space-y-2 shadow-sm">
-                        <div className="font-semibold text-[#0F172A] flex justify-between gap-4">
+                      <div key={q.id || qIdx} className="p-4 bg-[#131418] border border-[#23252C] rounded-xl text-xs space-y-2 shadow-sm">
+                        <div className="font-semibold text-[#EDEFF5] flex justify-between gap-4">
                           <span>Q{qIdx + 1}: {q.text}</span>
-                          <span className={`font-black shrink-0 ${isCorrect ? "text-[#16A34A]" : "text-[#DC2626]"}`}>
+                          <span className={`font-black shrink-0 ${isCorrect ? "text-[#2FBF71]" : "text-[#F0555D]"}`}>
                             {isCorrect ? `+${q.points} pts` : "0 pts"}
                           </span>
                         </div>
@@ -2433,24 +2433,24 @@ export default function TeacherConsole({
                                 key={oIdx} 
                                 className={`p-2.5 rounded-lg border flex items-center gap-2 text-[11px] ${
                                   isAnsCorrect 
-                                    ? "bg-[#16A34A]/10 border-[#16A34A]/30 text-[#16A34A] font-bold" 
+                                    ? "bg-[#2FBF71]/10 border-[#2FBF71]/30 text-[#2FBF71] font-bold" 
                                     : isSelected 
-                                    ? "bg-[#DC2626]/10 border-[#DC2626]/30 text-[#DC2626] font-semibold" 
-                                    : "bg-white border-[#E2E8F0] text-[#475569]"
+                                    ? "bg-[#F0555D]/10 border-[#F0555D]/30 text-[#F0555D] font-semibold" 
+                                    : "bg-[#131418] border-[#23252C] text-[#C2C6D1]"
                                 }`}
                               >
                                 <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center text-[8px] font-black shrink-0 ${
                                   isAnsCorrect 
-                                    ? "bg-[#16A34A] border-transparent text-white" 
+                                    ? "bg-[#2FBF71] border-transparent text-white" 
                                     : isSelected 
-                                    ? "bg-[#DC2626] border-transparent text-white" 
-                                    : "border-slate-300"
+                                    ? "bg-[#F0555D] border-transparent text-white" 
+                                    : "border-[#2E313A]"
                                   }`}>
                                   {oIdx === 0 ? "A" : oIdx === 1 ? "B" : oIdx === 2 ? "C" : oIdx === 3 ? "D" : String(oIdx + 1)}
                                 </div>
                                 <span>{opt.option_text || opt}</span>
-                                {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#16A34A]/20 px-1.5 py-0.5 rounded text-[#16A34A]">Correct Option</span>}
-                                {isSelected && !isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#DC2626]/20 px-1.5 py-0.5 rounded text-[#DC2626]">Submitted Answer</span>}
+                                {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#2FBF71]/20 px-1.5 py-0.5 rounded text-[#2FBF71]">Correct Option</span>}
+                                {isSelected && !isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#F0555D]/20 px-1.5 py-0.5 rounded text-[#F0555D]">Submitted Answer</span>}
                               </div>
                             );
                           })}
@@ -2463,10 +2463,10 @@ export default function TeacherConsole({
             </div>
           </div>
 
-          <div className="p-4 border-t border-[#E2E8F0] bg-slate-50 flex justify-end shrink-0">
+          <div className="p-4 border-t border-[#23252C] bg-[#16171D] flex justify-end shrink-0">
             <button 
               onClick={() => setSelectedQuizAttempt(null)}
-              className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-slate-100 font-bold text-xs py-2 px-5 rounded-xl transition-all"
+              className="bg-[#131418] border border-[#23252C] text-[#EDEFF5] hover:bg-[#1A1C22] font-bold text-xs py-2 px-5 rounded-xl transition-all"
             >
               Close Auditor details
             </button>
@@ -2482,19 +2482,19 @@ export default function TeacherConsole({
 
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
-        <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-slideOver">
+        <div className="w-full max-w-2xl bg-[#131418] h-full shadow-2xl flex flex-col animate-slideOver">
           
           {/* Drawer Header */}
-          <div className="p-6 border-b border-[#E2E8F0] flex items-center justify-between bg-slate-50 shrink-0">
+          <div className="p-6 border-b border-[#23252C] flex items-center justify-between bg-[#16171D] shrink-0">
             <div>
-              <h3 className="text-sm font-bold text-[#0F172A]">Project Submission Auditor</h3>
-              <p className="text-xs text-[#475569]">
-                Student: <strong className="text-[#0F172A]">{selectedProjectSub.student?.full_name || selectedProjectSub.student?.email}</strong>
+              <h3 className="text-sm font-bold text-[#EDEFF5]">Project Submission Auditor</h3>
+              <p className="text-xs text-[#C2C6D1]">
+                Student: <strong className="text-[#EDEFF5]">{selectedProjectSub.student?.full_name || selectedProjectSub.student?.email}</strong>
               </p>
             </div>
             <button 
               onClick={() => setSelectedProjectSub(null)}
-              className="text-[#475569] hover:text-[#0F172A] p-2 hover:bg-slate-200/50 rounded-lg transition-all"
+              className="text-[#C2C6D1] hover:text-[#EDEFF5] p-2 hover:bg-[#23252C]/50 rounded-lg transition-all"
             >
               <X size={18} />
             </button>
@@ -2504,45 +2504,45 @@ export default function TeacherConsole({
           <div className="p-6 overflow-y-auto flex-1">
             <form onSubmit={handleReviewSubmit} className="space-y-6">
               <div>
-                <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-2">
+                <h3 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider mb-2">
                   Project: {selectedProjectSub.project_title}
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0B0C0F] p-4 border border-[#23252C] rounded-xl text-xs">
                 <div>
-                  <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Status</span>
+                  <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Status</span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block ${
                     !selectedProjectSub.review || selectedProjectSub.review.review_status === "pending"
-                      ? "bg-[#F59E0B]/10 text-[#F59E0B]"
+                      ? "bg-[#F5B04A]/10 text-[#F5B04A]"
                       : selectedProjectSub.review.review_status === "approved"
-                      ? "bg-[#16A34A]/10 text-[#16A34A]"
-                      : "bg-[#DC2626]/10 text-[#DC2626]"
+                      ? "bg-[#2FBF71]/10 text-[#2FBF71]"
+                      : "bg-[#F0555D]/10 text-[#F0555D]"
                   }`}>
                     {!selectedProjectSub.review ? "Pending Review" : selectedProjectSub.review.review_status}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Max Score</span>
-                  <span className="font-semibold text-[#0F172A]">{selectedProjectSub.max_score} pts</span>
+                  <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Max Score</span>
+                  <span className="font-semibold text-[#EDEFF5]">{selectedProjectSub.max_score} pts</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Submitted At</span>
-                  <span className="font-semibold text-[#0F172A]">
+                  <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Submitted At</span>
+                  <span className="font-semibold text-[#EDEFF5]">
                     {new Date(selectedProjectSub.submitted_at).toLocaleString()}
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                   Submitted GitHub URL
                 </label>
                 <a 
                   href={selectedProjectSub.github_url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-xs text-[#2563EB] font-semibold break-all hover:underline flex items-center gap-1"
+                  className="text-xs text-[#6E79F4] font-semibold break-all hover:underline flex items-center gap-1"
                 >
                   {selectedProjectSub.github_url}
                   <ExternalLink size={12} />
@@ -2551,28 +2551,28 @@ export default function TeacherConsole({
 
               {selectedProjectSub.submission_notes && (
                 <div>
-                  <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                  <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                     Student Submission Notes
                   </label>
-                  <p className="text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A]">
+                  <p className="text-xs bg-[#0B0C0F] border border-[#23252C] rounded-xl p-3 text-[#EDEFF5]">
                     {selectedProjectSub.submission_notes}
                   </p>
                 </div>
               )}
 
-              <hr className="border-[#E2E8F0]" />
+              <hr className="border-[#23252C]" />
 
               <div className="space-y-4">
-                <h4 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider">Evaluation & Grading</h4>
+                <h4 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider">Evaluation & Grading</h4>
                 
                 <div>
-                  <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                  <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                     Assign Status
                   </label>
                   <select
                     value={reviewStatus}
                     onChange={(e) => setReviewStatus(e.target.value)}
-                    className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#2563EB] w-full"
+                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6E79F4] w-full"
                   >
                     <option value="approved">Approved & Completed</option>
                     <option value="revision_requested">Revision Requested</option>
@@ -2582,10 +2582,10 @@ export default function TeacherConsole({
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
-                    <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block">
+                    <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">
                       Assigned Score
                     </label>
-                    <span className="text-[10px] font-bold text-[#475569]">
+                    <span className="text-[10px] font-bold text-[#C2C6D1]">
                       Max Score: {selectedProjectSub.max_score}
                     </span>
                   </div>
@@ -2595,12 +2595,12 @@ export default function TeacherConsole({
                     min={0}
                     value={score}
                     onChange={(e) => setScore(Number(e.target.value))}
-                    className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                  <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                     Feedback Comments
                   </label>
                   <textarea 
@@ -2608,7 +2608,7 @@ export default function TeacherConsole({
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     placeholder="Add review feedback for the student..."
-                    className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full resize-none"
+                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full resize-none"
                   />
                 </div>
               </div>
@@ -2616,17 +2616,17 @@ export default function TeacherConsole({
               <button 
                 type="submit"
                 disabled={isPending}
-                className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-slate-300 text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                className="w-full bg-[#6E79F4] hover:bg-[#5A66F0] disabled:bg-[#2E313A] text-white font-bold text-xs py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
               >
                 {isPending ? "Submitting..." : "Submit Review Grade"}
               </button>
             </form>
           </div>
 
-          <div className="p-4 border-t border-[#E2E8F0] bg-slate-50 flex justify-end shrink-0">
+          <div className="p-4 border-t border-[#23252C] bg-[#16171D] flex justify-end shrink-0">
             <button 
               onClick={() => setSelectedProjectSub(null)}
-              className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-slate-100 font-bold text-xs py-2 px-5 rounded-xl transition-all"
+              className="bg-[#131418] border border-[#23252C] text-[#EDEFF5] hover:bg-[#1A1C22] font-bold text-xs py-2 px-5 rounded-xl transition-all"
             >
               Close Auditor details
             </button>
@@ -2642,19 +2642,19 @@ export default function TeacherConsole({
 
     return (
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex justify-end animate-fadeIn">
-        <div className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-slideOver">
+        <div className="w-full max-w-2xl bg-[#131418] h-full shadow-2xl flex flex-col animate-slideOver">
           
           {/* Drawer Header */}
-          <div className="p-6 border-b border-[#E2E8F0] flex items-center justify-between bg-slate-50 shrink-0">
+          <div className="p-6 border-b border-[#23252C] flex items-center justify-between bg-[#16171D] shrink-0">
             <div>
-              <h3 className="text-sm font-bold text-[#0F172A]">Challenge Submission Auditor</h3>
-              <p className="text-xs text-[#475569]">
-                Student: <strong className="text-[#0F172A]">{selectedChallengeSub.student?.full_name || selectedChallengeSub.student?.email}</strong>
+              <h3 className="text-sm font-bold text-[#EDEFF5]">Challenge Submission Auditor</h3>
+              <p className="text-xs text-[#C2C6D1]">
+                Student: <strong className="text-[#EDEFF5]">{selectedChallengeSub.student?.full_name || selectedChallengeSub.student?.email}</strong>
               </p>
             </div>
             <button 
               onClick={() => setSelectedChallengeSub(null)}
-              className="text-[#475569] hover:text-[#0F172A] p-2 hover:bg-slate-200/50 rounded-lg transition-all"
+              className="text-[#C2C6D1] hover:text-[#EDEFF5] p-2 hover:bg-[#23252C]/50 rounded-lg transition-all"
             >
               <X size={18} />
             </button>
@@ -2663,69 +2663,69 @@ export default function TeacherConsole({
           {/* Drawer Content */}
           <div className="p-6 overflow-y-auto flex-1 space-y-6">
             <div>
-              <h3 className="text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-1">
+              <h3 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider mb-1">
                 Challenge Name
               </h3>
               <span className="text-xs font-bold">{selectedChallengeSub.challenge_title}</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F8FAFC] p-4 border border-[#E2E8F0] rounded-xl text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0B0C0F] p-4 border border-[#23252C] rounded-xl text-xs">
               <div>
-                <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Language Runtime</span>
+                <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Language Runtime</span>
                 <span className="text-xs font-semibold uppercase">{selectedChallengeSub.language}</span>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Status</span>
+                <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Status</span>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block uppercase ${
                   selectedChallengeSub.submission_status_code === "accepted"
-                    ? "bg-[#16A34A]/10 text-[#16A34A]"
+                    ? "bg-[#2FBF71]/10 text-[#2FBF71]"
                     : selectedChallengeSub.submission_status_code === "pending" || selectedChallengeSub.submission_status_code === "running"
-                    ? "bg-[#F59E0B]/10 text-[#F59E0B]"
-                    : "bg-[#DC2626]/10 text-[#DC2626]"
+                    ? "bg-[#F5B04A]/10 text-[#F5B04A]"
+                    : "bg-[#F0555D]/10 text-[#F0555D]"
                 }`}>
                   {selectedChallengeSub.submission_status_code.replace(/_/g, " ")}
                 </span>
               </div>
               <div>
-                <span className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Submitted At</span>
-                <span className="font-semibold text-[#0F172A]">
+                <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Submitted At</span>
+                <span className="font-semibold text-[#EDEFF5]">
                   {new Date(selectedChallengeSub.submitted_at).toLocaleString()}
                 </span>
               </div>
             </div>
 
-            <hr className="border-[#E2E8F0]" />
+            <hr className="border-[#23252C]" />
 
             <div>
-              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wide block mb-1">Submitted Code Snippet</span>
-              <pre className="p-4 bg-[#0F172A] text-white text-[11px] font-mono rounded-xl overflow-x-auto max-h-80 shadow-inner">
+              <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-1">Submitted Code Snippet</span>
+              <pre className="p-4 bg-[#6E79F4] text-white text-[11px] font-mono rounded-xl overflow-x-auto max-h-80 shadow-inner">
                 <code>{selectedChallengeSub.source_code}</code>
               </pre>
             </div>
 
             {selectedChallengeSub.result && (
-              <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 space-y-2 text-xs">
-                <span className="font-bold text-[#0F172A] block uppercase tracking-wide text-[10px]">Judge Execution Results</span>
+              <div className="bg-[#0B0C0F] border border-[#23252C] rounded-xl p-4 space-y-2 text-xs">
+                <span className="font-bold text-[#EDEFF5] block uppercase tracking-wide text-[10px]">Judge Execution Results</span>
                 <div className="flex justify-between">
-                  <span className="text-[#475569]">Passed Test Cases:</span>
-                  <strong className="text-[#16A34A]">{selectedChallengeSub.result.passed_test_cases} / {selectedChallengeSub.result.total_test_cases}</strong>
+                  <span className="text-[#C2C6D1]">Passed Test Cases:</span>
+                  <strong className="text-[#2FBF71]">{selectedChallengeSub.result.passed_test_cases} / {selectedChallengeSub.result.total_test_cases}</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#475569]">Execution Time:</span>
+                  <span className="text-[#C2C6D1]">Execution Time:</span>
                   <strong>{selectedChallengeSub.result.execution_time_ms} ms</strong>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#475569]">Assigned Grade Score:</span>
-                  <strong className="text-[#2563EB]">{selectedChallengeSub.result.score} pts</strong>
+                  <span className="text-[#C2C6D1]">Assigned Grade Score:</span>
+                  <strong className="text-[#6E79F4]">{selectedChallengeSub.result.score} pts</strong>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="p-4 border-t border-[#E2E8F0] bg-slate-50 flex justify-end shrink-0">
+          <div className="p-4 border-t border-[#23252C] bg-[#16171D] flex justify-end shrink-0">
             <button 
               onClick={() => setSelectedChallengeSub(null)}
-              className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-slate-100 font-bold text-xs py-2 px-5 rounded-xl transition-all"
+              className="bg-[#131418] border border-[#23252C] text-[#EDEFF5] hover:bg-[#1A1C22] font-bold text-xs py-2 px-5 rounded-xl transition-all"
             >
               Close Auditor details
             </button>
@@ -2747,23 +2747,23 @@ export default function TeacherConsole({
       <div className="space-y-6" style={{ animation: "hc-dashFadeIn 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
       
       {/* Top Banner & Multi-Tenant Campus Selector */}
-      <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+      <div className="bg-[#131418] border border-[#23252C] p-6 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-slate-50 rounded-xl text-[#0F172A] border border-[#E2E8F0] transition-all cursor-pointer mr-1"
+            className="p-2 hover:bg-[#16171D] rounded-xl text-[#EDEFF5] border border-[#23252C] transition-all cursor-pointer mr-1"
             title="Toggle Sidebar"
           >
             <Menu size={16} />
           </button>
           <div>
-            <h2 className="text-base font-bold text-[#0F172A]">Instructor Cohort Dashboard</h2>
-            <p className="text-xs text-[#475569]">Select your active assigned cohort to view student roster, attendance, assigned course syllabus, and grade activities.</p>
+            <h2 className="text-base font-bold text-[#EDEFF5]">Instructor Cohort Dashboard</h2>
+            <p className="text-xs text-[#C2C6D1]">Select your active assigned cohort to view student roster, attendance, assigned course syllabus, and grade activities.</p>
           </div>
         </div>
 
         {cohorts.length === 0 ? (
-          <div className="flex items-center gap-2 bg-[#DC2626]/10 border border-[#DC2626]/20 px-4 py-2 rounded-xl text-xs text-[#DC2626] font-bold">
+          <div className="flex items-center gap-2 bg-[#F0555D]/10 border border-[#F0555D]/20 px-4 py-2 rounded-xl text-xs text-[#F0555D] font-bold">
             <ShieldAlert size={16} />
             No cohorts assigned yet
           </div>
@@ -2771,11 +2771,11 @@ export default function TeacherConsole({
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
             {/* Group Select */}
             <div className="flex flex-col gap-1 w-full sm:w-80">
-              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider">Select Group</span>
+              <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider">Select Group</span>
               <select
                 value={selectedCohortId}
                 onChange={(e) => setSelectedCohortId(e.target.value)}
-                className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs font-bold text-[#0f172a] focus:outline-none focus:border-[#2563EB] shadow-sm w-full"
+                className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs font-bold text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] shadow-sm w-full"
               >
                 {cohorts.map(c => (
                   <option key={c.id} value={c.id}>
@@ -2790,16 +2790,16 @@ export default function TeacherConsole({
 
       <div className="flex flex-col lg:flex-row gap-8 min-h-[calc(100vh-8rem)]">
         {isSelectedInstDisabled ? (
-          <div className="flex-1 bg-white border border-[#E2E8F0] p-8 rounded-2xl shadow-sm max-w-2xl mx-auto text-center space-y-6 mt-10 h-fit">
-            <div className="mx-auto w-16 h-16 bg-[#DC2626]/10 text-[#DC2626] rounded-full flex items-center justify-center border border-[#DC2626]/20">
+          <div className="flex-1 bg-[#131418] border border-[#23252C] p-8 rounded-2xl shadow-sm max-w-2xl mx-auto text-center space-y-6 mt-10 h-fit">
+            <div className="mx-auto w-16 h-16 bg-[#F0555D]/10 text-[#F0555D] rounded-full flex items-center justify-center border border-[#F0555D]/20">
               <ShieldAlert size={32} />
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl font-bold text-[#0F172A]">Institution Access Suspended</h2>
-              <p className="text-sm text-[#475569]">
-                The institution <strong className="text-[#0F172A]">{currentSelectedInst?.name}</strong> is currently deactivated or suspended.
+              <h2 className="text-xl font-bold text-[#EDEFF5]">Institution Access Suspended</h2>
+              <p className="text-sm text-[#C2C6D1]">
+                The institution <strong className="text-[#EDEFF5]">{currentSelectedInst?.name}</strong> is currently deactivated or suspended.
               </p>
-              <p className="text-xs text-[#64748B] leading-relaxed">
+              <p className="text-xs text-[#C2C6D1] leading-relaxed">
                 All teacher dashboard controls and curriculum management tools have been locked for this campus. If you work with other institutions, please select another active institution from the dropdown menu above.
               </p>
             </div>
@@ -2816,11 +2816,11 @@ export default function TeacherConsole({
 
             {/* Sidebars container - Collapsible drawer on mobile, inline on desktop */}
             <div className={`
-              fixed inset-y-0 left-0 z-50 bg-white lg:bg-transparent p-4 lg:p-0 border-r border-[#E2E8F0] lg:border-none flex gap-4 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:h-auto
+              fixed inset-y-0 left-0 z-50 bg-[#131418] lg:bg-transparent p-4 lg:p-0 border-r border-[#23252C] lg:border-none flex gap-4 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:h-auto
               ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:flex lg:translate-x-0"}
             `}>
               {/* PRIMARY SIDEBAR (Icon-only, narrow, Supabase-style) */}
-              <div className="w-14 shrink-0 flex flex-col items-center gap-4 py-2 border-r border-[#E2E8F0] pr-4">
+              <div className="w-14 shrink-0 flex flex-col items-center gap-4 py-2 border-r border-[#23252C] pr-4">
                 <button
                   onClick={() => {
                     setActiveParentTab("overview");
@@ -2828,8 +2828,8 @@ export default function TeacherConsole({
                   }}
                   className={`p-3 rounded-xl border transition-all cursor-pointer ${
                     activeParentTab === "overview"
-                      ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                      : "bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#475569] hover:text-[#0F172A]"
+                      ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
+                      : "bg-[#131418] border-[#23252C] hover:bg-[#0B0C0F] text-[#C2C6D1] hover:text-[#EDEFF5]"
                   }`}
                   title="Overview Space"
                 >
@@ -2843,8 +2843,8 @@ export default function TeacherConsole({
                   }}
                   className={`p-3 rounded-xl border transition-all cursor-pointer ${
                     activeParentTab === "students"
-                      ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                      : "bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#475569] hover:text-[#0F172A]"
+                      ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
+                      : "bg-[#131418] border-[#23252C] hover:bg-[#0B0C0F] text-[#C2C6D1] hover:text-[#EDEFF5]"
                   }`}
                   title="Student Roster"
                 >
@@ -2858,8 +2858,8 @@ export default function TeacherConsole({
                   }}
                   className={`p-3 rounded-xl border transition-all cursor-pointer ${
                     activeParentTab === "assessments"
-                      ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                      : "bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#475569] hover:text-[#0F172A]"
+                      ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
+                      : "bg-[#131418] border-[#23252C] hover:bg-[#0B0C0F] text-[#C2C6D1] hover:text-[#EDEFF5]"
                   }`}
                   title="Assessments & Grading"
                 >
@@ -2873,8 +2873,8 @@ export default function TeacherConsole({
                   }}
                   className={`p-3 rounded-xl border transition-all cursor-pointer ${
                     activeParentTab === "curriculum"
-                      ? "bg-[#2563EB] text-white shadow-sm border-[#2563EB]"
-                      : "bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#475569] hover:text-[#0F172A]"
+                      ? "bg-[#6E79F4] text-white shadow-sm border-[#6E79F4]"
+                      : "bg-[#131418] border-[#23252C] hover:bg-[#0B0C0F] text-[#C2C6D1] hover:text-[#EDEFF5]"
                   }`}
                   title="Curriculum & Syllabus"
                 >
@@ -2884,10 +2884,10 @@ export default function TeacherConsole({
 
               {/* SECONDARY SIDEBAR (Sub-options list) */}
               <div className={`
-                w-52 shrink-0 flex flex-col gap-2 border-r border-[#E2E8F0] pr-4 lg:border-r
+                w-52 shrink-0 flex flex-col gap-2 border-r border-[#23252C] pr-4 lg:border-r
                 ${isSidebarOpen ? "flex" : "hidden lg:flex"}
               `}>
-                <h4 className="text-[10px] font-bold text-[#475569] uppercase tracking-wider px-2 mb-2">
+                <h4 className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider px-2 mb-2">
                   {activeParentTab === "overview" && "Overview Space"}
                   {activeParentTab === "students" && "Student Hub"}
                   {activeParentTab === "assessments" && "Auditing & Grading"}
@@ -2904,8 +2904,8 @@ export default function TeacherConsole({
                     }}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                       activeTab === "overview"
-                        ? "bg-[#2563EB]/10 text-[#2563EB]"
-                        : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                        ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                        : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                     }`}
                   >
                     Dashboard Overview
@@ -2922,8 +2922,8 @@ export default function TeacherConsole({
                       }}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                         activeTab === "roster"
-                          ? "bg-[#2563EB]/10 text-[#2563EB]"
-                          : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                       }`}
                     >
                       Student Directory
@@ -2937,8 +2937,8 @@ export default function TeacherConsole({
                       }}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                         activeTab === "delivery"
-                          ? "bg-[#2563EB]/10 text-[#2563EB]"
-                          : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                       }`}
                     >
                       Groups & Delivery
@@ -2952,8 +2952,8 @@ export default function TeacherConsole({
                       }}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                         activeTab === "attendance"
-                          ? "bg-[#2563EB]/10 text-[#2563EB]"
-                          : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                       }`}
                     >
                       Attendance Tracker
@@ -2972,8 +2972,8 @@ export default function TeacherConsole({
                       }}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                         activeTab === "auditor"
-                          ? "bg-[#2563EB]/10 text-[#2563EB]"
-                          : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                       }`}
                     >
                       Submissions Auditor
@@ -2987,13 +2987,13 @@ export default function TeacherConsole({
                       }}
                       className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                         activeTab === "projects"
-                          ? "bg-[#2563EB]/10 text-[#2563EB]"
-                          : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                       }`}
                     >
                       <span>Project Validator</span>
                       {pendingProjectCount > 0 && (
-                        <span className="bg-[#DC2626] text-white px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
+                        <span className="bg-[#F0555D] text-white px-2 py-0.5 rounded-full text-[9px] font-bold animate-pulse">
                           {pendingProjectCount}
                         </span>
                       )}
@@ -3007,8 +3007,8 @@ export default function TeacherConsole({
                       }}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                         activeTab === "challenges"
-                          ? "bg-[#2563EB]/10 text-[#2563EB]"
-                          : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                       }`}
                     >
                       Challenge Auditor
@@ -3027,8 +3027,8 @@ export default function TeacherConsole({
                       }}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                         activeTab === "activities-manager"
-                          ? "bg-[#2563EB]/10 text-[#2563EB]"
-                          : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                       }`}
                     >
                       Activities Builder
@@ -3042,8 +3042,8 @@ export default function TeacherConsole({
                       }}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-left transition-all cursor-pointer ${
                         activeTab === "syllabus"
-                          ? "bg-[#2563EB]/10 text-[#2563EB]"
-                          : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                          ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                          : "text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#0B0C0F]"
                       }`}
                     >
                       Course Syllabus
@@ -3056,16 +3056,16 @@ export default function TeacherConsole({
         {/* Main Content Area */}
         <main className="flex-1 min-w-0 space-y-6">
           {isSelectedProgDisabled ? (
-            <div className="bg-white border border-[#E2E8F0] p-8 rounded-2xl shadow-sm max-w-2xl mx-auto text-center space-y-6 mt-10">
-              <div className="mx-auto w-16 h-16 bg-[#DC2626]/10 text-[#DC2626] rounded-full flex items-center justify-center border border-[#DC2626]/20">
+            <div className="bg-[#131418] border border-[#23252C] p-8 rounded-2xl shadow-sm max-w-2xl mx-auto text-center space-y-6 mt-10">
+              <div className="mx-auto w-16 h-16 bg-[#F0555D]/10 text-[#F0555D] rounded-full flex items-center justify-center border border-[#F0555D]/20">
                 <ShieldAlert size={32} />
               </div>
               <div className="space-y-2">
-                <h2 className="text-xl font-bold text-[#0F172A]">Batch Access Suspended</h2>
-                <p className="text-sm text-[#475569]">
-                  The batch <strong className="text-[#0F172A]">{currentSelectedProg?.title}</strong> is currently deactivated or suspended.
+                <h2 className="text-xl font-bold text-[#EDEFF5]">Batch Access Suspended</h2>
+                <p className="text-sm text-[#C2C6D1]">
+                  The batch <strong className="text-[#EDEFF5]">{currentSelectedProg?.title}</strong> is currently deactivated or suspended.
                 </p>
-                <p className="text-xs text-[#64748B] leading-relaxed">
+                <p className="text-xs text-[#C2C6D1] leading-relaxed">
                   All teaching tools, roster management, grading, and syllabus editors have been locked for this batch. Please select another active batch from the header dropdown to continue.
                 </p>
               </div>
@@ -3106,20 +3106,20 @@ export default function TeacherConsole({
           {/* TAB: UNIFIED SUBMISSIONS AUDITOR */}
           {activeTab === "auditor" && (
             <div className="space-y-6 animate-fadeIn">
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[#E2E8F0]">
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[#23252C]">
                   <div>
-                    <h3 className="text-sm font-bold text-[#0F172A]">Unified Submissions Auditor</h3>
-                    <p className="text-[10px] text-[#475569]">Audit, evaluate, and grade all student quiz attempts, project uploads, and code runs in real time.</p>
+                    <h3 className="text-sm font-bold text-[#EDEFF5]">Unified Submissions Auditor</h3>
+                    <p className="text-[10px] text-[#C2C6D1]">Audit, evaluate, and grade all student quiz attempts, project uploads, and code runs in real time.</p>
                   </div>
                   
                   {/* Category filter */}
                   <div className="flex gap-2 items-center">
-                    <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider">Filter:</span>
+                    <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider">Filter:</span>
                     <select
                       value={auditorFilter}
                       onChange={e => setAuditorFilter(e.target.value as any)}
-                      className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#2563EB]"
+                      className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6E79F4]"
                     >
                       <option value="all">All Submissions</option>
                       <option value="quiz">Quizzes</option>
@@ -3130,11 +3130,11 @@ export default function TeacherConsole({
                 </div>
 
                 {combinedSubmissions.length === 0 ? (
-                  <div className="text-center py-12 text-xs text-[#475569] border border-dashed border-[#E2E8F0] rounded-xl mt-4">
+                  <div className="text-center py-12 text-xs text-[#C2C6D1] border border-dashed border-[#23252C] rounded-xl mt-4">
                     No submissions found matching the criteria.
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#E2E8F0] mt-2">
+                  <div className="divide-y divide-[#23252C] mt-2">
                     {combinedSubmissions.map(item => (
                       <div 
                         key={`${item.type}-${item.id}`}
@@ -3147,7 +3147,7 @@ export default function TeacherConsole({
                             setSelectedChallengeSub(item.original);
                           }
                         }}
-                        className="py-3.5 flex justify-between items-center gap-4 hover:bg-slate-50/50 px-2 rounded-xl transition-all cursor-pointer select-none"
+                        className="py-3.5 flex justify-between items-center gap-4 hover:bg-[#16171D]/50 px-2 rounded-xl transition-all cursor-pointer select-none"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
@@ -3160,31 +3160,31 @@ export default function TeacherConsole({
                             }`}>
                               {item.type === "programming" ? "code challenge" : item.type}
                             </span>
-                            <h4 className="text-xs font-bold text-[#0F172A] truncate">{item.title}</h4>
+                            <h4 className="text-xs font-bold text-[#EDEFF5] truncate">{item.title}</h4>
                           </div>
                           
-                          <p className="text-[10px] text-[#475569] mt-1">
-                            Submitted by <strong className="text-[#0F172A]">{item.studentName}</strong> • {new Date(item.submittedAt).toLocaleString()}
+                          <p className="text-[10px] text-[#C2C6D1] mt-1">
+                            Submitted by <strong className="text-[#EDEFF5]">{item.studentName}</strong> • {new Date(item.submittedAt).toLocaleString()}
                           </p>
                         </div>
 
                         <div className="flex items-center gap-3 shrink-0">
                           {item.score !== undefined ? (
-                            <span className="text-xs font-bold text-[#0F172A]">
-                              {item.score} <span className="text-[10px] text-[#475569] font-normal">/ {item.maxScore} pts</span>
+                            <span className="text-xs font-bold text-[#EDEFF5]">
+                              {item.score} <span className="text-[10px] text-[#C2C6D1] font-normal">/ {item.maxScore} pts</span>
                             </span>
                           ) : (
-                            <span className="text-[10px] font-semibold text-[#475569] bg-slate-100 px-2 py-0.5 rounded border">
+                            <span className="text-[10px] font-semibold text-[#C2C6D1] bg-[#1A1C22] px-2 py-0.5 rounded border">
                               Not graded
                             </span>
                           )}
 
                           <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase border ${
                             item.status === "approved" || item.status === "accepted" || item.status === "completed" || item.status === "submitted"
-                              ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
+                              ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20"
                               : item.status === "pending" || item.status === "running" || item.status === "review_pending"
-                              ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
-                              : "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20"
+                              ? "bg-[#F5B04A]/10 text-[#F5B04A] border-[#F5B04A]/20"
+                              : "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20"
                           }`}>
                             {item.status.replace(/_/g, " ")}
                           </span>
@@ -3202,63 +3202,63 @@ export default function TeacherConsole({
             <div className="space-y-6 animate-fadeIn">
               {/* Stats Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm">
+                <div className="bg-[#131418] border border-[#23252C] p-6 rounded-2xl shadow-sm">
                   <div className="flex justify-between items-start mb-4">
-                    <span className="text-xs font-bold text-[#475569] uppercase tracking-wider">Cohorts</span>
-                    <div className="p-2 bg-[#2563EB]/10 text-[#2563EB] rounded-xl"><Layers size={18} /></div>
+                    <span className="text-xs font-bold text-[#C2C6D1] uppercase tracking-wider">Cohorts</span>
+                    <div className="p-2 bg-[#6E79F4]/10 text-[#6E79F4] rounded-xl"><Layers size={18} /></div>
                   </div>
                   <h2 className="text-2xl font-bold">{filteredCohorts.length}</h2>
-                  <p className="text-[10px] text-[#475569] mt-1">Managed educational cohorts</p>
+                  <p className="text-[10px] text-[#C2C6D1] mt-1">Managed educational cohorts</p>
                 </div>
 
-                <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm">
+                <div className="bg-[#131418] border border-[#23252C] p-6 rounded-2xl shadow-sm">
                   <div className="flex justify-between items-start mb-4">
-                    <span className="text-xs font-bold text-[#475569] uppercase tracking-wider">Active Students</span>
-                    <div className="p-2 bg-[#16A34A]/10 text-[#16A34A] rounded-xl"><Users size={18} /></div>
+                    <span className="text-xs font-bold text-[#C2C6D1] uppercase tracking-wider">Active Students</span>
+                    <div className="p-2 bg-[#2FBF71]/10 text-[#2FBF71] rounded-xl"><Users size={18} /></div>
                   </div>
                   <h2 className="text-2xl font-bold">{activeStudentsCount}</h2>
-                  <p className="text-[10px] text-[#475569] mt-1">Enrolled class consumers</p>
+                  <p className="text-[10px] text-[#C2C6D1] mt-1">Enrolled class consumers</p>
                 </div>
 
-                <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm">
+                <div className="bg-[#131418] border border-[#23252C] p-6 rounded-2xl shadow-sm">
                   <div className="flex justify-between items-start mb-4">
-                    <span className="text-xs font-bold text-[#475569] uppercase tracking-wider">Pending Projects</span>
-                    <div className="p-2 bg-[#F59E0B]/10 text-[#F59E0B] rounded-xl"><CheckSquare size={18} /></div>
+                    <span className="text-xs font-bold text-[#C2C6D1] uppercase tracking-wider">Pending Projects</span>
+                    <div className="p-2 bg-[#F5B04A]/10 text-[#F5B04A] rounded-xl"><CheckSquare size={18} /></div>
                   </div>
                   <h2 className="text-2xl font-bold">{pendingProjectCount}</h2>
-                  <p className="text-[10px] text-[#475569] mt-1">Requires manual evaluation</p>
+                  <p className="text-[10px] text-[#C2C6D1] mt-1">Requires manual evaluation</p>
                 </div>
 
-                <div className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm">
+                <div className="bg-[#131418] border border-[#23252C] p-6 rounded-2xl shadow-sm">
                   <div className="flex justify-between items-start mb-4">
-                    <span className="text-xs font-bold text-[#475569] uppercase tracking-wider">Challenge Runs</span>
-                    <div className="p-2 bg-[#06B6D4]/10 text-[#06B6D4] rounded-xl"><Code2 size={18} /></div>
+                    <span className="text-xs font-bold text-[#C2C6D1] uppercase tracking-wider">Challenge Runs</span>
+                    <div className="p-2 bg-[#22D3EE]/10 text-[#22D3EE] rounded-xl"><Code2 size={18} /></div>
                   </div>
                   <h2 className="text-2xl font-bold">{filteredChallengeSubmissions.length}</h2>
-                  <p className="text-[10px] text-[#475569] mt-1">Code challenge attempts logged</p>
+                  <p className="text-[10px] text-[#C2C6D1] mt-1">Code challenge attempts logged</p>
                 </div>
               </div>
 
               {/* Quick Pending Submissions Queue */}
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-sm p-6">
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm p-6">
                 <h3 className="text-sm font-bold mb-4 flex items-center gap-2">
-                  <Activity size={16} className="text-[#2563EB]" />
+                  <Activity size={16} className="text-[#6E79F4]" />
                   Recent Pending Evaluations Queue
                 </h3>
                 
                 {filteredProjectSubmissions.filter(p => !p.review || p.review.review_status === "pending").length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl">
-                    <AlertCircle className="mx-auto mb-2 text-[#475569]/40" size={32} />
-                    <p className="text-xs font-medium text-[#475569]">All clear! No pending projects to grade.</p>
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl">
+                    <AlertCircle className="mx-auto mb-2 text-[#C2C6D1]/40" size={32} />
+                    <p className="text-xs font-medium text-[#C2C6D1]">All clear! No pending projects to grade.</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#E2E8F0]">
+                  <div className="divide-y divide-[#23252C]">
                     {filteredProjectSubmissions.filter(p => !p.review || p.review.review_status === "pending").slice(0, 5).map(sub => (
                       <div key={sub.id} className="py-4 flex justify-between items-center gap-4">
                         <div>
-                          <h4 className="text-xs font-bold text-[#0F172A]">{sub.project_title}</h4>
-                          <p className="text-[10px] text-[#475569] mt-0.5">
-                            Submitted by <strong className="text-[#0F172A]">{sub.student?.full_name || sub.student?.email}</strong> on {new Date(sub.submitted_at).toLocaleDateString()}
+                          <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.project_title}</h4>
+                          <p className="text-[10px] text-[#C2C6D1] mt-0.5">
+                            Submitted by <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong> on {new Date(sub.submitted_at).toLocaleDateString()}
                           </p>
                         </div>
                         <button 
@@ -3267,7 +3267,7 @@ export default function TeacherConsole({
                             setActiveParentTab("assessments");
                             setActiveTab("projects");
                           }}
-                          className="flex items-center gap-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                          className="flex items-center gap-1 bg-[#6E79F4] hover:bg-[#5A66F0] text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
                         >
                           Grade Submission <ArrowRight size={10} />
                         </button>
@@ -3281,11 +3281,11 @@ export default function TeacherConsole({
 
           {/* TAB 2: COHORT ROSTER */}
           {activeTab === "roster" && (
-            <div className="space-y-6 animate-fadeIn bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm">
+            <div className="space-y-6 animate-fadeIn bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-[#0F172A]">Academic Student Directory</h3>
-                  <p className="text-[10px] text-[#475569]">Active Cohort: <strong className="text-[#2563EB] font-bold">{cohorts.find(c => c.id === selectedCohortId)?.name || "N/A"}</strong> (Directory includes all enrolled students)</p>
+                  <h3 className="text-sm font-bold text-[#EDEFF5]">Academic Student Directory</h3>
+                  <p className="text-[10px] text-[#C2C6D1]">Active Cohort: <strong className="text-[#6E79F4] font-bold">{cohorts.find(c => c.id === selectedCohortId)?.name || "N/A"}</strong> (Directory includes all enrolled students)</p>
                 </div>
               </div>
 
@@ -3300,7 +3300,7 @@ export default function TeacherConsole({
 
                 if (currentCohortEnrollments.length === 0) {
                   return (
-                    <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
+                    <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
                       No students enrolled in this cohort yet.
                     </div>
                   );
@@ -3314,19 +3314,19 @@ export default function TeacherConsole({
                         placeholder="🔍 Search student by name or email..."
                         value={rosterSearchQuery}
                         onChange={(e) => setRosterSearchQuery(e.target.value)}
-                        className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                        className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                       />
                     </div>
 
                     {filteredRoster.length === 0 ? (
-                      <div className="text-center py-8 text-xs text-[#475569] bg-slate-50 rounded-xl border border-dashed border-[#E2E8F0]">
+                      <div className="text-center py-8 text-xs text-[#C2C6D1] bg-[#16171D] rounded-xl border border-dashed border-[#23252C]">
                         No matching students found.
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
-                            <tr className="border-b border-[#E2E8F0] text-[#475569] select-none">
+                            <tr className="border-b border-[#23252C] text-[#C2C6D1] select-none">
                               <th className="py-3 font-bold uppercase tracking-wider">Student Name</th>
                               <th className="py-3 font-bold uppercase tracking-wider">Email Address</th>
                               <th className="py-3 font-bold uppercase tracking-wider">Syllabus Progress</th>
@@ -3334,7 +3334,7 @@ export default function TeacherConsole({
                               <th className="py-3 font-bold uppercase tracking-wider">Enrolled On</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#E2E8F0]">
+                          <tbody className="divide-y divide-[#23252C]">
                             {filteredRoster.map((enr: any) => (
                               <tr 
                                 key={enr.id} 
@@ -3342,19 +3342,19 @@ export default function TeacherConsole({
                                   setSelectedStudent(enr);
                                   setStudentDetailTab("overview");
                                 }}
-                                className="hover:bg-[#F8FAFC] cursor-pointer transition-colors"
+                                className="hover:bg-[#0B0C0F] cursor-pointer transition-colors"
                               >
-                                <td className="py-3 font-bold text-[#0F172A] flex items-center gap-2">
-                                  <div className="w-7 h-7 rounded-full bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center font-bold text-[10px] uppercase border border-[#2563EB]/25 shadow-sm">
+                                <td className="py-3 font-bold text-[#EDEFF5] flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-[#6E79F4]/10 text-[#6E79F4] flex items-center justify-center font-bold text-[10px] uppercase border border-[#6E79F4]/25 shadow-sm">
                                     {(enr.student?.full_name || enr.student?.email || "I").substring(0, 2)}
                                   </div>
-                                  <span className="hover:text-[#2563EB] transition-colors">{enr.student?.full_name || "Invited Candidate"}</span>
+                                  <span className="hover:text-[#6E79F4] transition-colors">{enr.student?.full_name || "Invited Candidate"}</span>
                                 </td>
-                                <td className="py-3 text-[#475569]">{enr.student?.email}</td>
+                                <td className="py-3 text-[#C2C6D1]">{enr.student?.email}</td>
                                 <td className="py-3">
                                   <div className="flex items-center gap-2 w-28">
-                                    <div className="flex-1 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                      <div className="bg-[#2563EB] h-full" style={{ width: `${enr.progress_percentage || 0}%` }}></div>
+                                    <div className="flex-1 bg-[#1A1C22] h-1.5 rounded-full overflow-hidden">
+                                      <div className="bg-[#6E79F4] h-full" style={{ width: `${enr.progress_percentage || 0}%` }}></div>
                                     </div>
                                     <span className="font-bold shrink-0">{enr.progress_percentage || 0}%</span>
                                   </div>
@@ -3362,13 +3362,13 @@ export default function TeacherConsole({
                                 <td className="py-3">
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                     enr.status_code === "active" 
-                                      ? "bg-[#16A34A]/10 text-[#16A34A]" 
-                                      : "bg-[#475569]/10 text-[#475569]"
+                                      ? "bg-[#2FBF71]/10 text-[#2FBF71]" 
+                                      : "bg-[#3A3F4B]/10 text-[#C2C6D1]"
                                   }`}>
                                     {enr.status_code}
                                   </span>
                                 </td>
-                                <td className="py-3 text-[#475569]">
+                                <td className="py-3 text-[#C2C6D1]">
                                   {new Date(enr.created_at).toLocaleDateString()}
                                 </td>
                               </tr>
@@ -3386,11 +3386,11 @@ export default function TeacherConsole({
           {/* TAB 3: PROJECT VALIDATOR */}
           {activeTab === "projects" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-              <div className="lg:col-span-2 bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm h-fit">
-                <h3 className="text-sm font-bold text-[#0F172A] mb-4">Student Project Submissions</h3>
+              <div className="lg:col-span-2 bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit">
+                <h3 className="text-sm font-bold text-[#EDEFF5] mb-4">Student Project Submissions</h3>
                 
                 {filteredProjectSubmissions.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
                     No project submissions found.
                   </div>
                 ) : (
@@ -3405,35 +3405,35 @@ export default function TeacherConsole({
                           onClick={() => setSelectedProjectSub(sub)}
                           className={`p-4 border rounded-xl cursor-pointer transition-all ${
                             isSelected 
-                              ? "border-[#2563EB] bg-[#2563EB]/5 shadow-sm" 
-                              : "border-[#E2E8F0] hover:border-[#475569]/50"
+                              ? "border-[#6E79F4] bg-[#6E79F4]/5 shadow-sm" 
+                              : "border-[#23252C] hover:border-[#9BA1AE]/50"
                           }`}
                         >
                           <div className="flex justify-between items-start gap-4">
                             <div>
-                              <h4 className="text-xs font-bold text-[#0F172A]">{sub.project_title}</h4>
-                              <p className="text-[10px] text-[#475569] mt-0.5">
-                                By <strong className="text-[#0F172A]">{sub.student?.full_name || sub.student?.email}</strong>
+                              <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.project_title}</h4>
+                              <p className="text-[10px] text-[#C2C6D1] mt-0.5">
+                                By <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong>
                               </p>
                             </div>
                             
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                               !hasReview || sub.review.review_status === "pending"
-                                ? "bg-[#F59E0B]/10 text-[#F59E0B]"
+                                ? "bg-[#F5B04A]/10 text-[#F5B04A]"
                                 : sub.review.review_status === "approved"
-                                ? "bg-[#16A34A]/10 text-[#16A34A]"
-                                : "bg-[#DC2626]/10 text-[#DC2626]"
+                                ? "bg-[#2FBF71]/10 text-[#2FBF71]"
+                                : "bg-[#F0555D]/10 text-[#F0555D]"
                             }`}>
                               {!hasReview ? "Pending Review" : sub.review.review_status}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#E2E8F0] text-[10px] text-[#475569]">
+                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
                             <span className="flex items-center gap-1">
                               <Clock size={12} />
                               {new Date(sub.submitted_at).toLocaleDateString()}
                             </span>
-                            <span className="flex items-center gap-1 font-semibold text-[#2563EB]">
+                            <span className="flex items-center gap-1 font-semibold text-[#6E79F4]">
                               <ExternalLink size={12} />
                               GitHub Repo Link
                             </span>
@@ -3445,22 +3445,22 @@ export default function TeacherConsole({
                 )}
               </div>
 
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm h-fit">
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit">
                 {selectedProjectSub ? (
                   <form onSubmit={handleReviewSubmit} className="space-y-4">
-                    <h3 className="text-sm font-bold text-[#0F172A] pb-3 border-b border-[#E2E8F0]">
+                    <h3 className="text-sm font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C]">
                       Grade: {selectedProjectSub.project_title}
                     </h3>
 
                     <div>
-                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                         Submitted GitHub URL
                       </label>
                       <a 
                         href={selectedProjectSub.github_url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-xs text-[#2563EB] font-semibold break-all hover:underline flex items-center gap-1"
+                        className="text-xs text-[#6E79F4] font-semibold break-all hover:underline flex items-center gap-1"
                       >
                         {selectedProjectSub.github_url}
                         <ExternalLink size={12} />
@@ -3469,25 +3469,25 @@ export default function TeacherConsole({
 
                     {selectedProjectSub.submission_notes && (
                       <div>
-                        <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                           Student Submission Notes
                         </label>
-                        <p className="text-xs bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A]">
+                        <p className="text-xs bg-[#0B0C0F] border border-[#23252C] rounded-xl p-3 text-[#EDEFF5]">
                           {selectedProjectSub.submission_notes}
                         </p>
                       </div>
                     )}
 
-                    <hr className="border-[#E2E8F0]" />
+                    <hr className="border-[#23252C]" />
 
                     <div>
-                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                         Assign Status
                       </label>
                       <select
                         value={reviewStatus}
                         onChange={(e) => setReviewStatus(e.target.value)}
-                        className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#2563EB] w-full"
+                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6E79F4] w-full"
                       >
                         <option value="approved">Approved & Completed</option>
                         <option value="revision_requested">Revision Requested</option>
@@ -3497,10 +3497,10 @@ export default function TeacherConsole({
 
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block">
+                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">
                           Assigned Score
                         </label>
-                        <span className="text-[10px] font-bold text-[#475569]">
+                        <span className="text-[10px] font-bold text-[#C2C6D1]">
                           Max Score: {selectedProjectSub.max_score}
                         </span>
                       </div>
@@ -3510,12 +3510,12 @@ export default function TeacherConsole({
                         min={0}
                         value={score}
                         onChange={(e) => setScore(Number(e.target.value))}
-                        className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                       />
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                         Feedback Comments
                       </label>
                       <textarea 
@@ -3523,22 +3523,22 @@ export default function TeacherConsole({
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         placeholder="Add review feedback for the student..."
-                        className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full resize-none"
+                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full resize-none"
                       />
                     </div>
 
                     <button 
                       type="submit"
                       disabled={isPending}
-                      className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-slate-300 text-white font-bold text-xs py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                      className="w-full bg-[#6E79F4] hover:bg-[#5A66F0] disabled:bg-[#2E313A] text-white font-bold text-xs py-2 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                     >
                       {isPending ? "Submitting..." : "Submit Review Grade"}
                     </button>
                   </form>
                 ) : (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl">
-                    <AlertCircle className="mx-auto mb-2 text-[#475569]/40" size={32} />
-                    <p className="text-xs font-semibold text-[#475569]">Select submission from list to begin grading</p>
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl">
+                    <AlertCircle className="mx-auto mb-2 text-[#C2C6D1]/40" size={32} />
+                    <p className="text-xs font-semibold text-[#C2C6D1]">Select submission from list to begin grading</p>
                   </div>
                 )}
               </div>
@@ -3548,11 +3548,11 @@ export default function TeacherConsole({
           {/* TAB 4: CHALLENGE AUDITOR */}
           {activeTab === "challenges" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-              <div className="lg:col-span-2 bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm h-fit">
-                <h3 className="text-sm font-bold text-[#0F172A] mb-4">Student Coding Submissions</h3>
+              <div className="lg:col-span-2 bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit">
+                <h3 className="text-sm font-bold text-[#EDEFF5] mb-4">Student Coding Submissions</h3>
                 
                 {filteredChallengeSubmissions.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">
                     No coding challenge submissions logged yet.
                   </div>
                 ) : (
@@ -3566,31 +3566,31 @@ export default function TeacherConsole({
                           onClick={() => setSelectedChallengeSub(sub)}
                           className={`p-4 border rounded-xl cursor-pointer transition-all ${
                             isSelected 
-                              ? "border-[#2563EB] bg-[#2563EB]/5 shadow-sm" 
-                              : "border-[#E2E8F0] hover:border-[#475569]/50"
+                              ? "border-[#6E79F4] bg-[#6E79F4]/5 shadow-sm" 
+                              : "border-[#23252C] hover:border-[#9BA1AE]/50"
                           }`}
                         >
                           <div className="flex justify-between items-start gap-4">
                             <div>
-                              <h4 className="text-xs font-bold text-[#0F172A]">{sub.challenge_title}</h4>
-                              <p className="text-[10px] text-[#475569] mt-0.5">
-                                Submitted by <strong className="text-[#0F172A]">{sub.student?.full_name || sub.student?.email}</strong>
+                              <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.challenge_title}</h4>
+                              <p className="text-[10px] text-[#C2C6D1] mt-0.5">
+                                Submitted by <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong>
                               </p>
                             </div>
                             
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 uppercase ${
                               sub.submission_status_code === "accepted"
-                                ? "bg-[#16A34A]/10 text-[#16A34A]"
+                                ? "bg-[#2FBF71]/10 text-[#2FBF71]"
                                 : sub.submission_status_code === "pending" || sub.submission_status_code === "running"
-                                ? "bg-[#F59E0B]/10 text-[#F59E0B]"
-                                : "bg-[#DC2626]/10 text-[#DC2626]"
+                                ? "bg-[#F5B04A]/10 text-[#F5B04A]"
+                                : "bg-[#F0555D]/10 text-[#F0555D]"
                             }`}>
                               {sub.submission_status_code.replace(/_/g, " ")}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#E2E8F0] text-[10px] text-[#475569]">
-                            <span className="flex items-center gap-1 font-bold text-[#0F172A] bg-[#E2E8F0]/40 px-1.5 py-0.5 rounded">
+                          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
+                            <span className="flex items-center gap-1 font-bold text-[#EDEFF5] bg-[#23252C]/40 px-1.5 py-0.5 rounded">
                               {sub.language}
                             </span>
                             <span className="flex items-center gap-1">
@@ -3605,54 +3605,54 @@ export default function TeacherConsole({
                 )}
               </div>
 
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm h-fit">
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit">
                 {selectedChallengeSub ? (
                   <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-[#0F172A] pb-3 border-b border-[#E2E8F0]">
+                    <h3 className="text-sm font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C]">
                       Audit Subscribed Code
                     </h3>
 
                     <div>
-                      <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wide block">Challenge Name</span>
+                      <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wide block">Challenge Name</span>
                       <span className="text-xs font-bold">{selectedChallengeSub.challenge_title}</span>
                     </div>
 
                     <div>
-                      <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wide block">Language Runtime</span>
+                      <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wide block">Language Runtime</span>
                       <span className="text-xs font-semibold uppercase">{selectedChallengeSub.language}</span>
                     </div>
 
-                    <hr className="border-[#E2E8F0]" />
+                    <hr className="border-[#23252C]" />
 
                     <div>
-                      <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wide block mb-1">Submitted Code Snippet</span>
-                      <pre className="p-3 bg-[#0F172A] text-white text-[10px] font-mono rounded-xl overflow-x-auto max-h-60">
+                      <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-1">Submitted Code Snippet</span>
+                      <pre className="p-3 bg-[#6E79F4] text-white text-[10px] font-mono rounded-xl overflow-x-auto max-h-60">
                         <code>{selectedChallengeSub.source_code}</code>
                       </pre>
                     </div>
 
                     {selectedChallengeSub.result && (
-                      <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 space-y-2 text-[10px]">
-                        <span className="font-bold text-[#0F172A] block uppercase tracking-wide">Judge Execution Results</span>
+                      <div className="bg-[#0B0C0F] border border-[#23252C] rounded-xl p-4 space-y-2 text-[10px]">
+                        <span className="font-bold text-[#EDEFF5] block uppercase tracking-wide">Judge Execution Results</span>
                         <div className="flex justify-between">
-                          <span className="text-[#475569]">Passed Test Cases:</span>
-                          <strong className="text-[#16A34A]">{selectedChallengeSub.result.passed_test_cases} / {selectedChallengeSub.result.total_test_cases}</strong>
+                          <span className="text-[#C2C6D1]">Passed Test Cases:</span>
+                          <strong className="text-[#2FBF71]">{selectedChallengeSub.result.passed_test_cases} / {selectedChallengeSub.result.total_test_cases}</strong>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#475569]">Execution Time:</span>
+                          <span className="text-[#C2C6D1]">Execution Time:</span>
                           <strong>{selectedChallengeSub.result.execution_time_ms} ms</strong>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#475569]">Assigned Grade Score:</span>
-                          <strong className="text-[#2563EB]">{selectedChallengeSub.result.score} pts</strong>
+                          <span className="text-[#C2C6D1]">Assigned Grade Score:</span>
+                          <strong className="text-[#6E79F4]">{selectedChallengeSub.result.score} pts</strong>
                         </div>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-10 border border-dashed border-[#E2E8F0] rounded-xl">
-                    <AlertCircle className="mx-auto mb-2 text-[#475569]/40" size={32} />
-                    <p className="text-xs font-semibold text-[#475569]">Select student submission to audit execution logs</p>
+                  <div className="text-center py-10 border border-dashed border-[#23252C] rounded-xl">
+                    <AlertCircle className="mx-auto mb-2 text-[#C2C6D1]/40" size={32} />
+                    <p className="text-xs font-semibold text-[#C2C6D1]">Select student submission to audit execution logs</p>
                   </div>
                 )}
               </div>
@@ -3662,32 +3662,32 @@ export default function TeacherConsole({
           {/* TAB 5: ACTIVITIES & ASSIGNMENTS MANAGER */}
           {activeTab === "activities-manager" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-              <div className="lg:col-span-2 bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-6">
+              <div className="lg:col-span-2 bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm space-y-6">
                 
                 {!createdActivityId ? (
                   <form onSubmit={handleCreateActivityBase} className="space-y-4">
-                    <h3 className="text-sm font-bold text-[#0F172A] pb-3 border-b border-[#E2E8F0] flex items-center gap-1.5">
-                      <Plus size={16} className="text-[#2563EB]" /> Create Learning Activity
+                    <h3 className="text-sm font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C] flex items-center gap-1.5">
+                      <Plus size={16} className="text-[#6E79F4]" /> Create Learning Activity
                     </h3>
 
                     <div>
-                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                         Select Course *
                       </label>
                       <select
                         value={selectedCourseId}
                         onChange={(e) => setSelectedCourseId(e.target.value)}
-                        className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                         required
                       >
                         <option value="">-- Choose Course --</option>
                         {filteredCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                       </select>
                       {lessonsLoading && (
-                        <p className="text-[10px] text-[#475569] font-semibold mt-1">Preparing this course for activities...</p>
+                        <p className="text-[10px] text-[#C2C6D1] font-semibold mt-1">Preparing this course for activities...</p>
                       )}
                       {!lessonsLoading && selectedCourseId && lessonsList.length === 0 && (
-                        <p className="text-[10px] text-[#DC2626] font-semibold mt-1">
+                        <p className="text-[10px] text-[#F0555D] font-semibold mt-1">
                           Could not prepare this course for activities. Try selecting a different course.
                         </p>
                       )}
@@ -3695,13 +3695,13 @@ export default function TeacherConsole({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                           Activity Type
                         </label>
                         <select
                           value={activityType}
                           onChange={(e: any) => setActivityType(e.target.value)}
-                          className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                          className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                         >
                           <option value="quiz">Quiz Assessment</option>
                           <option value="project">Project Repository Upload</option>
@@ -3710,7 +3710,7 @@ export default function TeacherConsole({
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                           Activity Title *
                         </label>
                         <input 
@@ -3718,7 +3718,7 @@ export default function TeacherConsole({
                           value={title}
                           onChange={(e) => setTitle(e.target.value)}
                           placeholder="e.g., Module 3 Coding Quiz"
-                          className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                          className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                           required
                         />
                       </div>
@@ -3726,26 +3726,26 @@ export default function TeacherConsole({
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                           Max Score
                         </label>
                         <input 
                           type="number"
                           value={maxScore}
                           onChange={(e) => setMaxScore(Number(e.target.value))}
-                          className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                          className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                        <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                           Passing Score
                         </label>
                         <input 
                           type="number"
                           value={passingScore}
                           onChange={(e) => setPassingScore(Number(e.target.value))}
-                          className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                          className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                         />
                       </div>
 
@@ -3755,16 +3755,16 @@ export default function TeacherConsole({
                           id="isMandatoryAct"
                           checked={isMandatory}
                           onChange={(e) => setIsMandatory(e.target.checked)}
-                          className="rounded text-[#2563EB] focus:ring-[#2563EB] h-4 w-4"
+                          className="rounded text-[#6E79F4] focus:ring-[#6E79F4] h-4 w-4"
                         />
-                        <label htmlFor="isMandatoryAct" className="text-xs font-semibold text-[#475569]">
+                        <label htmlFor="isMandatoryAct" className="text-xs font-semibold text-[#C2C6D1]">
                           Mandatory
                         </label>
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                         Overview / Description
                       </label>
                       <textarea 
@@ -3772,12 +3772,12 @@ export default function TeacherConsole({
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Add activity outline..."
-                        className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full resize-none"
+                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full resize-none"
                       />
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">
                         Instructions / Tips
                       </label>
                       <textarea 
@@ -3785,30 +3785,30 @@ export default function TeacherConsole({
                         value={instructions}
                         onChange={(e) => setInstructions(e.target.value)}
                         placeholder="Write guidelines for completion..."
-                        className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full resize-none"
+                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full resize-none"
                       />
                     </div>
 
                     {activityType === "quiz" && (
-                      <div className="p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl space-y-3">
-                        <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-wide">Quiz Details</h4>
+                      <div className="p-4 bg-[#0B0C0F] border border-[#23252C] rounded-xl space-y-3">
+                        <h4 className="text-[10px] font-bold text-[#EDEFF5] uppercase tracking-wide">Quiz Details</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
-                            <label className="text-[10px] font-semibold text-[#475569] block mb-1">Time Limit (Minutes)</label>
+                            <label className="text-[10px] font-semibold text-[#C2C6D1] block mb-1">Time Limit (Minutes)</label>
                             <input 
                               type="number" 
                               value={quizTimeLimit} 
                               onChange={(e) => setQuizTimeLimit(Number(e.target.value))}
-                              className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-semibold text-[#475569] block mb-1">Max Attempts</label>
+                            <label className="text-[10px] font-semibold text-[#C2C6D1] block mb-1">Max Attempts</label>
                             <input 
                               type="number" 
                               value={quizMaxAttempts} 
                               onChange={(e) => setQuizMaxAttempts(Number(e.target.value))}
-                              className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                             />
                           </div>
                         </div>
@@ -3822,76 +3822,76 @@ export default function TeacherConsole({
                             Shuffle Options
                           </label>
                         </div>
-                        <div className="pt-2 border-t border-[#E2E8F0]">
+                        <div className="pt-2 border-t border-[#23252C]">
                           <label className="flex items-center gap-1.5 text-xs">
                             <input type="checkbox" checked={quizStrictMode} onChange={(e) => setQuizStrictMode(e.target.checked)} />
                             Enable Strict/Proctored Mode (fullscreen required, tab-switch = forfeited attempt)
                           </label>
                           {quizStrictMode && !quizTimeLimit && (
-                            <p className="text-[10px] text-[#DC2626] font-semibold mt-1">Strict Mode requires a Time Limit to be set above.</p>
+                            <p className="text-[10px] text-[#F0555D] font-semibold mt-1">Strict Mode requires a Time Limit to be set above.</p>
                           )}
                         </div>
                       </div>
                     )}
 
                     {activityType === "project" && (
-                      <div className="p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl space-y-3">
-                        <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-wide">Project Details</h4>
+                      <div className="p-4 bg-[#0B0C0F] border border-[#23252C] rounded-xl space-y-3">
+                        <h4 className="text-[10px] font-bold text-[#EDEFF5] uppercase tracking-wide">Project Details</h4>
                         <div>
-                          <label className="text-[10px] font-semibold text-[#475569] block mb-1">Overview Context</label>
+                          <label className="text-[10px] font-semibold text-[#C2C6D1] block mb-1">Overview Context</label>
                           <textarea 
                             rows={2} 
                             value={projOverview} 
                             onChange={(e) => setProjOverview(e.target.value)}
-                            className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                            className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] font-semibold text-[#475569] block mb-1">Requirements</label>
+                          <label className="text-[10px] font-semibold text-[#C2C6D1] block mb-1">Requirements</label>
                           <textarea 
                             rows={2} 
                             value={projRequirements} 
                             onChange={(e) => setProjRequirements(e.target.value)}
-                            className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                            className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                           />
                         </div>
                       </div>
                     )}
 
                     {activityType === "programming" && (
-                      <div className="p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl space-y-3">
-                        <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-wide">Challenge Definition</h4>
+                      <div className="p-4 bg-[#0B0C0F] border border-[#23252C] rounded-xl space-y-3">
+                        <h4 className="text-[10px] font-bold text-[#EDEFF5] uppercase tracking-wide">Challenge Definition</h4>
                         <div>
-                          <label className="text-[10px] font-semibold text-[#475569] block mb-1">Problem Statement</label>
+                          <label className="text-[10px] font-semibold text-[#C2C6D1] block mb-1">Problem Statement</label>
                           <textarea
                             rows={3}
                             value={chalStatement}
                             onChange={(e) => setChalStatement(e.target.value)}
-                            className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full font-mono"
+                            className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full font-mono"
                           />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
-                            <label className="text-[10px] font-semibold text-[#475569] block mb-1">Available From</label>
+                            <label className="text-[10px] font-semibold text-[#C2C6D1] block mb-1">Available From</label>
                             <input
                               type="datetime-local"
                               value={availableFrom}
                               onChange={(e) => setAvailableFrom(e.target.value)}
-                              className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-semibold text-[#475569] block mb-1">Due Date</label>
+                            <label className="text-[10px] font-semibold text-[#C2C6D1] block mb-1">Due Date</label>
                             <input
                               type="datetime-local"
                               value={availableUntil}
                               onChange={(e) => setAvailableUntil(e.target.value)}
-                              className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                             />
                           </div>
                         </div>
-                        <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-2.5 rounded-lg text-[10px] text-[#0f172a] leading-relaxed">
-                          <strong className="text-[#2563EB]">Next step:</strong> save this base problem first — the per-language
+                        <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/15 p-2.5 rounded-lg text-[10px] text-[#EDEFF5] leading-relaxed">
+                          <strong className="text-[#6E79F4]">Next step:</strong> save this base problem first — the per-language
                           starter code editor, lockdown toggle, examples, and visible/hidden test cases all open up in the
                           panel below immediately after saving, since they attach to the challenge record this creates.
                         </div>
@@ -3901,25 +3901,25 @@ export default function TeacherConsole({
                     <button
                       type="submit"
                       disabled={isPending}
-                      className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs py-2 px-6 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                      className="bg-[#6E79F4] hover:bg-[#5A66F0] text-white font-bold text-xs py-2 px-6 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
                     >
                       Save Activity Base details
                     </button>
                   </form>
                 ) : (
                   <div className="space-y-6">
-                    <div className="flex justify-between items-center border-b border-[#E2E8F0] pb-3">
-                      <h3 className="text-xs font-bold text-[#0F172A] uppercase">Activity Elements Configurations</h3>
+                    <div className="flex justify-between items-center border-b border-[#23252C] pb-3">
+                      <h3 className="text-xs font-bold text-[#EDEFF5] uppercase">Activity Elements Configurations</h3>
                       <button 
                         onClick={() => setCreatedActivityId("")}
-                        className="bg-slate-200 text-slate-700 font-bold text-[10px] px-3 py-1 rounded-lg"
+                        className="bg-[#23252C] text-[#E2E4EB] font-bold text-[10px] px-3 py-1 rounded-lg"
                       >
                         Create Another Activity
                       </button>
                     </div>
 
                     {activityType === "quiz" && createdQuizId && (
-                      <form onSubmit={handleAddQuestion} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
+                      <form onSubmit={handleAddQuestion} className="space-y-4 border border-[#23252C] p-4 rounded-xl">
                         <h4 className="text-xs font-bold flex items-center gap-1"><HelpCircle size={14} /> Add Quiz Question</h4>
                         <div>
                           <input 
@@ -3927,35 +3927,35 @@ export default function TeacherConsole({
                             value={newQuestionText}
                             onChange={(e) => setNewQuestionText(e.target.value)}
                             placeholder="Question Title Text..."
-                            className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs w-full"
+                            className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs w-full"
                             required
                           />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
-                            <label className="text-[10px] block font-bold text-[#475569]">Question Type</label>
+                            <label className="text-[10px] block font-bold text-[#C2C6D1]">Question Type</label>
                             <select 
                               value={newQuestionType}
                               onChange={(e) => setNewQuestionType(e.target.value)}
-                              className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                             >
                               <option value="single_choice">Single Choice</option>
                               <option value="multiple_choice">Multiple Choice</option>
                             </select>
                           </div>
                           <div>
-                            <label className="text-[10px] block font-bold text-[#475569]">Points</label>
+                            <label className="text-[10px] block font-bold text-[#C2C6D1]">Points</label>
                             <input 
                               type="number"
                               value={newQuestionPoints}
                               onChange={(e) => setNewQuestionPoints(Number(e.target.value))}
-                              className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-[10px] font-bold block text-[#475569]">Options Configuration</label>
+                          <label className="text-[10px] font-bold block text-[#C2C6D1]">Options Configuration</label>
                           {newQuestionOptions.map((opt, oIdx) => (
                             <div key={oIdx} className="flex items-center gap-2">
                               <input 
@@ -3972,13 +3972,13 @@ export default function TeacherConsole({
                                   setNewQuestionOptions(newOpts);
                                 }}
                                 placeholder={`Option ${oIdx + 1}`}
-                                className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full"
+                                className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full"
                               />
                             </div>
                           ))}
                         </div>
 
-                        <button type="submit" className="bg-[#2563EB] text-white px-4 py-1.5 rounded-xl font-bold">
+                        <button type="submit" className="bg-[#6E79F4] text-white px-4 py-1.5 rounded-xl font-bold">
                           Append Question
                         </button>
                       </form>
@@ -3986,7 +3986,7 @@ export default function TeacherConsole({
 
                     {activityType === "programming" && createdChallengeId && (
                       <div className="space-y-4">
-                        <div className="border border-[#E2E8F0] p-4 rounded-xl">
+                        <div className="border border-[#23252C] p-4 rounded-xl">
                           <ChallengeEditor
                             challengeId={createdChallengeId}
                             strictMode={chalStrictMode}
@@ -3996,49 +3996,49 @@ export default function TeacherConsole({
 
                         {examplesList.length > 0 && (
                           <div className="space-y-2">
-                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#475569]">Examples Added ({examplesList.length})</h4>
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]">Examples Added ({examplesList.length})</h4>
                             {examplesList.map((ex, index) => (
-                              <div key={ex.id || index} className="p-2.5 bg-slate-50 border border-[#E2E8F0] rounded-lg flex justify-between items-start gap-3 text-[10px] font-mono">
+                              <div key={ex.id || index} className="p-2.5 bg-[#16171D] border border-[#23252C] rounded-lg flex justify-between items-start gap-3 text-[10px] font-mono">
                                 <div>Ex {ex.example_number}: Input: {ex.input_example} → Output: {ex.output_example}</div>
-                                <button type="button" onClick={() => handleDeleteExample(ex.id)} className="p-1 bg-red-50 border border-red-100 hover:bg-red-100 text-[#DC2626] rounded shrink-0">
+                                <button type="button" onClick={() => handleDeleteExample(ex.id)} className="p-1 bg-red-50 border border-red-100 hover:bg-red-100 text-[#F0555D] rounded shrink-0">
                                   <Trash2 size={11} />
                                 </button>
                               </div>
                             ))}
                           </div>
                         )}
-                        <form onSubmit={handleAddExample} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
+                        <form onSubmit={handleAddExample} className="space-y-4 border border-[#23252C] p-4 rounded-xl">
                           <h4 className="text-xs font-bold flex items-center gap-1"><FileCode size={14} /> Add Code Example</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <textarea placeholder="Input example" value={newExInput} onChange={e=>setNewExInput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
-                            <textarea placeholder="Output example" value={newExOutput} onChange={e=>setNewExOutput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
+                            <textarea placeholder="Input example" value={newExInput} onChange={e=>setNewExInput(e.target.value)} className="bg-[#131418] border border-[#23252C] rounded-lg p-2 text-xs font-mono" />
+                            <textarea placeholder="Output example" value={newExOutput} onChange={e=>setNewExOutput(e.target.value)} className="bg-[#131418] border border-[#23252C] rounded-lg p-2 text-xs font-mono" />
                           </div>
-                          <button type="submit" className="bg-[#2563EB] text-white px-4 py-1.5 rounded-xl font-bold">Add Example</button>
+                          <button type="submit" className="bg-[#6E79F4] text-white px-4 py-1.5 rounded-xl font-bold">Add Example</button>
                         </form>
 
                         {testCasesList.length > 0 && (
                           <div className="space-y-2">
-                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#475569]">Test Cases Added ({testCasesList.length})</h4>
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]">Test Cases Added ({testCasesList.length})</h4>
                             {testCasesList.map((tc, index) => (
-                              <div key={tc.id || index} className="p-2.5 bg-slate-50 border border-[#E2E8F0] rounded-lg flex justify-between items-start gap-3 text-[10px] font-mono">
+                              <div key={tc.id || index} className="p-2.5 bg-[#16171D] border border-[#23252C] rounded-lg flex justify-between items-start gap-3 text-[10px] font-mono">
                                 <div>
                                   Test {index + 1}: Input: {tc.input_data} → Expected: {tc.expected_output}
                                   <span className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-bold ${tc.is_hidden ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
                                     {tc.is_hidden ? "HIDDEN" : "VISIBLE"}
                                   </span>
                                 </div>
-                                <button type="button" onClick={() => handleDeleteTestCase(tc.id)} className="p-1 bg-red-50 border border-red-100 hover:bg-red-100 text-[#DC2626] rounded shrink-0">
+                                <button type="button" onClick={() => handleDeleteTestCase(tc.id)} className="p-1 bg-red-50 border border-red-100 hover:bg-red-100 text-[#F0555D] rounded shrink-0">
                                   <Trash2 size={11} />
                                 </button>
                               </div>
                             ))}
                           </div>
                         )}
-                        <form onSubmit={handleAddTestCase} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
+                        <form onSubmit={handleAddTestCase} className="space-y-4 border border-[#23252C] p-4 rounded-xl">
                           <h4 className="text-xs font-bold flex items-center gap-1"><CheckSquare size={14} /> Add Judge Test Case</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <textarea placeholder="Input data" value={newTcInput} onChange={e=>setNewTcInput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
-                            <textarea placeholder="Expected Output" value={newTcOutput} onChange={e=>setNewTcOutput(e.target.value)} className="bg-white border border-[#E2E8F0] rounded-lg p-2 text-xs font-mono" />
+                            <textarea placeholder="Input data" value={newTcInput} onChange={e=>setNewTcInput(e.target.value)} className="bg-[#131418] border border-[#23252C] rounded-lg p-2 text-xs font-mono" />
+                            <textarea placeholder="Expected Output" value={newTcOutput} onChange={e=>setNewTcOutput(e.target.value)} className="bg-[#131418] border border-[#23252C] rounded-lg p-2 text-xs font-mono" />
                           </div>
                           <div className="flex items-center gap-2">
                             <input
@@ -4046,47 +4046,47 @@ export default function TeacherConsole({
                               id="create_tc_is_hidden_teacher"
                               checked={newTcHidden}
                               onChange={(e) => setNewTcHidden(e.target.checked)}
-                              className="rounded text-[#2563EB] focus:ring-[#2563EB] border-[#E2E8F0]"
+                              className="rounded text-[#6E79F4] focus:ring-[#6E79F4] border-[#23252C]"
                             />
-                            <label htmlFor="create_tc_is_hidden_teacher" className="font-semibold text-xs text-[#475569]">Hidden Test Case (not shown to students, used for grading only)</label>
+                            <label htmlFor="create_tc_is_hidden_teacher" className="font-semibold text-xs text-[#C2C6D1]">Hidden Test Case (not shown to students, used for grading only)</label>
                           </div>
-                          <button type="submit" className="bg-[#2563EB] text-white px-4 py-1.5 rounded-xl font-bold">Add Test Case</button>
+                          <button type="submit" className="bg-[#6E79F4] text-white px-4 py-1.5 rounded-xl font-bold">Add Test Case</button>
                         </form>
                       </div>
                     )}
 
-                    <form onSubmit={handleAssignSubmit} className="space-y-4 border border-[#E2E8F0] p-4 rounded-xl">
+                    <form onSubmit={handleAssignSubmit} className="space-y-4 border border-[#23252C] p-4 rounded-xl">
                       <h4 className="text-xs font-bold flex items-center gap-1"><Calendar size={14} /> Review & Deploy</h4>
-                      <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-3 rounded-xl text-xs space-y-2">
+                      <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/15 p-3 rounded-xl text-xs space-y-2">
                         <div>
-                          <span className="text-[10px] font-bold text-[#2563EB] uppercase block">Deploying To Cohort</span>
-                          <span className="font-bold text-[#0F172A]">{cohorts.find(c => c.id === selectedCohortId)?.name || "Active Cohort"}</span>
+                          <span className="text-[10px] font-bold text-[#6E79F4] uppercase block">Deploying To Cohort</span>
+                          <span className="font-bold text-[#EDEFF5]">{cohorts.find(c => c.id === selectedCohortId)?.name || "Active Cohort"}</span>
                         </div>
                         {activityType === "programming" ? (
-                          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#2563EB]/15">
+                          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#6E79F4]/15">
                             <div>
-                              <span className="text-[10px] font-bold text-[#2563EB] uppercase block">Available From</span>
-                              <span className="font-semibold text-[#0F172A]">{availableFrom ? new Date(availableFrom).toLocaleString() : "Immediately"}</span>
+                              <span className="text-[10px] font-bold text-[#6E79F4] uppercase block">Available From</span>
+                              <span className="font-semibold text-[#EDEFF5]">{availableFrom ? new Date(availableFrom).toLocaleString() : "Immediately"}</span>
                             </div>
                             <div>
-                              <span className="text-[10px] font-bold text-[#2563EB] uppercase block">Due Date</span>
-                              <span className="font-semibold text-[#0F172A]">{availableUntil ? new Date(availableUntil).toLocaleString() : "No due date"}</span>
+                              <span className="text-[10px] font-bold text-[#6E79F4] uppercase block">Due Date</span>
+                              <span className="font-semibold text-[#EDEFF5]">{availableUntil ? new Date(availableUntil).toLocaleString() : "No due date"}</span>
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#2563EB]/15">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#6E79F4]/15">
                             <div>
-                              <label className="text-[10px] block font-bold text-[#475569]">Available From</label>
-                              <input type="datetime-local" value={availableFrom} onChange={e=>setAvailableFrom(e.target.value)} className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full" />
+                              <label className="text-[10px] block font-bold text-[#C2C6D1]">Available From</label>
+                              <input type="datetime-local" value={availableFrom} onChange={e=>setAvailableFrom(e.target.value)} className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full" />
                             </div>
                             <div>
-                              <label className="text-[10px] block font-bold text-[#475569]">Due Date</label>
-                              <input type="datetime-local" value={availableUntil} onChange={e=>setAvailableUntil(e.target.value)} className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-lg text-xs w-full" />
+                              <label className="text-[10px] block font-bold text-[#C2C6D1]">Due Date</label>
+                              <input type="datetime-local" value={availableUntil} onChange={e=>setAvailableUntil(e.target.value)} className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-lg text-xs w-full" />
                             </div>
                           </div>
                         )}
                       </div>
-                      <button type="submit" className="w-full bg-[#16A34A] text-white font-bold text-xs py-2 rounded-xl">
+                      <button type="submit" className="w-full bg-[#2FBF71] text-white font-bold text-xs py-2 rounded-xl">
                         Schedule & Deploy Activity
                       </button>
                     </form>
@@ -4094,27 +4094,27 @@ export default function TeacherConsole({
                 )}
               </div>
 
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm h-fit space-y-4">
-                <h3 className="text-xs font-bold text-[#0F172A] uppercase pb-2 border-b border-[#E2E8F0] flex items-center gap-1.5">
-                  <Calendar size={14} className="text-[#2563EB]" /> Scheduled Activities
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit space-y-4">
+                <h3 className="text-xs font-bold text-[#EDEFF5] uppercase pb-2 border-b border-[#23252C] flex items-center gap-1.5">
+                  <Calendar size={14} className="text-[#6E79F4]" /> Scheduled Activities
                 </h3>
                 
                 {activities.length === 0 ? (
-                  <p className="text-xs text-[#475569] text-center py-6">No learning activity modules published.</p>
+                  <p className="text-xs text-[#C2C6D1] text-center py-6">No learning activity modules published.</p>
                 ) : (
                   <div className="space-y-3">
                     {activities.map(act => (
-                      <div key={act.id} className="p-3 bg-slate-50 border border-[#E2E8F0] rounded-xl text-[10px] flex justify-between items-center gap-2">
+                      <div key={act.id} className="p-3 bg-[#16171D] border border-[#23252C] rounded-xl text-[10px] flex justify-between items-center gap-2">
                         <div className="flex-1 truncate">
-                          <span className="font-bold block text-[#0F172A] truncate">{act.title}</span>
-                          <div className="flex gap-3 text-[#475569] mt-1 pt-1 border-t border-[#E2E8F0]/80 text-[9px]">
+                          <span className="font-bold block text-[#EDEFF5] truncate">{act.title}</span>
+                          <div className="flex gap-3 text-[#C2C6D1] mt-1 pt-1 border-t border-[#23252C]/80 text-[9px]">
                             <span className="capitalize">Type: {act.activity_type_code === "programming" ? "code challenge" : act.activity_type_code}</span>
                             <span>Max Score: {act.max_score}</span>
                           </div>
                         </div>
                         <button
                           onClick={() => handleViewActivityClick(act)}
-                          className="bg-white border border-[#E2E8F0] hover:bg-slate-50 text-[#2563EB] font-bold px-2.5 py-1 rounded-lg transition-all text-[9px] shrink-0"
+                          className="bg-[#131418] border border-[#23252C] hover:bg-[#16171D] text-[#6E79F4] font-bold px-2.5 py-1 rounded-lg transition-all text-[9px] shrink-0"
                         >
                           Edit
                         </button>
@@ -4129,15 +4129,15 @@ export default function TeacherConsole({
           {/* TAB 6: SYLLABUS & CONTENT MANAGER */}
           {activeTab === "syllabus" && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm h-fit space-y-4">
-                <h3 className="text-xs font-bold text-[#0F172A] pb-3 border-b border-[#E2E8F0]">Syllabus Navigator</h3>
+              <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm h-fit space-y-4">
+                <h3 className="text-xs font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C]">Syllabus Navigator</h3>
                 
                 <div>
-                  <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block mb-1">Select Course</label>
+                  <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">Select Course</label>
                   <select
                     value={syllabusCourseId}
                     onChange={(e) => setSyllabusCourseId(e.target.value)}
-                    className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                    className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                   >
                     <option value="">-- Choose Course --</option>
                     {filteredCourses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
@@ -4147,23 +4147,23 @@ export default function TeacherConsole({
                 {syllabusCourseId && (
                   <div className="space-y-3 pt-2">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block">Modules</label>
+                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">Modules</label>
                       <button 
                         onClick={() => setModuleFormOpen(!moduleFormOpen)}
-                        className="text-[10px] font-bold text-[#2563EB] hover:underline flex items-center gap-1"
+                        className="text-[10px] font-bold text-[#6E79F4] hover:underline flex items-center gap-1"
                       >
                         <Plus size={10} /> Add Module
                       </button>
                     </div>
 
                     {moduleFormOpen && (
-                      <form onSubmit={handleCreateModule} className="p-3 bg-slate-50 border rounded-xl space-y-2 text-xs">
+                      <form onSubmit={handleCreateModule} className="p-3 bg-[#16171D] border rounded-xl space-y-2 text-xs">
                         <input 
                           type="text" 
                           placeholder="Module Title..." 
                           value={newModuleTitle}
                           onChange={e => setNewModuleTitle(e.target.value)}
-                          className="bg-white border px-2 py-1 rounded-lg text-xs w-full"
+                          className="bg-[#131418] border px-2 py-1 rounded-lg text-xs w-full"
                           required
                         />
                         <div className="flex gap-2">
@@ -4172,10 +4172,10 @@ export default function TeacherConsole({
                             placeholder="Pos" 
                             value={newModulePosition}
                             onChange={e => setNewModulePosition(Number(e.target.value))}
-                            className="bg-white border px-2 py-1 rounded-lg text-xs w-20"
+                            className="bg-[#131418] border px-2 py-1 rounded-lg text-xs w-20"
                             required
                           />
-                          <button type="submit" className="bg-[#2563EB] text-white px-3 py-1 rounded-lg font-bold text-xs flex-1">
+                          <button type="submit" className="bg-[#6E79F4] text-white px-3 py-1 rounded-lg font-bold text-xs flex-1">
                             Save
                           </button>
                         </div>
@@ -4195,7 +4195,7 @@ export default function TeacherConsole({
                           }
                           setSyllabusLessonId("");
                         }}
-                        className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] flex-1"
+                        className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] flex-1"
                       >
                         <option value="">-- All Course Modules --</option>
                         {syllabusModules.map(m => <option key={m.id} value={m.id}>Mod {m.position}: {m.title}</option>)}
@@ -4203,7 +4203,7 @@ export default function TeacherConsole({
                       {syllabusModuleId && (
                         <button 
                           onClick={() => handleDeleteModule(syllabusModuleId)}
-                          className="p-2 bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20 rounded-xl hover:bg-[#DC2626] hover:text-white transition-all"
+                          className="p-2 bg-[#F0555D]/10 text-[#F0555D] border border-[#F0555D]/20 rounded-xl hover:bg-[#F0555D] hover:text-white transition-all"
                           title="Delete Selected Module"
                         >
                           <Trash2 size={13} />
@@ -4216,11 +4216,11 @@ export default function TeacherConsole({
                 {syllabusCourseId && (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center pt-2">
-                      <label className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block">Lessons</label>
+                      <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">Lessons</label>
                       {syllabusModuleId && (
                         <button 
                           onClick={() => setLessonFormOpen(!lessonFormOpen)}
-                          className="text-[10px] font-bold text-[#2563EB] hover:underline flex items-center gap-1"
+                          className="text-[10px] font-bold text-[#6E79F4] hover:underline flex items-center gap-1"
                         >
                           <Plus size={10} /> Add Lesson
                         </button>
@@ -4228,13 +4228,13 @@ export default function TeacherConsole({
                     </div>
 
                     {lessonFormOpen && (
-                      <form onSubmit={handleCreateLesson} className="p-3 bg-slate-50 border rounded-xl space-y-2 text-xs">
+                      <form onSubmit={handleCreateLesson} className="p-3 bg-[#16171D] border rounded-xl space-y-2 text-xs">
                         <input 
                           type="text" 
                           placeholder="Lesson Title..." 
                           value={newLessonTitle}
                           onChange={e => setNewLessonTitle(e.target.value)}
-                          className="bg-white border px-2 py-1 rounded-lg text-xs w-full"
+                          className="bg-[#131418] border px-2 py-1 rounded-lg text-xs w-full"
                           required
                         />
                         <div className="flex gap-2">
@@ -4243,7 +4243,7 @@ export default function TeacherConsole({
                             placeholder="Pos" 
                             value={newLessonPosition}
                             onChange={e => setNewLessonPosition(Number(e.target.value))}
-                            className="bg-white border px-2 py-1 rounded-lg text-xs w-16"
+                            className="bg-[#131418] border px-2 py-1 rounded-lg text-xs w-16"
                             required
                           />
                           <input 
@@ -4251,10 +4251,10 @@ export default function TeacherConsole({
                             placeholder="Dur min" 
                             value={newLessonDuration}
                             onChange={e => setNewLessonDuration(Number(e.target.value))}
-                            className="bg-white border px-2 py-1 rounded-lg text-xs w-20"
+                            className="bg-[#131418] border px-2 py-1 rounded-lg text-xs w-20"
                             required
                           />
-                          <button type="submit" className="bg-[#2563EB] text-white px-3 py-1 rounded-lg font-bold text-xs flex-1">
+                          <button type="submit" className="bg-[#6E79F4] text-white px-3 py-1 rounded-lg font-bold text-xs flex-1">
                             Save
                           </button>
                         </div>
@@ -4263,7 +4263,7 @@ export default function TeacherConsole({
 
                     <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
                       {syllabusLessons.length === 0 ? (
-                        <p className="text-[11px] text-[#475569] italic text-center py-2">No lessons in this scope.</p>
+                        <p className="text-[11px] text-[#C2C6D1] italic text-center py-2">No lessons in this scope.</p>
                       ) : (
                         syllabusLessons.map(l => (
                           <div key={l.id} className="flex gap-2 items-center w-full">
@@ -4271,8 +4271,8 @@ export default function TeacherConsole({
                               onClick={() => setSyllabusLessonId(l.id)}
                               className={`text-left p-2.5 text-xs font-semibold rounded-xl border transition-all flex items-center justify-between flex-1 truncate ${
                                 syllabusLessonId === l.id 
-                                  ? "bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/20" 
-                                  : "bg-slate-50 border-[#E2E8F0] text-[#475569] hover:bg-slate-100"
+                                  ? "bg-[#6E79F4]/10 text-[#6E79F4] border-[#6E79F4]/20" 
+                                  : "bg-[#16171D] border-[#23252C] text-[#C2C6D1] hover:bg-[#1A1C22]"
                               }`}
                             >
                               <span className="truncate">{l.title}</span>
@@ -4280,7 +4280,7 @@ export default function TeacherConsole({
                             </button>
                             <button
                               onClick={() => handleDeleteLesson(l.id)}
-                              className="p-2.5 bg-slate-50 border border-[#E2E8F0] text-[#DC2626] hover:bg-[#DC2626]/10 hover:border-[#DC2626]/30 rounded-xl transition-all"
+                              className="p-2.5 bg-[#16171D] border border-[#23252C] text-[#F0555D] hover:bg-[#F0555D]/10 hover:border-[#F0555D]/30 rounded-xl transition-all"
                               title="Delete Lesson"
                             >
                               <Trash2 size={12} />
@@ -4295,21 +4295,21 @@ export default function TeacherConsole({
 
               <div className="lg:col-span-2 space-y-6">
                 {!syllabusCourseId ? (
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-10 text-center text-[#475569] shadow-sm">
-                    <AlertCircle className="mx-auto mb-2 text-[#475569]/40" size={36} />
-                    <p className="text-xs font-bold text-[#0F172A]">Select a Course from the navigator tree to view and manage its syllabus.</p>
+                  <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-10 text-center text-[#C2C6D1] shadow-sm">
+                    <AlertCircle className="mx-auto mb-2 text-[#C2C6D1]/40" size={36} />
+                    <p className="text-xs font-bold text-[#EDEFF5]">Select a Course from the navigator tree to view and manage its syllabus.</p>
                   </div>
                 ) : syllabusLessonId ? (
                   <>
                     {/* View Mode Toggle Header */}
-                    <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl shadow-sm flex items-center justify-between">
+                    <div className="bg-[#131418] border border-[#23252C] p-4 rounded-2xl shadow-sm flex items-center justify-between">
                       <div className="flex gap-2">
                         <button
                           onClick={() => setSyllabusViewMode("preview")}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                             syllabusViewMode === "preview"
-                              ? "bg-[#2563EB]/10 text-[#2563EB]"
-                              : "text-[#475569] hover:bg-slate-50"
+                              ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                              : "text-[#C2C6D1] hover:bg-[#16171D]"
                           }`}
                         >
                           <Eye size={14} />
@@ -4319,15 +4319,15 @@ export default function TeacherConsole({
                           onClick={() => setSyllabusViewMode("edit")}
                           className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                             syllabusViewMode === "edit"
-                              ? "bg-[#2563EB]/10 text-[#2563EB]"
-                              : "text-[#475569] hover:bg-slate-50"
+                              ? "bg-[#6E79F4]/10 text-[#6E79F4]"
+                              : "text-[#C2C6D1] hover:bg-[#16171D]"
                           }`}
                         >
                           <Settings size={14} />
                           Edit Details & Resources
                         </button>
                       </div>
-                      <span className="text-[10px] text-[#475569] font-mono uppercase bg-slate-100 px-2 py-0.5 rounded-md font-bold">
+                      <span className="text-[10px] text-[#C2C6D1] font-mono uppercase bg-[#1A1C22] px-2 py-0.5 rounded-md font-bold">
                         Mode: {syllabusViewMode}
                       </span>
                     </div>
@@ -4335,13 +4335,13 @@ export default function TeacherConsole({
                     {syllabusViewMode === "preview" ? (
                       <div className="space-y-6 animate-fadeIn">
                         {/* Live Preview Display Card */}
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+                        <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm space-y-4">
                           <div>
-                            <span className="text-[9px] font-bold text-[#2563EB] uppercase tracking-wider block">LESSON LIVE PREVIEW</span>
-                            <h4 className="font-bold text-sm text-[#0F172A] mt-0.5">{newLessonTitle || "Untitled Lesson"}</h4>
+                            <span className="text-[9px] font-bold text-[#6E79F4] uppercase tracking-wider block">LESSON LIVE PREVIEW</span>
+                            <h4 className="font-bold text-sm text-[#EDEFF5] mt-0.5">{newLessonTitle || "Untitled Lesson"}</h4>
                             <div className="flex flex-wrap items-center gap-2 mt-1.5">
                               {newLessonTypeId && (
-                                <span className="text-[8px] bg-[#2563EB]/5 text-[#2563EB] border border-[#2563EB]/15 px-1.5 py-0.5 rounded font-bold uppercase">
+                                <span className="text-[8px] bg-[#6E79F4]/5 text-[#6E79F4] border border-[#6E79F4]/15 px-1.5 py-0.5 rounded font-bold uppercase">
                                   {lessonTypes.find(t => t.id === newLessonTypeId)?.code || "Lesson"}
                                 </span>
                               )}
@@ -4350,10 +4350,10 @@ export default function TeacherConsole({
                                   Free Preview Available
                                 </span>
                               )}
-                              <span className="text-[9px] text-[#475569] font-mono flex items-center gap-1">
+                              <span className="text-[9px] text-[#C2C6D1] font-mono flex items-center gap-1">
                                 <Clock size={10} /> {newLessonDuration || 0} mins
                               </span>
-                              <span className="text-[9px] text-[#475569] font-mono">
+                              <span className="text-[9px] text-[#C2C6D1] font-mono">
                                 Order Position: {newLessonPositionOrder}
                               </span>
                             </div>
@@ -4373,7 +4373,7 @@ export default function TeacherConsole({
 
                             if (ytMatch && ytMatch[1]) {
                               return (
-                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-[#23252C] shadow-sm">
                                   <iframe
                                     src={`https://www.youtube.com/embed/${ytMatch[1]}`}
                                     className="w-full h-full border-0"
@@ -4385,7 +4385,7 @@ export default function TeacherConsole({
                               );
                             } else if (vimeoMatch && vimeoMatch[1]) {
                               return (
-                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-[#23252C] shadow-sm">
                                   <iframe
                                     src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
                                     className="w-full h-full border-0"
@@ -4397,20 +4397,20 @@ export default function TeacherConsole({
                               );
                             } else if (newLessonVideoUrl.match(/\.(mp4|webm|ogg)/i)) {
                               return (
-                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-[#23252C] shadow-sm">
                                   <video src={newLessonVideoUrl} className="w-full h-full" controls preload="metadata" />
                                 </div>
                               );
                             } else {
                               return (
                                 <div className="bg-slate-900 aspect-video rounded-xl flex flex-col items-center justify-center text-white p-6 text-center border border-slate-800 shadow-sm">
-                                  <Video size={32} className="text-[#2563EB] mb-2" />
+                                  <Video size={32} className="text-[#6E79F4] mb-2" />
                                   <p className="text-xs font-semibold mb-2">Video Resource Link</p>
                                   <a
                                     href={newLessonVideoUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-[10px] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                                    className="bg-[#6E79F4] hover:bg-[#5A66F0] text-white font-bold text-[10px] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
                                   >
                                     Open Video Resource <ExternalLink size={10} />
                                   </a>
@@ -4437,16 +4437,16 @@ export default function TeacherConsole({
                             if (!pdfUrl) return null;
 
                             return (
-                              <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden shadow-sm h-[500px] w-full flex flex-col">
-                                <div className="bg-slate-50 border-b border-[#E2E8F0] px-4 py-2 flex items-center justify-between text-[10px]">
-                                  <span className="font-bold text-[#0F172A] flex items-center gap-1">
-                                    <File size={12} className="text-[#2563EB]" /> Embedded PDF document viewer
+                              <div className="bg-[#131418] border border-[#23252C] rounded-xl overflow-hidden shadow-sm h-[500px] w-full flex flex-col">
+                                <div className="bg-[#16171D] border-b border-[#23252C] px-4 py-2 flex items-center justify-between text-[10px]">
+                                  <span className="font-bold text-[#EDEFF5] flex items-center gap-1">
+                                    <File size={12} className="text-[#6E79F4]" /> Embedded PDF document viewer
                                   </span>
                                   <a
                                     href={pdfUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[#2563EB] hover:underline font-bold flex items-center gap-0.5"
+                                    className="text-[#6E79F4] hover:underline font-bold flex items-center gap-0.5"
                                   >
                                     Open Fullscreen <ExternalLink size={9} />
                                   </a>
@@ -4459,8 +4459,8 @@ export default function TeacherConsole({
                           {/* Text Content */}
                           {newLessonContentText && (
                             <div className="space-y-1.5 pt-2">
-                              <span className="text-[10px] font-bold text-[#475569] uppercase tracking-wider block">Structured Content / Text (Markdown)</span>
-                              <div className="bg-slate-50 border border-[#E2E8F0] p-5 rounded-xl">
+                              <span className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block">Structured Content / Text (Markdown)</span>
+                              <div className="bg-[#16171D] border border-[#23252C] p-5 rounded-xl">
                                 <MarkdownRenderer content={newLessonContentText} />
                               </div>
                             </div>
@@ -4468,25 +4468,25 @@ export default function TeacherConsole({
 
                           {/* Reference Resources */}
                           {syllabusResources.length > 0 && (
-                            <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-3 shadow-2xs">
-                              <p className="text-[9px] font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1">
-                                <FileText size={12} className="text-slate-400" /> Attached Reference Study Materials
+                            <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 space-y-3 shadow-2xs">
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1">
+                                <FileText size={12} className="text-[#A3A9B6]" /> Attached Reference Study Materials
                               </p>
-                              <div className="divide-y divide-[#E2E8F0] text-xs">
+                              <div className="divide-y divide-[#23252C] text-xs">
                                 {syllabusResources.map(res => {
                                   const downloadUrl = res.external_url || res.file_url;
                                   return (
                                     <div key={res.id} className="py-2 flex items-center justify-between">
                                       <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-[#0F172A]">{res.title}</span>
-                                        <span className="px-1.5 py-0.2 bg-slate-100 rounded text-[8px] text-[#475569] uppercase font-mono font-bold shrink-0">{res.resource_type || "File"}</span>
+                                        <span className="font-semibold text-[#EDEFF5]">{res.title}</span>
+                                        <span className="px-1.5 py-0.2 bg-[#1A1C22] rounded text-[8px] text-[#C2C6D1] uppercase font-mono font-bold shrink-0">{res.resource_type || "File"}</span>
                                       </div>
                                       {downloadUrl && (
                                         <a
                                           href={downloadUrl}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="text-[#2563EB] font-bold flex items-center gap-0.5 hover:underline"
+                                          className="text-[#6E79F4] font-bold flex items-center gap-0.5 hover:underline"
                                         >
                                           Open File <ExternalLink size={10} />
                                         </a>
@@ -4504,30 +4504,30 @@ export default function TeacherConsole({
                             if (!assocAct) return null;
 
                             return (
-                              <div className="border border-[#2563EB]/15 bg-slate-50/50 rounded-xl p-5 space-y-3">
-                                <h4 className="font-bold text-xs text-[#0f172a] flex items-center gap-1.5 uppercase tracking-wider border-b border-[#E2E8F0] pb-2">
-                                  <FolderCode className="text-[#2563EB]" size={14} /> Associated Activity Specification
+                              <div className="border border-[#6E79F4]/15 bg-[#16171D]/50 rounded-xl p-5 space-y-3">
+                                <h4 className="font-bold text-xs text-[#EDEFF5] flex items-center gap-1.5 uppercase tracking-wider border-b border-[#23252C] pb-2">
+                                  <FolderCode className="text-[#6E79F4]" size={14} /> Associated Activity Specification
                                 </h4>
-                                <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 text-xs space-y-2.5">
+                                <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 text-xs space-y-2.5">
                                   <div>
-                                    <span className="text-[9px] bg-[#2563EB]/5 text-[#2563EB] border border-[#2563EB]/15 px-1.5 py-0.5 rounded font-bold uppercase inline-block mb-1.5">
+                                    <span className="text-[9px] bg-[#6E79F4]/5 text-[#6E79F4] border border-[#6E79F4]/15 px-1.5 py-0.5 rounded font-bold uppercase inline-block mb-1.5">
                                       {assocAct.activity_type_code} Activity
                                     </span>
-                                    <h5 className="font-bold text-[#0F172A] text-[11px]">{assocAct.title}</h5>
+                                    <h5 className="font-bold text-[#EDEFF5] text-[11px]">{assocAct.title}</h5>
                                     {assocAct.description && (
-                                      <p className="text-[#475569] mt-1 whitespace-pre-line leading-relaxed">{assocAct.description}</p>
+                                      <p className="text-[#C2C6D1] mt-1 whitespace-pre-line leading-relaxed">{assocAct.description}</p>
                                     )}
                                   </div>
                                   {assocAct.instructions && (
                                     <div>
-                                      <h5 className="font-bold text-[#0F172A] text-[11px] mt-1">Instructions / Requirements</h5>
-                                      <p className="text-[#475569] mt-0.5 whitespace-pre-line leading-relaxed">{assocAct.instructions}</p>
+                                      <h5 className="font-bold text-[#EDEFF5] text-[11px] mt-1">Instructions / Requirements</h5>
+                                      <p className="text-[#C2C6D1] mt-0.5 whitespace-pre-line leading-relaxed">{assocAct.instructions}</p>
                                     </div>
                                   )}
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E2E8F0] text-[10px] text-[#475569]">
-                                    <div>Status: <span className="font-bold text-[#0F172A] uppercase">{assocAct.status_code}</span></div>
-                                    <div>Max Score: <span className="font-bold text-[#0F172A]">{assocAct.max_score || 100} pts</span></div>
-                                    <div>Mandatory: <span className="font-bold text-[#0F172A]">{assocAct.is_mandatory ? "Yes" : "No"}</span></div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
+                                    <div>Status: <span className="font-bold text-[#EDEFF5] uppercase">{assocAct.status_code}</span></div>
+                                    <div>Max Score: <span className="font-bold text-[#EDEFF5]">{assocAct.max_score || 100} pts</span></div>
+                                    <div>Mandatory: <span className="font-bold text-[#EDEFF5]">{assocAct.is_mandatory ? "Yes" : "No"}</span></div>
                                   </div>
                                 </div>
                               </div>
@@ -4538,29 +4538,29 @@ export default function TeacherConsole({
                     ) : (
                       <div className="space-y-6 animate-fadeIn">
                         {/* Edit Details Form Panel */}
-                        <form onSubmit={handleUpdateLesson} className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
-                          <h3 className="text-sm font-bold text-[#0F172A] pb-3 border-b border-[#E2E8F0] flex items-center gap-1.5">
-                            <Video size={16} className="text-[#2563EB]" /> Edit Lesson details & settings
+                        <form onSubmit={handleUpdateLesson} className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm space-y-4">
+                          <h3 className="text-sm font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C] flex items-center gap-1.5">
+                            <Video size={16} className="text-[#6E79F4]" /> Edit Lesson details & settings
                           </h3>
 
                           <div>
-                            <label className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Lesson Title *</label>
+                            <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Lesson Title *</label>
                             <input 
                               type="text" 
                               value={newLessonTitle} 
                               onChange={(e) => setNewLessonTitle(e.target.value)}
-                              className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                               required
                             />
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                              <label className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Lesson Type *</label>
+                              <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Lesson Type *</label>
                               <select
                                 value={newLessonTypeId || defaultLessonTypeId}
                                 onChange={(e) => setNewLessonTypeId(e.target.value)}
-                                className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                                className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                               >
                                 {lessonTypes.map((t: any) => (
                                   <option key={t.id} value={t.id}>{t.description || t.code}</option>
@@ -4568,24 +4568,24 @@ export default function TeacherConsole({
                               </select>
                             </div>
                             <div>
-                              <label className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Duration (Minutes)</label>
+                              <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Duration (Minutes)</label>
                               <input 
                                 type="number" 
                                 value={newLessonDuration} 
                                 onChange={(e) => setNewLessonDuration(Number(e.target.value))}
-                                className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                                className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                               />
                             </div>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                              <label className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Position Order Index</label>
+                              <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Position Order Index</label>
                               <input 
                                 type="number" 
                                 value={newLessonPositionOrder} 
                                 onChange={(e) => setNewLessonPositionOrder(Number(e.target.value))}
-                                className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full"
+                                className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                               />
                             </div>
                             <div className="flex items-center gap-2 pt-5">
@@ -4594,40 +4594,40 @@ export default function TeacherConsole({
                                 id="lesson-preview-checkbox"
                                 checked={newLessonIsPreview}
                                 onChange={(e) => setNewLessonIsPreview(e.target.checked)}
-                                className="rounded border-[#d2d2d7] text-[#2563EB] focus:ring-[#2563EB]"
+                                className="rounded border-[#23252C] text-[#6E79F4] focus:ring-[#6E79F4]"
                               />
-                              <label htmlFor="lesson-preview-checkbox" className="font-semibold text-xs text-[#475569] select-none cursor-pointer">
+                              <label htmlFor="lesson-preview-checkbox" className="font-semibold text-xs text-[#C2C6D1] select-none cursor-pointer">
                                 Available as free preview
                               </label>
                             </div>
                           </div>
 
                           <div>
-                            <label className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Video Resource / File URL</label>
+                            <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Video Resource / File URL</label>
                             <input 
                               type="url" 
                               value={newLessonVideoUrl} 
                               onChange={(e) => setNewLessonVideoUrl(e.target.value)}
                               placeholder="e.g. YouTube, Vimeo or direct video/PDF file link"
-                              className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full font-mono"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full font-mono"
                             />
                           </div>
 
                           <div>
-                            <label className="text-[10px] font-bold text-[#475569] uppercase block mb-1">Structured Lesson Content / Text</label>
+                            <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Structured Lesson Content / Text</label>
                             <textarea
                               value={newLessonContentText}
                               onChange={(e) => setNewLessonContentText(e.target.value)}
                               placeholder="Type or paste lesson study text content..."
                               rows={5}
-                              className="bg-white border border-[#E2E8F0] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#2563EB] w-full resize-y leading-relaxed font-sans"
+                              className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full resize-y leading-relaxed font-sans"
                             />
                           </div>
 
                           <button
                             type="submit"
                             disabled={isPending}
-                            className="bg-[#2563EB] hover:bg-[#1D4ED8] disabled:bg-slate-300 text-white font-bold text-xs py-2 px-5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                            className="bg-[#6E79F4] hover:bg-[#5A66F0] disabled:bg-[#2E313A] text-white font-bold text-xs py-2 px-5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                           >
                             <Save size={14} />
                             Save Changes
@@ -4635,28 +4635,28 @@ export default function TeacherConsole({
                         </form>
 
                         {/* Uploads Panel */}
-                        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
-                          <h3 className="text-sm font-bold text-[#0F172A] pb-3 border-b border-[#E2E8F0] flex items-center gap-1.5">
-                            <FileText size={16} className="text-[#2563EB]" /> Study Materials & PDF Resources
+                        <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-6 shadow-sm space-y-4">
+                          <h3 className="text-sm font-bold text-[#EDEFF5] pb-3 border-b border-[#23252C] flex items-center gap-1.5">
+                            <FileText size={16} className="text-[#6E79F4]" /> Study Materials & PDF Resources
                           </h3>
 
                           {syllabusResources.length === 0 ? (
-                            <p className="text-xs text-[#475569] text-center py-6 border border-dashed border-[#E2E8F0] rounded-xl">
+                            <p className="text-xs text-[#C2C6D1] text-center py-6 border border-dashed border-[#23252C] rounded-xl">
                               No study materials uploaded for this lesson yet.
                             </p>
                           ) : (
-                            <div className="divide-y divide-[#E2E8F0]">
+                            <div className="divide-y divide-[#23252C]">
                               {syllabusResources.map(res => (
                                 <div key={res.id} className="py-3 flex justify-between items-center gap-4">
                                   <div className="flex items-center gap-2">
-                                    <FileText size={16} className="text-[#2563EB] shrink-0" />
+                                    <FileText size={16} className="text-[#6E79F4] shrink-0" />
                                     <div>
-                                      <span className="font-semibold text-xs text-[#0F172A] block">{res.title}</span>
+                                      <span className="font-semibold text-xs text-[#EDEFF5] block">{res.title}</span>
                                       <a 
                                         href={res.external_url || res.file_url} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="text-[9px] text-[#2563EB] font-semibold break-all hover:underline"
+                                        className="text-[9px] text-[#6E79F4] font-semibold break-all hover:underline"
                                       >
                                         {res.external_url || res.file_url}
                                       </a>
@@ -4664,7 +4664,7 @@ export default function TeacherConsole({
                                   </div>
                                   <button 
                                     onClick={() => handleDeleteResource(res.id)}
-                                    className="p-1.5 bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20 rounded-lg hover:bg-[#DC2626] hover:text-white transition-all shrink-0"
+                                    className="p-1.5 bg-[#F0555D]/10 text-[#F0555D] border border-[#F0555D]/20 rounded-lg hover:bg-[#F0555D] hover:text-white transition-all shrink-0"
                                   >
                                     <Trash2 size={13} />
                                   </button>
@@ -4673,15 +4673,15 @@ export default function TeacherConsole({
                             </div>
                           )}
 
-                          <form onSubmit={handleAddResource} className="pt-4 border-t border-[#E2E8F0] space-y-3">
-                            <h4 className="text-[10px] font-bold text-[#0F172A] uppercase tracking-wide">Add Extra Resource Study Material</h4>
+                          <form onSubmit={handleAddResource} className="pt-4 border-t border-[#23252C] space-y-3">
+                            <h4 className="text-[10px] font-bold text-[#EDEFF5] uppercase tracking-wide">Add Extra Resource Study Material</h4>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                <label className="text-[9px] font-bold text-[#475569] block mb-1">Resource Type</label>
+                                <label className="text-[9px] font-bold text-[#C2C6D1] block mb-1">Resource Type</label>
                                 <select 
                                   value={resType}
                                   onChange={(e) => setResType(e.target.value)}
-                                  className="bg-white border border-[#E2E8F0] px-2.5 py-1.5 rounded-lg text-xs w-full"
+                                  className="bg-[#131418] border border-[#23252C] px-2.5 py-1.5 rounded-lg text-xs w-full"
                                 >
                                   <option value="pdf">PDF Document</option>
                                   <option value="link">External Resource Link</option>
@@ -4689,32 +4689,32 @@ export default function TeacherConsole({
                                 </select>
                               </div>
                               <div>
-                                <label className="text-[9px] font-bold text-[#475569] block mb-1">Title *</label>
+                                <label className="text-[9px] font-bold text-[#C2C6D1] block mb-1">Title *</label>
                                 <input 
                                   type="text" 
                                   value={resTitle} 
                                   onChange={(e) => setResTitle(e.target.value)}
                                   placeholder="e.g. CheatSheet PDF"
-                                  className="bg-white border border-[#E2E8F0] px-2.5 py-1.5 rounded-lg text-xs w-full"
+                                  className="bg-[#131418] border border-[#23252C] px-2.5 py-1.5 rounded-lg text-xs w-full"
                                   required
                                 />
                               </div>
                             </div>
                             <div>
-                              <label className="text-[9px] font-bold text-[#475569] block mb-1">Resource Link URL *</label>
+                              <label className="text-[9px] font-bold text-[#C2C6D1] block mb-1">Resource Link URL *</label>
                               <input 
                                 type="url" 
                                 value={resExternalUrl} 
                                 onChange={(e) => setResExternalUrl(e.target.value)}
                                 placeholder="https://drive.google.com/... or https://..."
-                                className="bg-white border border-[#E2E8F0] px-2.5 py-1.5 rounded-lg text-xs w-full font-mono"
+                                className="bg-[#131418] border border-[#23252C] px-2.5 py-1.5 rounded-lg text-xs w-full font-mono"
                                 required
                               />
                             </div>
                             <button 
                               type="submit" 
                               disabled={isPending}
-                              className="bg-[#2563EB] text-white text-xs font-bold py-1.5 px-4 rounded-xl flex items-center gap-1.5"
+                              className="bg-[#6E79F4] text-white text-xs font-bold py-1.5 px-4 rounded-xl flex items-center gap-1.5"
                             >
                               <Plus size={12} />
                               Add Study Material
@@ -4725,9 +4725,9 @@ export default function TeacherConsole({
                     )}
                   </>
                 ) : (
-                  <div className="bg-white border border-[#E2E8F0] rounded-2xl p-10 text-center text-[#475569] shadow-sm">
-                    <AlertCircle className="mx-auto mb-2 text-[#475569]/40" size={36} />
-                    <p className="text-xs font-bold text-[#0F172A]">Select Course and target Lesson from tree to begin editing content & uploads</p>
+                  <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-10 text-center text-[#C2C6D1] shadow-sm">
+                    <AlertCircle className="mx-auto mb-2 text-[#C2C6D1]/40" size={36} />
+                    <p className="text-xs font-bold text-[#EDEFF5]">Select Course and target Lesson from tree to begin editing content & uploads</p>
                   </div>
                 )}
               </div>

@@ -19,11 +19,11 @@ export default async function AcademicProgramsPage() {
   const lookups = await getAcademicLookups();
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 text-[#0F172A]">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-6 mb-8">
+    <div className="max-w-7xl mx-auto px-6 py-10 text-[#EDEFF5]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#23252C] pb-6 mb-8">
         <div>
           <h1 className="text-xl font-bold tracking-tight">Academic Programs</h1>
-          <p className="text-xs text-[#475569] mt-1">
+          <p className="text-xs text-[#C2C6D1] mt-1">
             Browse and manage top-level curriculum categories and career pathways.
           </p>
         </div>

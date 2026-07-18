@@ -61,8 +61,8 @@ export default function ChallengeEditor({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="font-bold text-xs uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-          <Code size={14} className="text-[#2563EB]" /> Starter Code Per Language
+        <h4 className="font-bold text-xs uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5">
+          <Code size={14} className="text-[#6E79F4]" /> Starter Code Per Language
         </h4>
       </div>
 
@@ -74,8 +74,8 @@ export default function ChallengeEditor({
             onClick={() => setActiveLanguage(lang.code)}
             className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
               activeLanguage === lang.code
-                ? "bg-[#2563EB] text-white"
-                : "bg-slate-100 text-[#475569] hover:bg-slate-200"
+                ? "bg-[#6E79F4] text-white"
+                : "bg-[#1A1C22] text-[#C2C6D1] hover:bg-[#23252C]"
             }`}
           >
             {lang.label}
@@ -83,7 +83,7 @@ export default function ChallengeEditor({
         ))}
       </div>
 
-      <div className="border border-[#E2E8F0] rounded-xl overflow-hidden">
+      <div className="border border-[#23252C] rounded-xl overflow-hidden">
         <Editor
           height="220px"
           language={LANGUAGES.find((l) => l.code === activeLanguage)?.monaco || "plaintext"}
@@ -107,7 +107,7 @@ export default function ChallengeEditor({
         type="button"
         onClick={() => handleSaveStarterCode(activeLanguage)}
         disabled={savingLanguage === activeLanguage}
-        className="bg-[#0F172A] hover:bg-[#0F172A]/90 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 disabled:opacity-50"
+        className="bg-[#6E79F4] hover:bg-[#6E79F4]/90 text-white px-3 py-1.5 rounded-lg font-bold text-[10px] flex items-center gap-1.5 disabled:opacity-50"
       >
         {savingLanguage === activeLanguage ? (
           <Loader2 size={12} className="animate-spin" />
@@ -121,7 +121,7 @@ export default function ChallengeEditor({
           : `Save ${LANGUAGES.find((l) => l.code === activeLanguage)?.label} Starter`}
       </button>
 
-      <div className="pt-3 border-t border-[#E2E8F0]">
+      <div className="pt-3 border-t border-[#23252C]">
         <label className="flex items-center gap-2 text-xs cursor-pointer">
           <input
             type="checkbox"
@@ -133,10 +133,10 @@ export default function ChallengeEditor({
               // button for this toggle in every context it's rendered in).
               await updateChallengeStrictModeAction(challengeId, value);
             }}
-            className="rounded text-[#2563EB] focus:ring-[#2563EB] border-[#E2E8F0]"
+            className="rounded text-[#6E79F4] focus:ring-[#6E79F4] border-[#23252C]"
           />
-          <span className="font-semibold text-[#0F172A] flex items-center gap-1">
-            <ShieldAlert size={13} className="text-[#DC2626]" />
+          <span className="font-semibold text-[#EDEFF5] flex items-center gap-1">
+            <ShieldAlert size={13} className="text-[#F0555D]" />
             Enable Lockdown Mode (fullscreen required, tab-switch/exit forfeits the attempt)
           </span>
         </label>

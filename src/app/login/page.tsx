@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { signInWithGoogle } from "@/app/actions/auth-actions";
 import { Terminal, ShieldCheck, AlertCircle } from "lucide-react";
+import ParticleField from "@/components/particle-field";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -65,28 +66,30 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-6 text-[#0F172A]">
-      <div className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-xl p-8 shadow-md">
-        
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-6 text-slate-100 overflow-hidden bg-[#050810]">
+      <ParticleField />
+
+      <div className="relative z-10 max-w-md w-full bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-xl p-8 shadow-2xl shadow-black/50">
+
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="bg-[#2563EB]/10 text-[#2563EB] p-2.5 rounded-xl border border-[#2563EB]/20 mb-3">
+          <div className="bg-blue-500/10 text-blue-400 p-2.5 rounded-xl border border-blue-400/20 mb-3">
             <Terminal size={22} className="stroke-[2.5]" />
           </div>
-          <h2 className="text-lg font-bold tracking-tight">Hynox Campus</h2>
-          <p className="text-xs text-[#475569] mt-1">Platform Authentication Portal</p>
+          <h2 className="text-lg font-bold tracking-tight text-white">Hynox Campus</h2>
+          <p className="text-xs text-slate-400 mt-1">Platform Authentication Portal</p>
         </div>
 
         {/* Alert Messages */}
         {errorMessage && (
-          <div className="mb-4 bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-lg p-3 text-xs flex items-start gap-2">
+          <div className="mb-4 bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg p-3 text-xs flex items-start gap-2">
             <AlertCircle size={14} className="mt-0.5 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-4 bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-lg p-3 text-xs flex items-start gap-2">
+          <div className="mb-4 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-lg p-3 text-xs flex items-start gap-2">
             <ShieldCheck size={14} className="mt-0.5 shrink-0" />
             <span>{successMessage}</span>
           </div>
@@ -97,13 +100,13 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full bg-[#0F172A] hover:bg-[#0F172A]/90 border border-[#E2E8F0] text-white text-xs font-semibold py-3 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 duration-200 cursor-pointer"
+            className="w-full bg-white hover:bg-slate-200 border border-white/10 text-slate-900 text-xs font-semibold py-3 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 duration-200 cursor-pointer"
           >
             <GoogleIcon />
             {loading ? "Initializing..." : "Sign In with Google"}
           </button>
-          
-          <p className="text-[10px] text-center text-[#475569]">
+
+          <p className="text-[10px] text-center text-slate-500">
             OAuth authentication automatically signs you in or sets up your campus profile.
           </p>
         </div>

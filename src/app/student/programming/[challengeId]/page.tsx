@@ -35,22 +35,22 @@ export default async function ChallengeWorkspacePage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#0F172A] font-sans antialiased">
-      <header className="bg-white border-b border-[#E2E8F0] shadow-sm sticky top-0 z-40">
+    <div className="min-h-screen bg-[#0B0C0F] flex flex-col text-[#EDEFF5] font-sans antialiased">
+      <header className="bg-[#131418] border-b border-[#23252C] shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/student" className="flex items-center gap-2.5">
-            <div className="bg-[#2563EB]/10 text-[#2563EB] p-2 rounded-xl border border-[#2563EB]/20">
+            <div className="bg-[#6E79F4]/10 text-[#6E79F4] p-2 rounded-xl border border-[#6E79F4]/20">
               <Terminal size={18} />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-sm tracking-tight">Hynox Campus Portal</span>
-              <span className="text-[10px] text-[#475569] font-medium tracking-wide">STUDENT HUB</span>
+              <span className="text-[10px] text-[#C2C6D1] font-medium tracking-wide">STUDENT HUB</span>
             </div>
           </Link>
           <div className="flex items-center gap-3">
             <Link
               href="/student/programming"
-              className="text-[#475569] hover:text-[#0F172A] px-3.5 py-1.5 rounded-lg border border-[#E2E8F0] hover:border-slate-350 bg-white transition-all text-xs font-semibold"
+              className="text-[#C2C6D1] hover:text-[#EDEFF5] px-3.5 py-1.5 rounded-lg border border-[#23252C] hover:border-[#2E313A] bg-[#131418] transition-all text-xs font-semibold"
             >
               Exit Workspace
             </Link>
@@ -60,10 +60,10 @@ export default async function ChallengeWorkspacePage({ params }: PageProps) {
 
       <main className="max-w-7xl mx-auto px-6 py-8 flex-1 w-full space-y-6">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#0F172A]">
+          <h1 className="text-xl font-bold tracking-tight text-[#EDEFF5]">
             {workspaceData.challenge.title || "Challenge Workspace"}
           </h1>
-          <p className="text-xs text-[#475569] mt-1">
+          <p className="text-xs text-[#C2C6D1] mt-1">
             Read guidelines, write and test code solution, and submit for evaluation.
           </p>
         </div>

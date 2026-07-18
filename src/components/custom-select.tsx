@@ -82,34 +82,34 @@ export function CustomSelect({
   const showSearch = searchable && options.length > 6;
 
   return (
-    <div ref={containerRef} className={`relative inline-block w-full text-xs text-[#1d1d1f] ${className}`}>
+    <div ref={containerRef} className={`relative inline-block w-full text-xs text-[#EDEFF5] ${className}`}>
       <button
         disabled={disabled}
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-left focus:outline-none focus:border-[#0066cc] focus:ring-1 focus:ring-[#0066cc]/20 shadow-sm flex items-center justify-between gap-2 transition-all duration-200 cursor-pointer hover:bg-slate-50/50 disabled:opacity-50 disabled:pointer-events-none"
+        className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-left focus:outline-none focus:border-[#6E79F4] focus:ring-1 focus:ring-[#6E79F4]/20 shadow-sm flex items-center justify-between gap-2 transition-all duration-200 cursor-pointer hover:bg-[#16171D]/50 disabled:opacity-50 disabled:pointer-events-none"
       >
-        <span className={`truncate ${selectedOption ? "text-[#1d1d1f] font-medium" : "text-[#86868b]"}`}>
+        <span className={`truncate ${selectedOption ? "text-[#EDEFF5] font-medium" : "text-[#C2C6D1]"}`}>
           {selectedOption ? optionLabel(selectedOption) : placeholder}
         </span>
         <ChevronDown
           size={14}
-          className={`text-[#86868b] transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180 text-[#0066cc]" : ""}`}
+          className={`text-[#C2C6D1] transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180 text-[#6E79F4]" : ""}`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 mt-1 bg-white border border-[#d2d2d7] rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn scale-95 origin-top transition-all duration-150 ease-out">
+        <div className="absolute left-0 right-0 mt-1 bg-[#131418] border border-[#23252C] rounded-lg shadow-lg z-50 overflow-hidden animate-fadeIn scale-95 origin-top transition-all duration-150 ease-out">
           {showSearch && (
-            <div className="relative border-b border-[#d2d2d7] p-1.5">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#86868b]" size={12} />
+            <div className="relative border-b border-[#23252C] p-1.5">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#C2C6D1]" size={12} />
               <input
                 ref={searchRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search..."
-                className="w-full bg-slate-50 border border-transparent rounded-md pl-7 pr-2 py-1.5 text-xs focus:outline-none focus:border-[#0066cc] text-[#1d1d1f]"
+                className="w-full bg-[#16171D] border border-transparent rounded-md pl-7 pr-2 py-1.5 text-xs focus:outline-none focus:border-[#6E79F4] text-[#EDEFF5]"
               />
             </div>
           )}
@@ -120,7 +120,7 @@ export function CustomSelect({
                 type="button"
                 onClick={() => handleSelect("")}
                 className={`w-full text-left px-3 py-2 transition-colors flex items-center justify-between ${
-                  !value ? "bg-[#0066cc]/10 text-[#0066cc] font-semibold" : "hover:bg-slate-50 text-[#86868b]"
+                  !value ? "bg-[#6E79F4]/10 text-[#6E79F4] font-semibold" : "hover:bg-[#16171D] text-[#C2C6D1]"
                 }`}
               >
                 {placeholder}
@@ -137,7 +137,7 @@ export function CustomSelect({
                     type="button"
                     onClick={() => handleSelect(opt.id)}
                     className={`w-full text-left px-3 py-2 transition-colors flex items-center justify-between gap-2 ${
-                      isSelected ? "bg-[#0066cc]/10 text-[#0066cc] font-semibold" : "hover:bg-slate-50 text-[#1d1d1f]"
+                      isSelected ? "bg-[#6E79F4]/10 text-[#6E79F4] font-semibold" : "hover:bg-[#16171D] text-[#EDEFF5]"
                     }`}
                   >
                     <span className="truncate">{optionLabel(opt)}</span>
@@ -146,7 +146,7 @@ export function CustomSelect({
                 );
               })
             ) : (
-              <div className="px-3 py-4 text-center text-[#86868b]">
+              <div className="px-3 py-4 text-center text-[#C2C6D1]">
                 {options.length === 0 ? "No options available" : "No matches found"}
               </div>
             )}

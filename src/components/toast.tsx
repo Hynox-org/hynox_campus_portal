@@ -58,8 +58,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             className={`pointer-events-auto flex items-start gap-2 rounded-xl border p-3 text-xs shadow-lg backdrop-blur-sm transition-all duration-200 ${
               t.kind === "success"
-                ? "bg-[#16A34A]/95 border-[#16A34A] text-white"
-                : "bg-[#DC2626]/95 border-[#DC2626] text-white"
+                ? "bg-[#2FBF71]/95 border-[#2FBF71] text-white"
+                : "bg-[#F0555D]/95 border-[#F0555D] text-white"
             }`}
           >
             {t.kind === "success" ? (

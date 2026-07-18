@@ -53,14 +53,14 @@ export function DataTable<TData, TValue>({
           />
         </div>
       )}
-      <div className="rounded-md border border-[#d2d2d7] overflow-hidden">
+      <div className="rounded-md border border-[#23252C] overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-[#f5f5f7] border-b border-[#d2d2d7]">
+          <thead className="bg-[#1A1C22] border-b border-[#23252C]">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <th key={header.id} className="h-12 px-4 text-left align-middle font-medium text-[#1d1d1f]">
+                    <th key={header.id} className="h-12 px-4 text-left align-middle font-medium text-[#EDEFF5]">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -78,7 +78,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-[#d2d2d7] transition-colors hover:bg-slate-50 data-[state=selected]:bg-slate-100"
+                  className="border-b border-[#23252C] transition-colors hover:bg-[#16171D] data-[state=selected]:bg-[#1A1C22]"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="p-4 align-middle">

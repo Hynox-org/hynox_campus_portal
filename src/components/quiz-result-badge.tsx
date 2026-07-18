@@ -13,7 +13,7 @@ export function QuizResultBadge({ passed }: { passed: boolean }) {
         const distance = 60 + (i % 3) * 18;
         const x = Math.cos(angle) * distance;
         const y = Math.sin(angle) * distance;
-        const colors = ["#16A34A", "#2563EB", "#F59E0B", "#DC2626", "#0EA5E9"];
+        const colors = ["#2FBF71", "#6E79F4", "#F5B04A", "#F0555D", "#0EA5E9"];
         return {
           x,
           y,
@@ -28,8 +28,8 @@ export function QuizResultBadge({ passed }: { passed: boolean }) {
     <div className="relative flex items-center justify-center h-24 mb-1">
       {passed && (
         <>
-          <span className="absolute inset-0 m-auto w-16 h-16 rounded-full border-4 border-[#16A34A]/40 animate-hc-ringPulse" style={{ animationDelay: "0.3s" }} />
-          <span className="absolute inset-0 m-auto w-16 h-16 rounded-full border-4 border-[#16A34A]/30 animate-hc-ringPulse" style={{ animationDelay: "0.7s" }} />
+          <span className="absolute inset-0 m-auto w-16 h-16 rounded-full border-4 border-[#2FBF71]/40 animate-hc-ringPulse" style={{ animationDelay: "0.3s" }} />
+          <span className="absolute inset-0 m-auto w-16 h-16 rounded-full border-4 border-[#2FBF71]/30 animate-hc-ringPulse" style={{ animationDelay: "0.7s" }} />
           {confettiPieces.map((p, i) => (
             <span
               key={i}
@@ -48,8 +48,8 @@ export function QuizResultBadge({ passed }: { passed: boolean }) {
       <div
         className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg ${
           passed
-            ? "bg-gradient-to-br from-[#16A34A] to-[#15803D] animate-hc-badgePopIn"
-            : "bg-gradient-to-br from-[#DC2626] to-[#B91C1C] animate-hc-badgeShake"
+            ? "bg-gradient-to-br from-[#2FBF71] to-[#15803D] animate-hc-badgePopIn"
+            : "bg-gradient-to-br from-[#F0555D] to-[#B91C1C] animate-hc-badgeShake"
         }`}
       >
         {passed ? (

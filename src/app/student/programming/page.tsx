@@ -22,22 +22,22 @@ export default async function ProgrammingChallengesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#0F172A] font-sans antialiased">
-      <header className="bg-white border-b border-[#E2E8F0] shadow-sm sticky top-0 z-40">
+    <div className="min-h-screen bg-[#0B0C0F] flex flex-col text-[#EDEFF5] font-sans antialiased">
+      <header className="bg-[#131418] border-b border-[#23252C] shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/student" className="flex items-center gap-2.5">
-            <div className="bg-[#2563EB]/10 text-[#2563EB] p-2 rounded-xl border border-[#2563EB]/20">
+            <div className="bg-[#6E79F4]/10 text-[#6E79F4] p-2 rounded-xl border border-[#6E79F4]/20">
               <Terminal size={18} />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-sm tracking-tight">Hynox Campus Portal</span>
-              <span className="text-[10px] text-[#475569] font-medium tracking-wide">STUDENT HUB</span>
+              <span className="text-[10px] text-[#C2C6D1] font-medium tracking-wide">STUDENT HUB</span>
             </div>
           </Link>
           <div className="flex items-center gap-3">
             <Link
               href="/student"
-              className="text-[#2563EB] hover:bg-[#2563EB]/5 px-3 py-1.5 rounded-lg border border-transparent hover:border-[#2563EB]/10 transition-all text-xs font-semibold"
+              className="text-[#6E79F4] hover:bg-[#6E79F4]/5 px-3 py-1.5 rounded-lg border border-transparent hover:border-[#6E79F4]/10 transition-all text-xs font-semibold"
             >
               Back to Dashboard
             </Link>
@@ -47,20 +47,20 @@ export default async function ProgrammingChallengesPage() {
 
       <main className="max-w-7xl mx-auto px-6 py-10 flex-1 w-full space-y-8">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#0F172A]">Programming Challenges</h1>
-          <p className="text-xs text-[#475569] mt-1">
+          <h1 className="text-xl font-bold tracking-tight text-[#EDEFF5]">Programming Challenges</h1>
+          <p className="text-xs text-[#C2C6D1] mt-1">
             Solve assigned coding exercises, validate solutions against test cases, and track your achievements.
           </p>
         </div>
 
-        <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-[#E2E8F0] flex items-center justify-between">
-            <span className="text-xs font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5">
-              <Code2 size={15} className="text-[#2563EB]" /> Assigned Challenges ({challenges.length})
+        <div className="bg-[#131418] border border-[#23252C] rounded-xl shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-[#23252C] flex items-center justify-between">
+            <span className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider flex items-center gap-1.5">
+              <Code2 size={15} className="text-[#6E79F4]" /> Assigned Challenges ({challenges.length})
             </span>
           </div>
 
-          <div className="divide-y divide-[#E2E8F0]">
+          <div className="divide-y divide-[#23252C]">
             {challenges.length > 0 ? (
               challenges.map((c) => {
                 const diffColor =
@@ -79,7 +79,7 @@ export default async function ProgrammingChallengesPage() {
                     ? "bg-amber-50 text-amber-700 border-amber-200"
                     : c.status === "failed"
                     ? "bg-red-50 text-red-700 border-red-200"
-                    : "bg-slate-50 text-slate-600 border-slate-200";
+                    : "bg-[#16171D] text-[#C2C6D1] border-[#23252C]";
 
                 const statusLabels: Record<string, string> = {
                   assigned: "Assigned",
@@ -92,18 +92,18 @@ export default async function ProgrammingChallengesPage() {
                 return (
                   <div
                     key={c.challenge_id}
-                    className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-all"
+                    className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#16171D]/50 transition-all"
                   >
                     <div className="space-y-2.5 min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="font-bold text-xs text-[#0F172A] truncate">{c.title}</h2>
+                        <h2 className="font-bold text-xs text-[#EDEFF5] truncate">{c.title}</h2>
                         <span className={`px-2 py-0.5 rounded text-[9px] font-bold border capitalize ${diffColor}`}>
                           {c.difficulty}
                         </span>
                       </div>
-                      <p className="text-[10px] text-[#475569] line-clamp-1 max-w-2xl">{c.description}</p>
+                      <p className="text-[10px] text-[#C2C6D1] line-clamp-1 max-w-2xl">{c.description}</p>
                       
-                      <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-[9px] text-[#475569] font-medium">
+                      <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-[9px] text-[#C2C6D1] font-medium">
                         <span className="flex items-center gap-1">
                           <Calendar size={11} />
                           Assigned: {c.assigned_date ? new Date(c.assigned_date).toLocaleDateString() : "N/A"}
@@ -124,7 +124,7 @@ export default async function ProgrammingChallengesPage() {
                           {statusLabels[c.status] || c.status}
                         </span>
                         {c.score !== null && (
-                          <span className="bg-[#2563EB]/5 text-[#2563EB] border border-[#2563EB]/15 px-2.5 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1">
+                          <span className="bg-[#6E79F4]/5 text-[#6E79F4] border border-[#6E79F4]/15 px-2.5 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1">
                             <Award size={10} />
                             {c.score} / {c.max_score}
                           </span>
@@ -133,7 +133,7 @@ export default async function ProgrammingChallengesPage() {
 
                       <Link
                         href={`/student/programming/${c.activity_id}`}
-                        className="bg-white border border-[#E2E8F0] hover:border-[#2563EB]/20 hover:bg-[#2563EB]/5 text-[#0F172A] hover:text-[#2563EB] px-3.5 py-1.5 rounded-lg shadow-sm font-semibold text-[10px] transition-all flex items-center gap-1"
+                        className="bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/20 hover:bg-[#6E79F4]/5 text-[#EDEFF5] hover:text-[#6E79F4] px-3.5 py-1.5 rounded-lg shadow-sm font-semibold text-[10px] transition-all flex items-center gap-1"
                       >
                         Open Workspace <ChevronRight size={11} />
                       </Link>
@@ -143,12 +143,12 @@ export default async function ProgrammingChallengesPage() {
               })
             ) : (
               <div className="text-center py-16 px-4 space-y-3">
-                <div className="bg-slate-100 text-slate-400 p-3 rounded-full w-fit mx-auto">
+                <div className="bg-[#1A1C22] text-[#A3A9B6] p-3 rounded-full w-fit mx-auto">
                   <ShieldAlert size={20} />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-bold text-xs text-[#0F172A]">No Assigned Challenges</h3>
-                  <p className="text-[10px] text-[#475569]">
+                  <h3 className="font-bold text-xs text-[#EDEFF5]">No Assigned Challenges</h3>
+                  <p className="text-[10px] text-[#C2C6D1]">
                     You do not have any active programming challenges assigned to your cohort.
                   </p>
                 </div>

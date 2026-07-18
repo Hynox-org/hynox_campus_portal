@@ -41,21 +41,21 @@ export default async function TeacherPage() {
   const assignedInstitutions = Array.from(instMap.values());
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-[#0F172A] font-sans">
-      <header className="bg-white border-b border-[#E2E8F0] shadow-sm sticky top-0 z-40">
+    <div className="min-h-screen bg-[#0B0C0F] flex flex-col text-[#EDEFF5] font-sans">
+      <header className="bg-[#131418] border-b border-[#23252C] shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="bg-[#2563EB]/10 text-[#2563EB] p-2 rounded-xl border border-[#2563EB]/20">
+            <div className="bg-[#6E79F4]/10 text-[#6E79F4] p-2 rounded-xl border border-[#6E79F4]/20">
               <Terminal size={18} />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-xs sm:text-sm tracking-tight">Hynox Campus Portal</span>
-              <span className="text-[9px] sm:text-[10px] text-[#475569] font-medium tracking-wide">INSTRUCTOR CONSOLE</span>
+              <span className="text-[9px] sm:text-[10px] text-[#C2C6D1] font-medium tracking-wide">INSTRUCTOR CONSOLE</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 text-xs">
-            <span className="hidden sm:inline-block px-2 py-0.5 rounded-full font-bold border bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/20 text-[10px] capitalize">
+            <span className="hidden sm:inline-block px-2 py-0.5 rounded-full font-bold border bg-[#6E79F4]/10 text-[#6E79F4] border-[#6E79F4]/20 text-[10px] capitalize">
               {primaryRole}
             </span>
             

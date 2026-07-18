@@ -8,48 +8,69 @@
   display: none;
 }
 
+/* ============================================================
+   Hynox Campus Design System — "Nocturne"
+   A premium dark theme: deep neutral surfaces, a single indigo
+   brand hue, and calm semantic colors. All UI should reference
+   these tokens rather than raw hex values.
+   ============================================================ */
 :root {
-  --background: #F8FAFC;
-  --foreground: #0F172A;
-  
-  --primary: #2563EB;
-  --secondary: #0F172A;
-  --accent: #06B6D4;
-  --surface: #FFFFFF;
-  --muted-surface: #E2E8F0;
-  
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  
-  --success: #16A34A;
-  --warning: #F59E0B;
-  --error: #DC2626;
-  
-  --border-muted: #E2E8F0;
-  
+  /* Surfaces (darkest → most elevated) */
+  --background: #0B0C0F;
+  --surface: #131418;
+  --surface-raised: #1A1C22;
+  --surface-hover: #1F2128;
+  --muted-surface: #23252C;
+
+  --foreground: #EDEFF5;
+
+  /* Brand */
+  --primary: #6E79F4;
+  --primary-hover: #5A66F0;
+  --secondary: #EDEFF5;
+  --accent: #22D3EE;
+
+  /* Text */
+  --text-primary: #EDEFF5;
+  --text-secondary: #C2C6D1;
+  --text-tertiary: #A3A9B6;
+
+  /* Status */
+  --success: #2FBF71;
+  --warning: #F5B04A;
+  --error: #F0555D;
+
+  /* Lines */
+  --border-muted: #23252C;
+  --border-strong: #2E313A;
+
   --font-sans: var(--font-geist-sans), var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
   --color-surface: var(--surface);
   --color-muted-surface: var(--muted-surface);
-  
+
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
-  
+
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-error: var(--error);
-  
+
   --color-border-muted: var(--border-muted);
-  
+
   --font-sans: var(--font-sans);
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
@@ -60,17 +81,71 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom classes for sleek border and scrollbars in the dashboard style */
+::selection {
+  background: rgba(110, 121, 244, 0.35);
+}
+
+/* Slim, dark scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2e313a transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #2e313a;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #3a3e4a;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Visible, brand-colored focus for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Depth utilities tuned for dark surfaces */
 .border-subtle {
   border: 1px solid var(--border-muted);
 }
 
 .shadow-subtle {
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
 }
 
 .shadow-card {
-  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.03), 0 2px 4px -2px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Interactive card lift */
+.hover-lift {
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45), 0 12px 32px -12px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Skeleton shimmer */
+@keyframes hc-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(100deg, #1a1c22 40%, #23252c 50%, #1a1c22 60%);
+  background-size: 200% 100%;
+  animation: hc-shimmer 1.6s ease-in-out infinite;
+  border-radius: 6px;
 }
 
 @keyframes fadeIn {
@@ -94,6 +169,26 @@ body {
 
 .animate-slideOver {
   animation: slideOver 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Page/section entrance — apply to top-level containers on mount */
+.animate-pageIn {
+  animation: hc-dashFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Staggered list entrance: give children inline animation-delay */
+.animate-riseIn {
+  animation: hc-dashFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-pageIn,
+  .animate-riseIn,
+  .skeleton,
+  .hover-lift {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* Quiz pass/fail result badge */
@@ -138,4 +233,3 @@ body {
 .animate-hc-confetti {
   animation: hc-confettiBurst 0.9s ease-out forwards;
 }
-

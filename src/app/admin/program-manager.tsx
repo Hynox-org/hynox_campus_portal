@@ -530,15 +530,15 @@ export default function ProgramManager({
   const renderExplorerMode = () => {
     return (
       <div className="space-y-6">
-        <div className="bg-white border border-[#d2d2d7] rounded-xl overflow-hidden shadow-sm">
-          <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex items-center justify-between">
-            <h4 className="text-xs font-bold text-[#1d1d1f] uppercase tracking-wider">Ongoing Academic Programs</h4>
+        <div className="bg-[#131418] border border-[#23252C] rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-[#16171D] px-6 py-4 border-b border-[#23252C] flex items-center justify-between">
+            <h4 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider">Ongoing Academic Programs</h4>
             <button
               onClick={() => {
                 setProgramForm({ title: "", slug: "", description: "" });
                 setProgramModalOpen(true);
               }}
-              className="flex items-center gap-1.5 bg-[#0066cc] text-white px-3.5 py-1.5 rounded-lg hover:bg-[#0066cc]/95 transition-all text-xs font-semibold shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 bg-[#6E79F4] text-white px-3.5 py-1.5 rounded-lg hover:bg-[#6E79F4]/95 transition-all text-xs font-semibold shadow-sm cursor-pointer"
             >
               <Plus size={14} /> Register Program
             </button>
@@ -547,28 +547,28 @@ export default function ProgramManager({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50/40 border-b border-[#d2d2d7] font-bold text-[#86868b]">
+                <tr className="bg-[#16171D]/40 border-b border-[#23252C] font-bold text-[#C2C6D1]">
                   <th className="px-6 py-3">Program Pathway</th>
                   <th className="px-6 py-3">Timeline Details</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d2d2d7]">
+              <tbody className="divide-y divide-[#23252C]">
                 {programs.length > 0 ? (
                   programs.map((prog) => {
                     const startedDate = new Date(prog.created_at);
 
                     return (
-                      <tr key={prog.id} className="hover:bg-slate-50/20 transition-colors">
+                      <tr key={prog.id} className="hover:bg-[#16171D]/20 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="font-bold text-[#1d1d1f] text-sm">{prog.title}</div>
-                          <div className="text-[#86868b] mt-0.5 max-w-sm truncate">{prog.description || "No pathway description provided."}</div>
-                          <span className="inline-flex mt-1.5 px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono text-[#86868b]">/{prog.slug}</span>
+                          <div className="font-bold text-[#EDEFF5] text-sm">{prog.title}</div>
+                          <div className="text-[#C2C6D1] mt-0.5 max-w-sm truncate">{prog.description || "No pathway description provided."}</div>
+                          <span className="inline-flex mt-1.5 px-2 py-0.5 bg-[#1A1C22] rounded text-[10px] font-mono text-[#C2C6D1]">/{prog.slug}</span>
                         </td>
-                        <td className="px-6 py-4 text-[#86868b] leading-normal font-medium">
+                        <td className="px-6 py-4 text-[#C2C6D1] leading-normal font-medium">
                           <div className="flex items-center gap-1.5 text-[11px]">
-                            <Calendar size={11} className="text-[#86868b]" />
+                            <Calendar size={11} className="text-[#C2C6D1]" />
                             <span>Registered: {startedDate.toLocaleDateString()}</span>
                           </div>
                         </td>
@@ -580,7 +580,7 @@ export default function ProgramManager({
                                 statuses.find((s: any) => s.id === prog.status_id)?.code === "active"
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/80"
                                   : statuses.find((s: any) => s.id === prog.status_id)?.code === "draft"
-                                  ? "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200/80"
+                                  ? "bg-[#1A1C22] text-[#E2E4EB] border-[#23252C] hover:bg-[#23252C]/80"
                                   : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
                               }`}
                             >
@@ -588,7 +588,7 @@ export default function ProgramManager({
                                 statuses.find((s: any) => s.id === prog.status_id)?.code === "active"
                                   ? "bg-emerald-500"
                                   : statuses.find((s: any) => s.id === prog.status_id)?.code === "draft"
-                                  ? "bg-slate-400"
+                                  ? "bg-[#3A3F4B]"
                                   : "bg-red-500"
                               }`}></span>
                               {statuses.find((s: any) => s.id === prog.status_id)?.code.toUpperCase() || "DRAFT"}
@@ -598,7 +598,7 @@ export default function ProgramManager({
                             {openDropdownId === prog.id && (
                               <>
                                 <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)}></div>
-                                <div className="absolute left-0 mt-1.5 w-32 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 font-semibold text-[10px] overflow-hidden text-slate-700">
+                                <div className="absolute left-0 mt-1.5 w-32 bg-[#131418] border border-[#23252C] rounded-xl shadow-lg z-20 py-1 font-semibold text-[10px] overflow-hidden text-[#E2E4EB]">
                                   {statuses
                                     .filter((s: any) => ["active", "draft", "disabled"].includes(s.code))
                                     .map((s: any) => (
@@ -621,10 +621,10 @@ export default function ProgramManager({
                                             await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
                                           }
                                         }}
-                                        className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-all flex items-center gap-2"
+                                        className="w-full text-left px-3 py-2 hover:bg-[#16171D] transition-all flex items-center gap-2"
                                       >
                                         <span className={`w-1.5 h-1.5 rounded-full ${
-                                          s.code === "active" ? "bg-emerald-500" : s.code === "draft" ? "bg-slate-400" : "bg-red-500"
+                                          s.code === "active" ? "bg-emerald-500" : s.code === "draft" ? "bg-[#3A3F4B]" : "bg-red-500"
                                         }`}></span>
                                         {s.code.toUpperCase()}
                                       </button>
@@ -634,7 +634,7 @@ export default function ProgramManager({
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right text-slate-400 font-medium">
+                        <td className="px-6 py-4 text-right text-[#A3A9B6] font-medium">
                           Status toggling controls access controls
                         </td>
                       </tr>
@@ -642,7 +642,7 @@ export default function ProgramManager({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-[#86868b] font-medium">
+                    <td colSpan={4} className="px-6 py-10 text-center text-[#C2C6D1] font-medium">
                       No active academic programs found.
                     </td>
                   </tr>
@@ -659,18 +659,18 @@ export default function ProgramManager({
     if (!selectedProgram) {
       return (
         <div className="space-y-6 animate-fadeIn">
-          <div className="bg-white border border-[#d2d2d7] rounded-xl p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#d2d2d7]/50 pb-4 mb-6">
+          <div className="bg-[#131418] border border-[#23252C] rounded-xl p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#23252C]/50 pb-4 mb-6">
               <div className="min-w-0">
-                <h4 className="text-xs font-bold text-[#1d1d1f] uppercase tracking-wider">Select Academic Pathway to Examine</h4>
-                <p className="text-[11px] text-[#86868b] mt-0.5">Explore instantiated courses, syllabus modules, lessons, and learning material.</p>
+                <h4 className="text-xs font-bold text-[#EDEFF5] uppercase tracking-wider">Select Academic Pathway to Examine</h4>
+                <p className="text-[11px] text-[#C2C6D1] mt-0.5">Explore instantiated courses, syllabus modules, lessons, and learning material.</p>
               </div>
               <button
                 onClick={() => {
                   setProgramForm({ title: "", slug: "", description: "" });
                   setProgramModalOpen(true);
                 }}
-                className="flex items-center justify-center gap-1.5 bg-[#0066cc] text-white px-3.5 py-1.5 rounded-lg hover:bg-[#0066cc]/95 transition-all text-xs font-semibold shadow-sm cursor-pointer shrink-0 w-full sm:w-auto"
+                className="flex items-center justify-center gap-1.5 bg-[#6E79F4] text-white px-3.5 py-1.5 rounded-lg hover:bg-[#6E79F4]/95 transition-all text-xs font-semibold shadow-sm cursor-pointer shrink-0 w-full sm:w-auto"
               >
                 <Plus size={14} /> Register Program
               </button>
@@ -683,7 +683,7 @@ export default function ProgramManager({
                   return (
                     <div 
                       key={prog.id} 
-                      className="bg-white border border-[#d2d2d7] rounded-xl p-5 hover:shadow-md hover:border-[#86868b] transition-all duration-200 flex flex-col justify-between"
+                      className="bg-[#131418] border border-[#23252C] rounded-xl p-5 hover:shadow-md hover:border-[#9BA1AE] transition-all duration-200 flex flex-col justify-between"
                     >
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2">
@@ -692,12 +692,12 @@ export default function ProgramManager({
                               programStatus === "active"
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                 : programStatus === "draft"
-                                ? "bg-slate-100 text-slate-700 border-slate-200"
+                                ? "bg-[#1A1C22] text-[#E2E4EB] border-[#23252C]"
                                 : "bg-red-50 text-red-700 border-red-200"
                             }`}>
                               {programStatus}
                             </span>
-                            <span className="text-[9px] font-mono text-[#86868b] truncate">/{prog.slug}</span>
+                            <span className="text-[9px] font-mono text-[#C2C6D1] truncate">/{prog.slug}</span>
                           </div>
                           <button
                             onClick={async (e) => {
@@ -714,19 +714,19 @@ export default function ProgramManager({
                                 setSaving(false);
                               }
                             }}
-                            className="p-1 hover:bg-red-50 rounded text-[#86868b] hover:text-red-600 transition-colors shrink-0"
+                            className="p-1 hover:bg-red-50 rounded text-[#C2C6D1] hover:text-red-600 transition-colors shrink-0"
                             title="Delete Program"
                           >
                             <Trash2 size={13} />
                           </button>
                         </div>
-                        <h4 className="font-bold text-sm text-[#1d1d1f]">{prog.title}</h4>
-                        <p className="text-xs text-[#86868b] line-clamp-3 min-h-[48px]">{prog.description || "No pathway description provided."}</p>
+                        <h4 className="font-bold text-sm text-[#EDEFF5]">{prog.title}</h4>
+                        <p className="text-xs text-[#C2C6D1] line-clamp-3 min-h-[48px]">{prog.description || "No pathway description provided."}</p>
                       </div>
 
                       <button
                         onClick={() => setSelectedProgram(prog)}
-                        className="mt-6 w-full flex items-center justify-center gap-1 bg-[#0066cc]/10 hover:bg-[#0066cc] text-[#0066cc] hover:text-white px-4 py-2 rounded-lg transition-all text-xs font-semibold cursor-pointer border border-transparent"
+                        className="mt-6 w-full flex items-center justify-center gap-1 bg-[#6E79F4]/10 hover:bg-[#6E79F4] text-[#6E79F4] hover:text-white px-4 py-2 rounded-lg transition-all text-xs font-semibold cursor-pointer border border-transparent"
                       >
                         Examine Pathway & Syllabus <ChevronRight size={14} />
                       </button>
@@ -735,7 +735,7 @@ export default function ProgramManager({
                 })}
               </div>
             ) : (
-              <div className="py-12 text-center text-[#86868b] font-medium border border-dashed border-[#d2d2d7] rounded-xl bg-slate-50/50">
+              <div className="py-12 text-center text-[#C2C6D1] font-medium border border-dashed border-[#23252C] rounded-xl bg-[#16171D]/50">
                 No active academic programs found in this campus scope.
               </div>
             )}
@@ -747,43 +747,43 @@ export default function ProgramManager({
     return (
       <div className="space-y-4 animate-fadeIn">
         {/* Back navigation header */}
-        <div className="flex items-center gap-3 bg-white border border-[#d2d2d7] px-6 py-4 rounded-xl shadow-sm">
+        <div className="flex items-center gap-3 bg-[#131418] border border-[#23252C] px-6 py-4 rounded-xl shadow-sm">
           <button
             onClick={() => setSelectedProgram(null)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 text-[#1d1d1f] font-semibold text-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#23252C] hover:bg-[#16171D] text-[#EDEFF5] font-semibold text-xs transition-colors cursor-pointer"
           >
             ← Back to Pathways List
           </button>
-          <div className="h-6 w-px bg-[#d2d2d7]" />
+          <div className="h-6 w-px bg-[#23252C]" />
           <div>
-            <span className="text-[9px] uppercase tracking-wider font-bold text-[#86868b]">Examining Pathway</span>
-            <h3 className="font-bold text-[#1d1d1f] text-sm mt-0.5">{selectedProgram.title}</h3>
+            <span className="text-[9px] uppercase tracking-wider font-bold text-[#C2C6D1]">Examining Pathway</span>
+            <h3 className="font-bold text-[#EDEFF5] text-sm mt-0.5">{selectedProgram.title}</h3>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* Left panel: Courses and Actions */}
-          <div className="lg:col-span-4 bg-white border border-[#d2d2d7] rounded-xl p-5 shadow-sm space-y-5">
+          <div className="lg:col-span-4 bg-[#131418] border border-[#23252C] rounded-xl p-5 shadow-sm space-y-5">
             <div className="space-y-1">
-              <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Pathway Details</h4>
-              <p className="text-xs text-[#1d1d1f] leading-relaxed font-medium">{selectedProgram.description || "No pathway description provided."}</p>
-              <div className="pt-2 flex items-center justify-between text-[10px] text-[#86868b]">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]">Pathway Details</h4>
+              <p className="text-xs text-[#EDEFF5] leading-relaxed font-medium">{selectedProgram.description || "No pathway description provided."}</p>
+              <div className="pt-2 flex items-center justify-between text-[10px] text-[#C2C6D1]">
                 <span>Status:</span>
                 <span className="capitalize font-bold">{statuses.find((s: any) => s.id === selectedProgram.status_id)?.code || "Draft"}</span>
               </div>
             </div>
 
             {/* Status Dropdown inside Examine Mode */}
-            <div className="relative inline-block text-left w-full border-t border-slate-100 pt-4">
-              <label className="block text-[10px] font-bold text-[#86868b] uppercase tracking-wider mb-2">Change Pathway Status</label>
+            <div className="relative inline-block text-left w-full border-t border-[#1F2128] pt-4">
+              <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-2">Change Pathway Status</label>
               <button
                 onClick={() => setOpenDropdownId(openDropdownId === `examine-${selectedProgram.id}` ? null : `examine-${selectedProgram.id}`)}
                 className={`w-full px-3 py-2 rounded-lg text-xs font-bold border flex items-center justify-between cursor-pointer shadow-xs transition-all ${
                   statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "active"
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/80"
                     : statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "draft"
-                    ? "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200/80"
+                    ? "bg-[#1A1C22] text-[#E2E4EB] border-[#23252C] hover:bg-[#23252C]/80"
                     : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
                 }`}
               >
@@ -792,7 +792,7 @@ export default function ProgramManager({
                     statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "active"
                       ? "bg-emerald-500"
                       : statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "draft"
-                      ? "bg-slate-400"
+                      ? "bg-[#3A3F4B]"
                       : "bg-red-500"
                   }`}></span>
                   {statuses.find((s: any) => s.id === selectedProgram.status_id)?.code.toUpperCase() || "DRAFT"}
@@ -803,7 +803,7 @@ export default function ProgramManager({
               {openDropdownId === `examine-${selectedProgram.id}` && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)}></div>
-                  <div className="absolute left-0 right-0 mt-1.5 bg-white border border-[#d2d2d7] rounded-xl shadow-lg z-20 py-1 font-semibold text-xs overflow-hidden text-slate-700 animate-fadeIn">
+                  <div className="absolute left-0 right-0 mt-1.5 bg-[#131418] border border-[#23252C] rounded-xl shadow-lg z-20 py-1 font-semibold text-xs overflow-hidden text-[#E2E4EB] animate-fadeIn">
                     {statuses
                       .filter((s: any) => ["active", "draft", "disabled"].includes(s.code))
                       .map((s: any) => (
@@ -829,10 +829,10 @@ export default function ProgramManager({
                               if (updatedProg) setSelectedProgram(updatedProg);
                             }
                           }}
-                          className="w-full text-left px-3 py-2.5 hover:bg-slate-50 transition-all flex items-center gap-2"
+                          className="w-full text-left px-3 py-2.5 hover:bg-[#16171D] transition-all flex items-center gap-2"
                         >
                           <span className={`w-1.5 h-1.5 rounded-full ${
-                            s.code === "active" ? "bg-emerald-500" : s.code === "draft" ? "bg-slate-400" : "bg-red-500"
+                            s.code === "active" ? "bg-emerald-500" : s.code === "draft" ? "bg-[#3A3F4B]" : "bg-red-500"
                           }`}></span>
                           {s.code.toUpperCase()}
                         </button>
@@ -842,9 +842,9 @@ export default function ProgramManager({
               )}
             </div>
 
-            <div className="border-t border-[#d2d2d7] pt-4 space-y-3">
-              <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b] flex items-center gap-1">
-                <Sparkles size={11} className="text-[#0066cc]" /> Clone Course Blueprint
+            <div className="border-t border-[#23252C] pt-4 space-y-3">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1">
+                <Sparkles size={11} className="text-[#6E79F4]" /> Clone Course Blueprint
               </h4>
               <CustomSelect
                 options={blueprints.map(bp => {
@@ -858,7 +858,7 @@ export default function ProgramManager({
               <button
                 onClick={handleInstantiation}
                 disabled={loading || !selectedBlueprintId}
-                className="w-full bg-[#0066cc] text-white py-2 rounded-lg text-xs font-bold hover:bg-[#0066cc]/95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                className="w-full bg-[#6E79F4] text-white py-2 rounded-lg text-xs font-bold hover:bg-[#6E79F4]/95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {loading ? "Cloning..." : "Instantiate to Program"}
               </button>
@@ -869,14 +869,14 @@ export default function ProgramManager({
           <div className="lg:col-span-8 space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Instantiated Courses</h4>
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]">Instantiated Courses</h4>
                 <button
                   onClick={() => {
                     setEditingCourse(null);
                     setCourseForm({ title: "", slug: "", duration_minutes: 60 });
                     setCourseModalOpen(true);
                   }}
-                  className="flex items-center gap-1 text-[#0066cc] hover:underline text-[11px] font-bold cursor-pointer"
+                  className="flex items-center gap-1 text-[#6E79F4] hover:underline text-[11px] font-bold cursor-pointer"
                 >
                   <Plus size={12} /> New Course
                 </button>
@@ -884,7 +884,7 @@ export default function ProgramManager({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {loadingCourses ? (
-                  <div className="sm:col-span-2 py-8 bg-white border border-dashed border-[#d2d2d7] rounded-xl flex flex-col items-center justify-center">
+                  <div className="sm:col-span-2 py-8 bg-[#131418] border border-dashed border-[#23252C] rounded-xl flex flex-col items-center justify-center">
                     <SecondaryLoader variant="skeleton" message="Loading instantiated courses..." className="!border-0 !p-0 shadow-none bg-transparent" />
                   </div>
                 ) : courses.length > 0 ? (
@@ -894,8 +894,8 @@ export default function ProgramManager({
                       onClick={() => handleSelectCourse(course.id)}
                       className={`p-4 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between h-28 shadow-sm relative group ${
                         selectedCourseId === course.id
-                          ? "bg-[#0066cc]/5 border-[#0066cc] text-[#0066cc] ring-1 ring-[#0066cc]"
-                          : "bg-white border-[#d2d2d7] hover:border-[#86868b] text-[#1d1d1f]"
+                          ? "bg-[#6E79F4]/5 border-[#6E79F4] text-[#6E79F4] ring-1 ring-[#6E79F4]"
+                          : "bg-[#131418] border-[#23252C] hover:border-[#9BA1AE] text-[#EDEFF5]"
                       }`}
                     >
                       <div>
@@ -908,7 +908,7 @@ export default function ProgramManager({
                                 setCourseForm({ title: course.title, slug: course.slug, duration_minutes: course.duration_minutes || 60 });
                                 setCourseModalOpen(true);
                               }}
-                              className="p-0.5 hover:bg-slate-100 rounded text-slate-500 hover:text-[#0066cc]"
+                              className="p-0.5 hover:bg-[#1A1C22] rounded text-[#C2C6D1] hover:text-[#6E79F4]"
                               title="Edit Course"
                             >
                               <Edit size={12} />
@@ -930,26 +930,26 @@ export default function ProgramManager({
                                   setSaving(false);
                                 }
                               }}
-                              className="p-0.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
+                              className="p-0.5 hover:bg-red-50 rounded text-[#A3A9B6] hover:text-red-600"
                               title="Delete Course"
                             >
                               <Trash2 size={12} />
                             </button>
                           </div>
                         </div>
-                        <span className="inline-block mt-1 text-[9px] px-1.5 py-0.5 bg-slate-100 rounded text-[#86868b] font-mono">
+                        <span className="inline-block mt-1 text-[9px] px-1.5 py-0.5 bg-[#1A1C22] rounded text-[#C2C6D1] font-mono">
                           /{course.slug}
                         </span>
                       </div>
-                      <div className="flex items-center justify-end text-[10px] text-[#86868b] pt-2 border-t border-slate-100 mt-2">
-                        <span className="text-[8px] bg-slate-100 px-1 rounded uppercase font-bold text-[#86868b] font-mono">
+                      <div className="flex items-center justify-end text-[10px] text-[#C2C6D1] pt-2 border-t border-[#1F2128] mt-2">
+                        <span className="text-[8px] bg-[#1A1C22] px-1 rounded uppercase font-bold text-[#C2C6D1] font-mono">
                           {course.course_type_id ? "Syllabus Course" : "Live Blueprint"}
                         </span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="sm:col-span-2 bg-slate-50 border border-dashed border-[#d2d2d7] rounded-xl py-8 text-center text-xs text-[#86868b]">
+                  <div className="sm:col-span-2 bg-[#16171D] border border-dashed border-[#23252C] rounded-xl py-8 text-center text-xs text-[#C2C6D1]">
                     No active courses instantiated. Select a blueprint template from the left panel to clone.
                   </div>
                 )}
@@ -958,16 +958,16 @@ export default function ProgramManager({
 
             {/* Modules list of selected course */}
             {selectedCourseId && (
-              <div className="bg-white border border-[#d2d2d7] rounded-xl p-5 shadow-sm space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#86868b]">Syllabus Curriculum Modules</h4>
+              <div className="bg-[#131418] border border-[#23252C] rounded-xl p-5 shadow-sm space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1F2128] pb-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]">Syllabus Curriculum Modules</h4>
                   <button
                     onClick={() => {
                       setEditingModule(null);
                       setModuleForm({ title: "", position: (modulesCache[selectedCourseId]?.length || 0) + 1 });
                       setModuleModalOpen(true);
                     }}
-                    className="flex items-center gap-1 text-[#0066cc] hover:underline text-[11px] font-bold cursor-pointer shrink-0"
+                    className="flex items-center gap-1 text-[#6E79F4] hover:underline text-[11px] font-bold cursor-pointer shrink-0"
                   >
                     <Plus size={12} /> New Module
                   </button>
@@ -987,16 +987,16 @@ export default function ProgramManager({
                         const isLessonsLoading = !!lessonsLoading[mod.id];
 
                         return (
-                          <div key={mod.id} className="border border-[#d2d2d7] rounded-lg overflow-hidden">
+                          <div key={mod.id} className="border border-[#23252C] rounded-lg overflow-hidden">
                             {/* Module Header Row */}
                             <div
                               onClick={() => toggleModuleExpand(mod.id)}
-                              className="bg-slate-50/50 hover:bg-slate-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer border-b border-[#d2d2d7]/40 transition-colors"
+                              className="bg-[#16171D]/50 hover:bg-[#16171D] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer border-b border-[#23252C]/40 transition-colors"
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                {isExpanded ? <ChevronDown size={14} className="text-[#86868b] shrink-0" /> : <ChevronRight size={14} className="text-[#86868b] shrink-0" />}
-                                <Folder size={14} className="text-[#0066cc] shrink-0" />
-                                <span className="font-bold text-[#1d1d1f] text-xs">
+                                {isExpanded ? <ChevronDown size={14} className="text-[#C2C6D1] shrink-0" /> : <ChevronRight size={14} className="text-[#C2C6D1] shrink-0" />}
+                                <Folder size={14} className="text-[#6E79F4] shrink-0" />
+                                <span className="font-bold text-[#EDEFF5] text-xs">
                                   Module {mod.position}: {mod.title}
                                 </span>
                               </div>
@@ -1007,7 +1007,7 @@ export default function ProgramManager({
                                     setModuleForm({ title: mod.title, position: mod.position });
                                     setModuleModalOpen(true);
                                   }}
-                                  className="p-1 hover:bg-slate-200 rounded text-slate-500 hover:text-[#1d1d1f]"
+                                  className="p-1 hover:bg-[#23252C] rounded text-[#C2C6D1] hover:text-[#EDEFF5]"
                                   title="Edit Module"
                                 >
                                   <Edit size={11} />
@@ -1022,7 +1022,7 @@ export default function ProgramManager({
                                       setSaving(false);
                                     }
                                   }}
-                                  className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
+                                  className="p-1 hover:bg-red-50 rounded text-[#A3A9B6] hover:text-red-600"
                                   title="Delete Module"
                                 >
                                   <Trash2 size={11} />
@@ -1041,7 +1041,7 @@ export default function ProgramManager({
                                     });
                                     setLessonModalOpen(true);
                                   }}
-                                  className="flex items-center gap-0.5 text-[#0066cc] hover:underline text-[10px] font-bold px-1.5 py-0.5 hover:bg-[#0066cc]/5 rounded"
+                                  className="flex items-center gap-0.5 text-[#6E79F4] hover:underline text-[10px] font-bold px-1.5 py-0.5 hover:bg-[#6E79F4]/5 rounded"
                                 >
                                   <Plus size={10} /> Add Lesson
                                 </button>
@@ -1051,7 +1051,7 @@ export default function ProgramManager({
                             {/* Module Lessons Container with Animation */}
                             <div className={`grid transition-all duration-300 ease-in-out ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                               <div className="overflow-hidden">
-                                <div className="p-4 bg-white space-y-3 divide-y divide-slate-100">
+                                <div className="p-4 bg-[#131418] space-y-3 divide-y divide-[#1F2128]">
                                   {isLessonsLoading ? (
                                     <SecondaryLoader variant="skeleton" message="Loading lessons..." className="!border-0 !p-2 shadow-none bg-transparent" />
                                   ) : moduleLessons.length > 0 ? (
@@ -1066,11 +1066,11 @@ export default function ProgramManager({
                                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                                             <div
                                               onClick={() => toggleLessonExpand(les.id)}
-                                              className="flex items-center gap-1.5 cursor-pointer text-[#1d1d1f] hover:text-[#0066cc] transition-colors min-w-0"
+                                              className="flex items-center gap-1.5 cursor-pointer text-[#EDEFF5] hover:text-[#6E79F4] transition-colors min-w-0"
                                             >
-                                              {isLessonExpanded ? <ChevronDown size={12} className="text-[#86868b] shrink-0" /> : <ChevronRight size={12} className="text-[#86868b] shrink-0" />}
+                                              {isLessonExpanded ? <ChevronDown size={12} className="text-[#C2C6D1] shrink-0" /> : <ChevronRight size={12} className="text-[#C2C6D1] shrink-0" />}
                                               <span className="font-semibold">{les.position}. {les.title}</span>
-                                              <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-[#86868b] border border-slate-200 capitalize font-medium shrink-0">{lessonTypeName}</span>
+                                              <span className="text-[9px] bg-[#1A1C22] px-1.5 py-0.5 rounded text-[#C2C6D1] border border-[#23252C] capitalize font-medium shrink-0">{lessonTypeName}</span>
                                             </div>
 
                                             <div className="flex items-center gap-1.5 pl-5 sm:pl-0 shrink-0">
@@ -1088,7 +1088,7 @@ export default function ProgramManager({
                                                   });
                                                   setLessonModalOpen(true);
                                                 }}
-                                                className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-[#1d1d1f]"
+                                                className="p-1 hover:bg-[#1A1C22] rounded text-[#C2C6D1] hover:text-[#EDEFF5]"
                                                 title="Edit Lesson"
                                               >
                                                 <Edit size={10} />
@@ -1103,7 +1103,7 @@ export default function ProgramManager({
                                                     setSaving(false);
                                                   }
                                                 }}
-                                                className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
+                                                className="p-1 hover:bg-red-50 rounded text-[#A3A9B6] hover:text-red-600"
                                                 title="Delete Lesson"
                                               >
                                                 <Trash2 size={10} />
@@ -1114,7 +1114,7 @@ export default function ProgramManager({
                                                   setResourceForm({ title: "", resource_type: "link", external_url: "", file_url: "" });
                                                   setResourceModalOpen(true);
                                                 }}
-                                                className="text-[#0066cc] hover:underline text-[9px] font-bold"
+                                                className="text-[#6E79F4] hover:underline text-[9px] font-bold"
                                               >
                                                 + Resource
                                               </button>
@@ -1124,9 +1124,9 @@ export default function ProgramManager({
                                           {/* Expandable Lesson detail block with animation */}
                                           <div className={`grid transition-all duration-300 ease-in-out ${isLessonExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                                             <div className="overflow-hidden pl-6">
-                                              <div className="bg-slate-50/40 border border-[#d2d2d7]/50 p-3 rounded-lg space-y-3 mt-2">
+                                              <div className="bg-[#16171D]/40 border border-[#23252C]/50 p-3 rounded-lg space-y-3 mt-2">
                                                 {les.video_url && (
-                                                  <div className="flex items-center gap-1.5 text-[10px] text-[#0066cc]">
+                                                  <div className="flex items-center gap-1.5 text-[10px] text-[#6E79F4]">
                                                     <Video size={12} />
                                                     <a href={les.video_url} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-0.5">
                                                       Video pathway link <ExternalLink size={10} />
@@ -1135,25 +1135,25 @@ export default function ProgramManager({
                                                 )}
 
                                                 {(les.content_json?.text || les.content_json?.body) && (
-                                                  <div className="bg-white p-3 rounded border border-[#d2d2d7]/40 text-xs text-[#1d1d1f] max-w-none">
+                                                  <div className="bg-[#131418] p-3 rounded border border-[#23252C]/40 text-xs text-[#EDEFF5] max-w-none">
                                                     <MarkdownRenderer content={les.content_json.text || les.content_json.body} />
                                                   </div>
                                                 )}
 
                                                 {/* Lesson Resources List */}
-                                                <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                                                  <p className="text-[10px] font-bold text-[#86868b] uppercase tracking-wider">Lesson Attachments</p>
+                                                <div className="space-y-1.5 pt-1 border-t border-[#1F2128]">
+                                                  <p className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider">Lesson Attachments</p>
                                                   {resourcesCache[les.id] ? (
                                                     lessonResources.length > 0 ? (
                                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {lessonResources.map((res: any) => (
-                                                          <div key={res.id} className="bg-white border border-[#d2d2d7]/60 rounded p-2 flex items-center justify-between text-[11px]">
-                                                            <span className="font-medium text-[#1d1d1f] truncate max-w-[80%] flex items-center gap-1">
-                                                              <FileText size={10} className="text-[#86868b]" />
+                                                          <div key={res.id} className="bg-[#131418] border border-[#23252C]/60 rounded p-2 flex items-center justify-between text-[11px]">
+                                                            <span className="font-medium text-[#EDEFF5] truncate max-w-[80%] flex items-center gap-1">
+                                                              <FileText size={10} className="text-[#C2C6D1]" />
                                                               {res.title}
                                                             </span>
                                                             <div className="flex items-center gap-1">
-                                                              <a href={res.external_url || res.file_url} target="_blank" rel="noopener noreferrer" className="p-0.5 hover:bg-slate-100 rounded text-[#0066cc]">
+                                                              <a href={res.external_url || res.file_url} target="_blank" rel="noopener noreferrer" className="p-0.5 hover:bg-[#1A1C22] rounded text-[#6E79F4]">
                                                                 <ExternalLink size={10} />
                                                               </a>
                                                               <button
@@ -1163,7 +1163,7 @@ export default function ProgramManager({
                                                                     await refreshResources(les.id);
                                                                   }
                                                                 }}
-                                                                className="p-0.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-600"
+                                                                className="p-0.5 hover:bg-red-50 rounded text-[#A3A9B6] hover:text-red-600"
                                                               >
                                                                 <Trash2 size={10} />
                                                               </button>
@@ -1172,7 +1172,7 @@ export default function ProgramManager({
                                                         ))}
                                                       </div>
                                                     ) : (
-                                                      <p className="text-[9px] text-[#86868b] italic font-sans">No resources attached to this lesson.</p>
+                                                      <p className="text-[9px] text-[#C2C6D1] italic font-sans">No resources attached to this lesson.</p>
                                                     )
                                                   ) : (
                                                     <SecondaryLoader variant="skeleton" message="Loading resource attachments..." className="!border-0 !p-1 shadow-none bg-transparent" />
@@ -1186,7 +1186,7 @@ export default function ProgramManager({
                                       );
                                     })
                                   ) : (
-                                    <p className="text-[10px] text-[#86868b] italic py-2">No lessons in this module.</p>
+                                    <p className="text-[10px] text-[#C2C6D1] italic py-2">No lessons in this module.</p>
                                   )}
                                 </div>
                               </div>
@@ -1196,7 +1196,7 @@ export default function ProgramManager({
                       })}
                     </div>
                   ) : (
-                    <div className="text-center py-6 text-[#86868b] italic border border-dashed border-[#d2d2d7] rounded-xl bg-slate-50/50">
+                    <div className="text-center py-6 text-[#C2C6D1] italic border border-dashed border-[#23252C] rounded-xl bg-[#16171D]/50">
                       No curriculum modules defined.
                     </div>
                   );
@@ -1214,17 +1214,17 @@ export default function ProgramManager({
     <div className="space-y-6">
       
       {/* Scope banner */}
-      <div className="bg-white border border-[#d2d2d7] p-6 rounded-xl shadow-sm">
-        <h3 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#86868b] flex items-center gap-1.5">
-          <Folder size={15} className="text-[#0066cc]" /> Live Program Scope
+      <div className="bg-[#131418] border border-[#23252C] p-6 rounded-xl shadow-sm">
+        <h3 className="text-xs font-bold uppercase tracking-wider mb-2 text-[#C2C6D1] flex items-center gap-1.5">
+          <Folder size={15} className="text-[#6E79F4]" /> Live Program Scope
         </h3>
-        <p className="text-xs text-[#86868b] mb-4">
+        <p className="text-xs text-[#C2C6D1] mb-4">
           Select an institution scope below to explore registered programs and instantiated syllabus courses.
         </p>
         <select
           value={selectedInstId}
           onChange={(e) => setSelectedInstId(e.target.value)}
-          className="w-full max-w-md bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+          className="w-full max-w-md bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
         >
           <option value="">-- Select Institution Campus --</option>
           {institutions.map((inst) => (
@@ -1237,7 +1237,7 @@ export default function ProgramManager({
 
       {selectedInstId && (
         preloadingAll ? (
-          <div className="py-16 bg-white border border-[#d2d2d7] rounded-xl flex flex-col items-center justify-center shadow-sm animate-fadeIn">
+          <div className="py-16 bg-[#131418] border border-[#23252C] rounded-xl flex flex-col items-center justify-center shadow-sm animate-fadeIn">
             <SecondaryLoader variant="spinner" message="Syncing campus programs & course content..." />
           </div>
         ) : (
@@ -1249,18 +1249,18 @@ export default function ProgramManager({
         <>
           <div
             onClick={() => setProgramModalOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#23252D]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
-              <h3 className="font-bold text-sm text-[#1d1d1f]">Register Program</h3>
-              <button onClick={() => setProgramModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#EDEFF5]">Register Program</h3>
+              <button onClick={() => setProgramModalOpen(false)} className="text-[#C2C6D1] hover:text-[#EDEFF5] p-1.5 cursor-pointer rounded-full hover:bg-[#1A1C22] transition-colors">
                 <X size={16} />
               </button>
             </div>
             <form onSubmit={handleProgramSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Program Title *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Program Title *</label>
                 <input
                   type="text"
                   placeholder="e.g. AI Foundations"
@@ -1272,39 +1272,39 @@ export default function ProgramManager({
                       slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")
                     });
                   }}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Program Slug *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Program Slug *</label>
                 <input
                   type="text"
                   placeholder="e.g. ai-foundations"
                   value={programForm.slug}
                   onChange={(e) => setProgramForm({ ...programForm, slug: e.target.value })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm font-mono text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Description</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Description</label>
                 <textarea
                   placeholder="Program objectives, pathway roadmap..."
                   value={programForm.description}
                   onChange={(e) => setProgramForm({ ...programForm, description: e.target.value })}
                   rows={4}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm resize-none text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm resize-none text-[#EDEFF5]"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
-                <button type="button" onClick={() => setProgramModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#23252C]/60 mt-6 flex-wrap">
+                <button type="button" onClick={() => setProgramModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#23252C] hover:bg-[#16171D] font-semibold cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" disabled={loading} className="bg-[#0066cc] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#0066cc]/95 transition-colors disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={loading} className="bg-[#6E79F4] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#6E79F4]/95 transition-colors disabled:opacity-50 cursor-pointer">
                   Save Program
                 </button>
               </div>
@@ -1318,18 +1318,18 @@ export default function ProgramManager({
         <>
           <div
             onClick={() => setCourseModalOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#23252D]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
-              <h3 className="font-bold text-sm text-[#1d1d1f]">{editingCourse ? "Edit Course Pathway" : "Create Course Pathway"}</h3>
-              <button onClick={() => setCourseModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#EDEFF5]">{editingCourse ? "Edit Course Pathway" : "Create Course Pathway"}</h3>
+              <button onClick={() => setCourseModalOpen(false)} className="text-[#C2C6D1] hover:text-[#EDEFF5] p-1.5 cursor-pointer rounded-full hover:bg-[#1A1C22] transition-colors">
                 <X size={16} />
               </button>
             </div>
             <form onSubmit={handleCourseSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Course Title *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Course Title *</label>
                 <input
                   type="text"
                   value={courseForm.title}
@@ -1338,40 +1338,40 @@ export default function ProgramManager({
                     title: e.target.value,
                     slug: editingCourse ? courseForm.slug : e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "")
                   })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Course Slug *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Course Slug *</label>
                 <input
                   type="text"
                   value={courseForm.slug}
                   onChange={(e) => setCourseForm({ ...courseForm, slug: e.target.value })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm font-mono text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold mb-1 text-[#86868b]">Duration (minutes)</label>
+                  <label className="block font-semibold mb-1 text-[#C2C6D1]">Duration (minutes)</label>
                   <input
                     type="number"
                     value={courseForm.duration_minutes}
                     onChange={(e) => setCourseForm({ ...courseForm, duration_minutes: Number(e.target.value) })}
-                    className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     min={0}
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
-                <button type="button" onClick={() => setCourseModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#23252C]/60 mt-6 flex-wrap">
+                <button type="button" onClick={() => setCourseModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#23252C] hover:bg-[#16171D] font-semibold cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" disabled={loading} className="bg-[#0066cc] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#0066cc]/95 transition-colors disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={loading} className="bg-[#6E79F4] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#6E79F4]/95 transition-colors disabled:opacity-50 cursor-pointer">
                   Save Changes
                 </button>
               </div>
@@ -1385,44 +1385,44 @@ export default function ProgramManager({
         <>
           <div
             onClick={() => setModuleModalOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#23252D]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
-              <h3 className="font-bold text-sm text-[#1d1d1f]">{editingModule ? "Edit Module" : "Create New Module"}</h3>
-              <button onClick={() => setModuleModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#EDEFF5]">{editingModule ? "Edit Module" : "Create New Module"}</h3>
+              <button onClick={() => setModuleModalOpen(false)} className="text-[#C2C6D1] hover:text-[#EDEFF5] p-1.5 cursor-pointer rounded-full hover:bg-[#1A1C22] transition-colors">
                 <X size={16} />
               </button>
             </div>
             <form onSubmit={handleModuleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Module Title *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Module Title *</label>
                 <input
                   type="text"
                   placeholder="e.g. Getting Started"
                   value={moduleForm.title}
                   onChange={(e) => setModuleForm({ ...moduleForm, title: e.target.value })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Position Order *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Position Order *</label>
                 <input
                   type="number"
                   value={moduleForm.position}
                   onChange={(e) => setModuleForm({ ...moduleForm, position: Number(e.target.value) })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
-                <button type="button" onClick={() => setModuleModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#23252C]/60 mt-6 flex-wrap">
+                <button type="button" onClick={() => setModuleModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#23252C] hover:bg-[#16171D] font-semibold cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" disabled={loading} className="bg-[#0066cc] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#0066cc]/95 transition-colors disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={loading} className="bg-[#6E79F4] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#6E79F4]/95 transition-colors disabled:opacity-50 cursor-pointer">
                   Save Module
                 </button>
               </div>
@@ -1436,34 +1436,34 @@ export default function ProgramManager({
         <>
           <div
             onClick={() => setLessonModalOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#23252D]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
-              <h3 className="font-bold text-sm text-[#1d1d1f]">{editingLesson ? "Edit Lesson" : "Create New Lesson"}</h3>
-              <button onClick={() => setLessonModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#EDEFF5]">{editingLesson ? "Edit Lesson" : "Create New Lesson"}</h3>
+              <button onClick={() => setLessonModalOpen(false)} className="text-[#C2C6D1] hover:text-[#EDEFF5] p-1.5 cursor-pointer rounded-full hover:bg-[#1A1C22] transition-colors">
                 <X size={16} />
               </button>
             </div>
             <form onSubmit={handleLessonSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Lesson Title *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Lesson Title *</label>
                 <input
                   type="text"
                   placeholder="e.g. 1.1 Intro to Layouts"
                   value={lessonForm.title}
                   onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Lesson Type *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Lesson Type *</label>
                 <select
                   value={lessonForm.lesson_type_id || defaultLessonTypeId}
                   onChange={(e) => setLessonForm({ ...lessonForm, lesson_type_id: e.target.value })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-2.5 py-1.5 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#0066cc] shadow-sm"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] shadow-sm"
                 >
                   {lessonTypes.map((t: any) => (
                     <option key={t.id} value={t.id}>{t.description || t.code}</option>
@@ -1472,43 +1472,43 @@ export default function ProgramManager({
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Position Order *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Position Order *</label>
                 <input
                   type="number"
                   value={lessonForm.position}
                   onChange={(e) => setLessonForm({ ...lessonForm, position: Number(e.target.value) })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Video URL (Optional)</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Video URL (Optional)</label>
                 <input
                   type="text"
                   placeholder="https://example.com/video.mp4"
                   value={lessonForm.video_url}
                   onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Structured Content / Text (Optional)</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Structured Content / Text (Optional)</label>
                 <textarea
                   placeholder="Type lesson text content..."
                   value={lessonForm.content_text}
                   onChange={(e) => setLessonForm({ ...lessonForm, content_text: e.target.value })}
                   rows={4}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f] resize-y"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5] resize-y"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
-                <button type="button" onClick={() => setLessonModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#23252C]/60 mt-6 flex-wrap">
+                <button type="button" onClick={() => setLessonModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#23252C] hover:bg-[#16171D] font-semibold cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" disabled={loading} className="bg-[#0066cc] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#0066cc]/95 transition-colors disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={loading} className="bg-[#6E79F4] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#6E79F4]/95 transition-colors disabled:opacity-50 cursor-pointer">
                   Save Lesson
                 </button>
               </div>
@@ -1522,34 +1522,34 @@ export default function ProgramManager({
         <>
           <div
             onClick={() => setResourceModalOpen(false)}
-            className="fixed inset-0 z-[9998] bg-[#1d1d1f]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
+            className="fixed inset-0 z-[9998] bg-[#23252D]/35 backdrop-blur-xs transition-opacity duration-300 animate-fadeIn"
           />
-          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-white border-l border-[#d2d2d7] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#1d1d1f]">
-            <div className="bg-slate-50 px-6 py-5 border-b border-[#d2d2d7] flex items-center justify-between">
-              <h3 className="font-bold text-sm text-[#1d1d1f]">Attach Lesson Resource</h3>
-              <button onClick={() => setResourceModalOpen(false)} className="text-[#86868b] hover:text-[#1d1d1f] p-1.5 cursor-pointer rounded-full hover:bg-slate-100 transition-colors">
+          <div className="fixed inset-y-0 right-0 z-[9999] w-full max-w-md bg-[#131418] border-l border-[#23252C] shadow-2xl flex flex-col animate-slideInRight text-xs text-[#EDEFF5]">
+            <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[#EDEFF5]">Attach Lesson Resource</h3>
+              <button onClick={() => setResourceModalOpen(false)} className="text-[#C2C6D1] hover:text-[#EDEFF5] p-1.5 cursor-pointer rounded-full hover:bg-[#1A1C22] transition-colors">
                 <X size={16} />
               </button>
             </div>
             <form onSubmit={handleResourceSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Resource Title *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Resource Title *</label>
                 <input
                   type="text"
                   placeholder="e.g. Reference Guide PDF"
                   value={resourceForm.title}
                   onChange={(e) => setResourceForm({ ...resourceForm, title: e.target.value })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#86868b]">Resource Type *</label>
+                <label className="block font-semibold mb-1 text-[#C2C6D1]">Resource Type *</label>
                 <select
                   value={resourceForm.resource_type}
                   onChange={(e) => setResourceForm({ ...resourceForm, resource_type: e.target.value })}
-                  className="w-full bg-white border border-[#d2d2d7] rounded-lg px-2.5 py-1.5 text-xs text-[#1d1d1f] focus:outline-none focus:border-[#0066cc] shadow-sm"
+                  className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] shadow-sm"
                 >
                   <option value="link">External URL Link</option>
                   <option value="file">File Attachment</option>
@@ -1558,35 +1558,35 @@ export default function ProgramManager({
 
               {resourceForm.resource_type === "link" ? (
                 <div>
-                  <label className="block font-semibold mb-1 text-[#86868b]">External URL *</label>
+                  <label className="block font-semibold mb-1 text-[#C2C6D1]">External URL *</label>
                   <input
                     type="text"
                     placeholder="https://github.com/..."
                     value={resourceForm.external_url}
                     onChange={(e) => setResourceForm({ ...resourceForm, external_url: e.target.value })}
-                    className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     required
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="block font-semibold mb-1 text-[#86868b]">File Storage URL *</label>
+                  <label className="block font-semibold mb-1 text-[#C2C6D1]">File Storage URL *</label>
                   <input
                     type="text"
                     placeholder="https://storage.hynox.com/file.pdf"
                     value={resourceForm.file_url}
                     onChange={(e) => setResourceForm({ ...resourceForm, file_url: e.target.value })}
-                    className="w-full bg-white border border-[#d2d2d7] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#0066cc] shadow-sm text-[#1d1d1f]"
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     required
                   />
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#d2d2d7]/60 mt-6 flex-wrap">
-                <button type="button" onClick={() => setResourceModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#d2d2d7] hover:bg-slate-50 font-semibold cursor-pointer">
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-[#23252C]/60 mt-6 flex-wrap">
+                <button type="button" onClick={() => setResourceModalOpen(false)} className="px-4 py-2 rounded-lg border border-[#23252C] hover:bg-[#16171D] font-semibold cursor-pointer">
                   Cancel
                 </button>
-                <button type="submit" disabled={loading} className="bg-[#0066cc] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#0066cc]/95 transition-colors disabled:opacity-50 cursor-pointer">
+                <button type="submit" disabled={loading} className="bg-[#6E79F4] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#6E79F4]/95 transition-colors disabled:opacity-50 cursor-pointer">
                   Attach Resource
                 </button>
               </div>

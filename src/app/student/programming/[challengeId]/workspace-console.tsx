@@ -333,17 +333,17 @@ export default function WorkspaceConsole({
   // Lockdown gate: strict-mode challenges require entering fullscreen before any editing.
   if (strictMode && !lockdownActive && !forfeited) {
     return (
-      <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm p-10 text-center space-y-4 max-w-lg mx-auto">
-        <ShieldAlert size={32} className="text-[#DC2626] mx-auto" />
-        <h2 className="text-sm font-bold text-[#0F172A]">Lockdown Mode Challenge</h2>
-        <p className="text-xs text-[#475569] leading-relaxed">
+      <div className="bg-[#131418] border border-[#23252C] rounded-xl shadow-sm p-10 text-center space-y-4 max-w-lg mx-auto">
+        <ShieldAlert size={32} className="text-[#F0555D] mx-auto" />
+        <h2 className="text-sm font-bold text-[#EDEFF5]">Lockdown Mode Challenge</h2>
+        <p className="text-xs text-[#C2C6D1] leading-relaxed">
           This challenge is proctored. Once you begin, you must stay in fullscreen and on this tab.
           Switching tabs or exiting fullscreen will trigger a warning, and a second violation will
           forfeit your attempt with a score of 0.
         </p>
         <button
           onClick={handleEnterLockdown}
-          className="bg-[#2563EB] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold text-xs inline-flex items-center gap-1.5"
+          className="bg-[#6E79F4] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold text-xs inline-flex items-center gap-1.5"
         >
           <Maximize2 size={13} /> Enter Fullscreen & Begin
         </button>
@@ -353,10 +353,10 @@ export default function WorkspaceConsole({
 
   if (forfeited) {
     return (
-      <div className="bg-white border border-red-200 rounded-xl shadow-sm p-10 text-center space-y-3 max-w-lg mx-auto">
+      <div className="bg-[#131418] border border-red-200 rounded-xl shadow-sm p-10 text-center space-y-3 max-w-lg mx-auto">
         <XCircle size={32} className="text-red-600 mx-auto" />
-        <h2 className="text-sm font-bold text-[#0F172A]">Attempt Forfeited</h2>
-        <p className="text-xs text-[#475569]">
+        <h2 className="text-sm font-bold text-[#EDEFF5]">Attempt Forfeited</h2>
+        <p className="text-xs text-[#C2C6D1]">
           Your attempt was forfeited because you left the lockdown environment. Contact your
           instructor if you believe this was an error.
         </p>
@@ -365,16 +365,16 @@ export default function WorkspaceConsole({
   }
 
   return (
-    <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch ${isFullscreen ? "fixed inset-0 bg-[#F8FAFC] z-50 p-6 overflow-auto" : ""}`}>
+    <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch ${isFullscreen ? "fixed inset-0 bg-[#0B0C0F] z-50 p-6 overflow-auto" : ""}`}>
 
       {violationWarning && (
         <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-6">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full space-y-4 text-center shadow-2xl">
-            <ShieldAlert size={28} className="text-[#DC2626] mx-auto" />
-            <h3 className="text-sm font-bold text-[#0F172A]">Lockdown Violation Detected</h3>
-            <p className="text-xs text-[#475569] leading-relaxed">
+          <div className="bg-[#131418] rounded-2xl p-6 max-w-md w-full space-y-4 text-center shadow-2xl">
+            <ShieldAlert size={28} className="text-[#F0555D] mx-auto" />
+            <h3 className="text-sm font-bold text-[#EDEFF5]">Lockdown Violation Detected</h3>
+            <p className="text-xs text-[#C2C6D1] leading-relaxed">
               Return to fullscreen within{" "}
-              <span className="font-bold text-[#DC2626]">
+              <span className="font-bold text-[#F0555D]">
                 {Math.max(0, Math.ceil((violationWarning.deadline - Date.now()) / 1000))}s
               </span>{" "}
               or your attempt will be forfeited with a score of 0. This is your only warning.
@@ -383,7 +383,7 @@ export default function WorkspaceConsole({
               onClick={() => {
                 document.documentElement.requestFullscreen().catch(() => {});
               }}
-              className="bg-[#DC2626] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold hover:bg-[#DC2626]/90 transition-all text-xs flex items-center gap-1.5 justify-center w-full"
+              className="bg-[#F0555D] text-white px-5 py-2.5 rounded-lg shadow-sm font-bold hover:bg-[#F0555D]/90 transition-all text-xs flex items-center gap-1.5 justify-center w-full"
             >
               <Maximize2 size={13} /> Return to Fullscreen & Continue
             </button>
@@ -392,11 +392,11 @@ export default function WorkspaceConsole({
       )}
 
       {/* Left Pane: Problem Description */}
-      <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm flex flex-col justify-between overflow-hidden min-h-[500px]">
+      <div className="bg-[#131418] border border-[#23252C] rounded-xl shadow-sm flex flex-col justify-between overflow-hidden min-h-[500px]">
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
-          <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
-            <h2 className="text-sm font-bold text-[#0F172A] flex items-center gap-1.5">
-              <BookOpen size={16} className="text-[#2563EB]" /> Problem Specification
+          <div className="flex items-center justify-between border-b border-[#23252C] pb-3">
+            <h2 className="text-sm font-bold text-[#EDEFF5] flex items-center gap-1.5">
+              <BookOpen size={16} className="text-[#6E79F4]" /> Problem Specification
             </h2>
             <div className="flex items-center gap-1.5">
               {strictMode && (
@@ -418,66 +418,66 @@ export default function WorkspaceConsole({
 
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-[#475569] leading-relaxed whitespace-pre-wrap">
+              <p className="text-xs text-[#C2C6D1] leading-relaxed whitespace-pre-wrap">
                 {challenge.problem_statement}
               </p>
             </div>
 
             {challenge.instructions && (
-              <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 p-3 rounded-lg text-xs text-[#0f172a] space-y-1">
-                <span className="font-bold text-[#2563EB] block text-[9px] uppercase tracking-wider">💡 Instructions & Hints</span>
+              <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/15 p-3 rounded-lg text-xs text-[#EDEFF5] space-y-1">
+                <span className="font-bold text-[#6E79F4] block text-[9px] uppercase tracking-wider">💡 Instructions & Hints</span>
                 <p className="leading-relaxed whitespace-pre-wrap">{challenge.instructions}</p>
               </div>
             )}
 
             {challenge.input_format && (
               <div className="space-y-1">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#0F172A]">Input Format</h3>
-                <p className="text-xs text-[#475569]">{challenge.input_format}</p>
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5]">Input Format</h3>
+                <p className="text-xs text-[#C2C6D1]">{challenge.input_format}</p>
               </div>
             )}
 
             {challenge.output_format && (
               <div className="space-y-1">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#0F172A]">Output Format</h3>
-                <p className="text-xs text-[#475569]">{challenge.output_format}</p>
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5]">Output Format</h3>
+                <p className="text-xs text-[#C2C6D1]">{challenge.output_format}</p>
               </div>
             )}
 
             {challenge.constraints_text && (
               <div className="space-y-1">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#0F172A]">Constraints</h3>
-                <pre className="text-[9px] font-mono bg-slate-50 border border-[#E2E8F0] p-2 rounded text-[#0F172A]">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5]">Constraints</h3>
+                <pre className="text-[9px] font-mono bg-[#16171D] border border-[#23252C] p-2 rounded text-[#EDEFF5]">
                   {challenge.constraints_text}
                 </pre>
               </div>
             )}
 
-            <div className="flex gap-4 text-[9px] font-mono text-[#475569]">
-              <span className="bg-slate-100 px-2 py-1 rounded">Time Limit: {challenge.time_limit_ms || 1000}ms</span>
-              <span className="bg-slate-100 px-2 py-1 rounded">Memory Limit: {challenge.memory_limit_mb || 256}MB</span>
+            <div className="flex gap-4 text-[9px] font-mono text-[#C2C6D1]">
+              <span className="bg-[#1A1C22] px-2 py-1 rounded">Time Limit: {challenge.time_limit_ms || 1000}ms</span>
+              <span className="bg-[#1A1C22] px-2 py-1 rounded">Memory Limit: {challenge.memory_limit_mb || 256}MB</span>
             </div>
           </div>
 
           {/* Examples Section */}
           {examples.length > 0 && (
-            <div className="space-y-4 pt-4 border-t border-[#E2E8F0]">
-              <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#0F172A]">Examples</h3>
+            <div className="space-y-4 pt-4 border-t border-[#23252C]">
+              <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5]">Examples</h3>
               {examples.map((ex) => (
-                <div key={ex.id} className="border border-[#E2E8F0] rounded-xl p-4 bg-slate-50/50 space-y-2">
-                  <span className="text-[9px] font-bold text-[#2563EB] block">Example {ex.example_number}</span>
+                <div key={ex.id} className="border border-[#23252C] rounded-xl p-4 bg-[#16171D]/50 space-y-2">
+                  <span className="text-[9px] font-bold text-[#6E79F4] block">Example {ex.example_number}</span>
                   <div className="grid grid-cols-2 gap-3 text-[9px] font-mono">
                     <div>
-                      <span className="text-[8px] font-bold text-[#475569] block mb-0.5">Input</span>
-                      <pre className="bg-white border border-[#E2E8F0] p-2 rounded text-[#0F172A] whitespace-pre-wrap">{ex.input_example}</pre>
+                      <span className="text-[8px] font-bold text-[#C2C6D1] block mb-0.5">Input</span>
+                      <pre className="bg-[#131418] border border-[#23252C] p-2 rounded text-[#EDEFF5] whitespace-pre-wrap">{ex.input_example}</pre>
                     </div>
                     <div>
-                      <span className="text-[8px] font-bold text-[#475569] block mb-0.5">Output</span>
-                      <pre className="bg-white border border-[#E2E8F0] p-2 rounded text-[#0F172A] whitespace-pre-wrap">{ex.output_example}</pre>
+                      <span className="text-[8px] font-bold text-[#C2C6D1] block mb-0.5">Output</span>
+                      <pre className="bg-[#131418] border border-[#23252C] p-2 rounded text-[#EDEFF5] whitespace-pre-wrap">{ex.output_example}</pre>
                     </div>
                   </div>
                   {ex.explanation && (
-                    <p className="text-[9px] text-[#475569] italic mt-1">
+                    <p className="text-[9px] text-[#C2C6D1] italic mt-1">
                       <strong>Explanation:</strong> {ex.explanation}
                     </p>
                   )}
@@ -487,7 +487,7 @@ export default function WorkspaceConsole({
           )}
         </div>
 
-        <div className="bg-slate-50 border-t border-[#E2E8F0] p-4 flex justify-between items-center text-[10px] text-[#475569]">
+        <div className="bg-[#16171D] border-t border-[#23252C] p-4 flex justify-between items-center text-[10px] text-[#C2C6D1]">
           <span>Security: submissions run in an isolated, network-disabled sandbox. Hidden test cases are active.</span>
         </div>
       </div>
@@ -496,14 +496,14 @@ export default function WorkspaceConsole({
       <div className="flex flex-col gap-6">
 
         {/* Workspace Navigation Header */}
-        <div className="bg-white border border-[#E2E8F0] rounded-xl p-3 shadow-sm flex items-center justify-between">
+        <div className="bg-[#131418] border border-[#23252C] rounded-xl p-3 shadow-sm flex items-center justify-between">
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab("editor")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === "editor"
-                  ? "bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/10"
-                  : "hover:bg-slate-50 text-[#475569]"
+                  ? "bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/10"
+                  : "hover:bg-[#16171D] text-[#C2C6D1]"
               }`}
             >
               <Code size={13} />
@@ -513,8 +513,8 @@ export default function WorkspaceConsole({
               onClick={() => setActiveTab("results")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === "results"
-                  ? "bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/10"
-                  : "hover:bg-slate-50 text-[#475569]"
+                  ? "bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/10"
+                  : "hover:bg-[#16171D] text-[#C2C6D1]"
               }`}
             >
               <TerminalIcon size={13} />
@@ -524,8 +524,8 @@ export default function WorkspaceConsole({
               onClick={() => setActiveTab("history")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 activeTab === "history"
-                  ? "bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/10"
-                  : "hover:bg-slate-50 text-[#475569]"
+                  ? "bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/10"
+                  : "hover:bg-[#16171D] text-[#C2C6D1]"
               }`}
             >
               <History size={13} />
@@ -535,26 +535,26 @@ export default function WorkspaceConsole({
 
           <button
             onClick={toggleFullscreen}
-            className="p-1.5 hover:bg-slate-50 border border-transparent hover:border-[#E2E8F0] rounded-lg transition-all text-[#475569]"
+            className="p-1.5 hover:bg-[#16171D] border border-transparent hover:border-[#23252C] rounded-lg transition-all text-[#C2C6D1]"
           >
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
         </div>
 
         {/* Dynamic Panel Content */}
-        <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col min-h-[400px]">
+        <div className="bg-[#131418] border border-[#23252C] rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col min-h-[400px]">
 
           {/* TAB 1: MONACO EDITOR */}
           {activeTab === "editor" && (
             <div className="flex flex-col flex-1">
-              <div className="p-4 border-b border-[#E2E8F0] bg-slate-50/50 flex justify-between items-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F172A] flex items-center gap-1">
-                  <Code size={14} className="text-[#2563EB]" /> Code Editor
+              <div className="p-4 border-b border-[#23252C] bg-[#16171D]/50 flex justify-between items-center">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5] flex items-center gap-1">
+                  <Code size={14} className="text-[#6E79F4]" /> Code Editor
                 </span>
                 <select
                   value={selectedLanguage}
                   onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="bg-white border border-[#E2E8F0] rounded-lg px-2.5 py-1 text-[10px] font-semibold text-[#0F172A] outline-none shadow-sm focus:border-[#2563EB]/30 transition-all"
+                  className="bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1 text-[10px] font-semibold text-[#EDEFF5] outline-none shadow-sm focus:border-[#6E79F4]/30 transition-all"
                 >
                   {LANGUAGE_OPTIONS.map((lang) => (
                     <option key={lang.value} value={lang.value}>{lang.label}</option>
@@ -562,7 +562,7 @@ export default function WorkspaceConsole({
                 </select>
               </div>
 
-              <div className="flex-1 bg-[#0F172A]">
+              <div className="flex-1 bg-[#6E79F4]">
                 <Editor
                   height="340px"
                   language={selectedLanguage}
@@ -584,10 +584,10 @@ export default function WorkspaceConsole({
                         { token: "type", foreground: "B392F0" }
                       ],
                       colors: {
-                        "editor.background": "#0F172A",
-                        "editor.foreground": "#F8FAFC",
-                        "editorLineNumber.foreground": "#475569",
-                        "editorLineNumber.activeForeground": "#2563EB",
+                        "editor.background": "#EDEFF5",
+                        "editor.foreground": "#0B0C0F",
+                        "editorLineNumber.foreground": "#9BA1AE",
+                        "editorLineNumber.activeForeground": "#6E79F4",
                         "editor.lineHighlightBackground": "#1E293B",
                         "editor.selectionBackground": "#334155"
                       }
@@ -606,11 +606,11 @@ export default function WorkspaceConsole({
                 />
               </div>
 
-              <div className="p-4 border-t border-[#E2E8F0] bg-slate-50/30 flex gap-3">
+              <div className="p-4 border-t border-[#23252C] bg-[#16171D]/30 flex gap-3">
                 <button
                   onClick={handleRunCode}
                   disabled={runningCode || submitting}
-                  className="bg-white border border-[#E2E8F0] hover:border-[#2563EB]/25 hover:bg-[#2563EB]/5 text-[#0F172A] hover:text-[#2563EB] px-4 py-2 rounded-lg shadow-sm font-semibold text-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  className="bg-[#131418] border border-[#23252C] hover:border-[#6E79F4]/25 hover:bg-[#6E79F4]/5 text-[#EDEFF5] hover:text-[#6E79F4] px-4 py-2 rounded-lg shadow-sm font-semibold text-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                 >
                   {runningCode ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
                   Run Code
@@ -619,7 +619,7 @@ export default function WorkspaceConsole({
                 <button
                   onClick={handleSubmitSolution}
                   disabled={runningCode || submitting}
-                  className="bg-[#2563EB] text-white hover:bg-[#2563EB]/95 px-4.5 py-2 rounded-lg shadow-sm font-bold text-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer ml-auto"
+                  className="bg-[#6E79F4] text-white hover:bg-[#6E79F4]/95 px-4.5 py-2 rounded-lg shadow-sm font-bold text-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer ml-auto"
                 >
                   {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                   Submit Solution
@@ -632,12 +632,12 @@ export default function WorkspaceConsole({
           {activeTab === "results" && (
             <div className="p-6 flex-1 flex flex-col justify-between">
               <div className="space-y-6 overflow-y-auto flex-1 max-h-[380px]">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#0F172A] border-b border-[#E2E8F0] pb-2">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5] border-b border-[#23252C] pb-2">
                   Execution Report
                 </h3>
 
                 {statusMessage && (
-                  <div className="bg-[#2563EB]/5 border border-[#2563EB]/15 text-[#2563EB] p-4 rounded-xl flex items-center gap-2 text-xs font-semibold animate-pulse">
+                  <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/15 text-[#6E79F4] p-4 rounded-xl flex items-center gap-2 text-xs font-semibold animate-pulse">
                     <Loader2 size={14} className="animate-spin" />
                     <span>{statusMessage}</span>
                   </div>
@@ -666,9 +666,9 @@ export default function WorkspaceConsole({
                       {runResults.filter((r) => r.passed).length} / {runResults.length} visible test cases passed
                     </div>
                     {runResults.map((res, idx) => (
-                      <div key={idx} className="border border-[#E2E8F0] rounded-xl p-4 bg-slate-50/20 space-y-3 text-xs">
+                      <div key={idx} className="border border-[#23252C] rounded-xl p-4 bg-[#16171D]/20 space-y-3 text-xs">
                         <div className="flex justify-between items-center">
-                          <span className="font-bold text-[#0F172A]">Test Case #{idx + 1}</span>
+                          <span className="font-bold text-[#EDEFF5]">Test Case #{idx + 1}</span>
                           <span className={`px-2 py-0.5 rounded text-[8px] font-bold border ${
                             res.passed
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -680,12 +680,12 @@ export default function WorkspaceConsole({
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-[9px]">
                           <div>
-                            <span className="text-[8px] font-bold text-[#475569] block mb-0.5">Input</span>
-                            <pre className="bg-white border border-[#E2E8F0] p-2 rounded overflow-x-auto">{res.input}</pre>
+                            <span className="text-[8px] font-bold text-[#C2C6D1] block mb-0.5">Input</span>
+                            <pre className="bg-[#131418] border border-[#23252C] p-2 rounded overflow-x-auto">{res.input}</pre>
                           </div>
                           <div>
-                            <span className="text-[8px] font-bold text-[#475569] block mb-0.5">Expected Output</span>
-                            <pre className="bg-white border border-[#E2E8F0] p-2 rounded overflow-x-auto">{res.expected}</pre>
+                            <span className="text-[8px] font-bold text-[#C2C6D1] block mb-0.5">Expected Output</span>
+                            <pre className="bg-[#131418] border border-[#23252C] p-2 rounded overflow-x-auto">{res.expected}</pre>
                           </div>
                         </div>
 
@@ -703,7 +703,7 @@ export default function WorkspaceConsole({
                           </div>
                         )}
 
-                        <div className="text-[8px] text-[#475569] font-mono">
+                        <div className="text-[8px] text-[#C2C6D1] font-mono">
                           Execution time: {res.executionTimeMs}ms
                         </div>
                       </div>
@@ -728,41 +728,41 @@ export default function WorkspaceConsole({
                         : `${(activeSubmissionResults.submission?.submission_status_code || "wrong_answer").replace(/_/g, " ")} — ${activeSubmissionResults.result?.passed_test_cases || 0}/${activeSubmissionResults.result?.total_test_cases || 0} test cases passed`}
                     </div>
 
-                    <div className="bg-slate-50 border border-[#E2E8F0] rounded-xl p-4 flex flex-wrap justify-between items-center gap-4 text-xs">
+                    <div className="bg-[#16171D] border border-[#23252C] rounded-xl p-4 flex flex-wrap justify-between items-center gap-4 text-xs">
                       <div>
-                        <span className="text-[9px] text-[#475569] block font-bold uppercase tracking-wider">Passed Cases</span>
-                        <span className="text-sm font-bold text-[#0F172A]">
+                        <span className="text-[9px] text-[#C2C6D1] block font-bold uppercase tracking-wider">Passed Cases</span>
+                        <span className="text-sm font-bold text-[#EDEFF5]">
                           {activeSubmissionResults.result?.passed_test_cases || 0} / {activeSubmissionResults.result?.total_test_cases || 0}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#475569] block font-bold uppercase tracking-wider">Score</span>
-                        <span className="text-sm font-bold text-[#2563EB]">
+                        <span className="text-[9px] text-[#C2C6D1] block font-bold uppercase tracking-wider">Score</span>
+                        <span className="text-sm font-bold text-[#6E79F4]">
                           {activeSubmissionResults.result?.score || 0} pts
                         </span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#475569] block font-bold uppercase tracking-wider">Time Spent</span>
-                        <span className="text-sm font-bold text-[#0F172A] flex items-center gap-1">
+                        <span className="text-[9px] text-[#C2C6D1] block font-bold uppercase tracking-wider">Time Spent</span>
+                        <span className="text-sm font-bold text-[#EDEFF5] flex items-center gap-1">
                           <Clock size={12} /> {activeSubmissionResults.result?.execution_time_ms || 0}ms
                         </span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-[#475569] block font-bold uppercase tracking-wider">Memory</span>
-                        <span className="text-sm font-bold text-[#0F172A] flex items-center gap-1">
+                        <span className="text-[9px] text-[#C2C6D1] block font-bold uppercase tracking-wider">Memory</span>
+                        <span className="text-sm font-bold text-[#EDEFF5] flex items-center gap-1">
                           <Cpu size={12} /> {activeSubmissionResults.result?.memory_used_kb || 0}KB
                         </span>
                       </div>
                     </div>
 
                     <div className="space-y-3">
-                      <h4 className="text-[9px] font-bold uppercase tracking-wider text-[#0F172A]">Detailed Results</h4>
-                      <div className="divide-y divide-[#E2E8F0] border border-[#E2E8F0] rounded-xl bg-white overflow-hidden">
+                      <h4 className="text-[9px] font-bold uppercase tracking-wider text-[#EDEFF5]">Detailed Results</h4>
+                      <div className="divide-y divide-[#23252C] border border-[#23252C] rounded-xl bg-[#131418] overflow-hidden">
                         {activeSubmissionResults.testCases?.map((tc: any, index: number) => (
                           <div key={tc.id} className="p-3 flex justify-between items-center">
                             <div>
-                              <span className="font-bold text-[#0F172A]">Test Case #{index + 1}</span>
-                              <span className="text-[8px] text-[#475569] font-mono ml-3">{tc.execution_time_ms}ms</span>
+                              <span className="font-bold text-[#EDEFF5]">Test Case #{index + 1}</span>
+                              <span className="text-[8px] text-[#C2C6D1] font-mono ml-3">{tc.execution_time_ms}ms</span>
                             </div>
                             <span className={`px-2 py-0.5 rounded text-[8px] font-bold border ${
                               tc.passed
@@ -778,8 +778,8 @@ export default function WorkspaceConsole({
 
                     {activeSubmissionResults.logs?.length > 0 && (
                       <div className="space-y-2">
-                        <h4 className="text-[9px] font-bold uppercase tracking-wider text-[#0F172A]">Judge Engine Outputs</h4>
-                        <div className="bg-[#0F172A] text-emerald-400 font-mono p-4 rounded-xl text-[9px] space-y-1 max-h-32 overflow-y-auto border border-slate-800">
+                        <h4 className="text-[9px] font-bold uppercase tracking-wider text-[#EDEFF5]">Judge Engine Outputs</h4>
+                        <div className="bg-[#6E79F4] text-emerald-400 font-mono p-4 rounded-xl text-[9px] space-y-1 max-h-32 overflow-y-auto border border-slate-800">
                           {activeSubmissionResults.logs.map((log: any) => (
                             <div key={log.id}>
                               <span className="text-amber-400">[{log.log_type}]</span> {log.log_message}
@@ -792,7 +792,7 @@ export default function WorkspaceConsole({
                 )}
 
                 {!runningCode && !submitting && !runResults && !activeSubmissionResults && !runConsoleError && (
-                  <div className="text-center py-10 text-slate-500 font-medium">
+                  <div className="text-center py-10 text-[#C2C6D1] font-medium">
                     No execution outputs. Write code and click "Run Code" or "Submit Solution".
                   </div>
                 )}
@@ -804,11 +804,11 @@ export default function WorkspaceConsole({
           {activeTab === "history" && (
             <div className="p-6 flex-1 flex flex-col justify-between">
               <div className="space-y-4 overflow-y-auto flex-1 max-h-[380px]">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#0F172A] border-b border-[#E2E8F0] pb-2">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#EDEFF5] border-b border-[#23252C] pb-2">
                   My Submissions
                 </h3>
 
-                <div className="divide-y divide-[#E2E8F0]">
+                <div className="divide-y divide-[#23252C]">
                   {submissions.length > 0 ? (
                     submissions.map((sub) => {
                       const dateStr = new Date(sub.submitted_at).toLocaleString();
@@ -822,8 +822,8 @@ export default function WorkspaceConsole({
                       return (
                         <div key={sub.id} className="py-3 flex justify-between items-center text-xs">
                           <div>
-                            <span className="font-bold capitalize text-[#0F172A]">{sub.language}</span>
-                            <span className="text-[10px] text-[#475569] ml-3">{dateStr}</span>
+                            <span className="font-bold capitalize text-[#EDEFF5]">{sub.language}</span>
+                            <span className="text-[10px] text-[#C2C6D1] ml-3">{dateStr}</span>
                             <div className="mt-1 flex gap-2">
                               <span className={`px-2 py-0.5 rounded text-[8px] font-bold border capitalize ${statusColor}`}>
                                 {sub.submission_status_code}
@@ -833,7 +833,7 @@ export default function WorkspaceConsole({
 
                           <button
                             onClick={() => handleLoadSubmissionResults(sub)}
-                            className="text-[#2563EB] hover:underline font-bold text-[10px] cursor-pointer"
+                            className="text-[#6E79F4] hover:underline font-bold text-[10px] cursor-pointer"
                           >
                             Logs & Score
                           </button>
@@ -841,7 +841,7 @@ export default function WorkspaceConsole({
                       );
                     })
                   ) : (
-                    <div className="text-center py-10 text-slate-500 font-medium">
+                    <div className="text-center py-10 text-[#C2C6D1] font-medium">
                       You have not submitted any solutions yet.
                     </div>
                   )}

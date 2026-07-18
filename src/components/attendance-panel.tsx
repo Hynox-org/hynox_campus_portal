@@ -153,18 +153,18 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
   };
 
   return (
-    <div className="space-y-6 text-xs text-[#1d1d1f]">
+    <div className="space-y-6 text-xs text-[#EDEFF5]">
       
       {/* Top Controls Bar */}
-      <div className="bg-white border border-[#d2d2d7] rounded-xl p-4 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         
         {/* Cohort Select */}
         <div className="flex flex-col gap-1 w-full sm:w-64">
-          <label className="font-bold text-[#86868b] uppercase tracking-wider text-[10px]">Select Cohort Batch</label>
+          <label className="font-bold text-[#C2C6D1] uppercase tracking-wider text-[10px]">Select Cohort Batch</label>
           <select
             value={selectedCohortId}
             onChange={(e) => setSelectedCohortId(e.target.value)}
-            className="bg-white border border-[#d2d2d7] px-3 py-2 rounded-xl text-xs font-bold text-[#1d1d1f] focus:outline-none focus:border-[#0066cc] shadow-xs w-full"
+            className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs font-bold text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] shadow-xs w-full"
           >
             {cohorts.map(coh => (
               <option key={coh.id} value={coh.id}>{coh.name} ({coh.code})</option>
@@ -173,13 +173,13 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
         </div>
 
         {/* View Toggle Buttons */}
-        <div className="flex items-center bg-slate-100 p-1 border border-[#d2d2d7] rounded-xl self-stretch sm:self-auto gap-1">
+        <div className="flex items-center bg-[#1A1C22] p-1 border border-[#23252C] rounded-xl self-stretch sm:self-auto gap-1">
           <button
             onClick={() => setActiveTab("mark")}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all ${
               activeTab === "mark"
-                ? "bg-white text-[#0066cc] shadow-xs border border-[#d2d2d7]"
-                : "text-[#86868b] hover:text-[#1d1d1f]"
+                ? "bg-[#131418] text-[#6E79F4] shadow-xs border border-[#23252C]"
+                : "text-[#C2C6D1] hover:text-[#EDEFF5]"
             }`}
           >
             <ListTodo size={14} />
@@ -189,8 +189,8 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
             onClick={() => setActiveTab("analytics")}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-all ${
               activeTab === "analytics"
-                ? "bg-white text-[#0066cc] shadow-xs border border-[#d2d2d7]"
-                : "text-[#86868b] hover:text-[#1d1d1f]"
+                ? "bg-[#131418] text-[#6E79F4] shadow-xs border border-[#23252C]"
+                : "text-[#C2C6D1] hover:text-[#EDEFF5]"
             }`}
           >
             <TrendingUp size={14} />
@@ -200,14 +200,14 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
       </div>
 
       {error && (
-        <div className="bg-[#DC2626]/5 border border-[#DC2626]/20 text-[#DC2626] rounded-xl p-4 flex items-start gap-2">
+        <div className="bg-[#F0555D]/5 border border-[#F0555D]/20 text-[#F0555D] rounded-xl p-4 flex items-start gap-2">
           <AlertCircle size={16} className="shrink-0 mt-0.5" />
           <span className="font-semibold">{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="bg-[#16A34A]/5 border border-[#16A34A]/20 text-[#16A34A] rounded-xl p-4 flex items-center gap-2">
+        <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/20 text-[#2FBF71] rounded-xl p-4 flex items-center gap-2">
           <CheckCircle2 size={16} />
           <span className="font-semibold">{success}</span>
         </div>
@@ -218,25 +218,25 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
         <div className="space-y-6">
           {activeTab === "mark" ? (
             /* Tab 1: Mark Today's Sheet */
-            <div className="bg-white border border-[#d2d2d7] rounded-xl overflow-hidden shadow-sm max-w-4xl mx-auto">
-              <div className="bg-slate-50 px-6 py-4 border-b border-[#d2d2d7] flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div className="bg-[#131418] border border-[#23252C] rounded-xl overflow-hidden shadow-sm max-w-4xl mx-auto">
+              <div className="bg-[#16171D] px-6 py-4 border-b border-[#23252C] flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
-                  <h4 className="font-bold text-xs text-[#1d1d1f] uppercase tracking-wider flex items-center gap-1.5">
-                    <Calendar size={14} className="text-[#0066cc]" /> 
+                  <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar size={14} className="text-[#6E79F4]" /> 
                     Daily Attendance Sheet (Date: {todayStr})
                   </h4>
-                  <p className="text-[10px] text-[#86868b] mt-0.5">
+                  <p className="text-[10px] text-[#C2C6D1] mt-0.5">
                     Record attendance statuses or mark this day as a holiday for the cohort.
                   </p>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-2 font-bold cursor-pointer bg-slate-100 border border-[#d2d2d7] px-3 py-1.5 rounded-lg select-none hover:bg-slate-200 transition-colors text-[10px]">
+                  <label className="flex items-center gap-2 font-bold cursor-pointer bg-[#1A1C22] border border-[#23252C] px-3 py-1.5 rounded-lg select-none hover:bg-[#23252C] transition-colors text-[10px]">
                     <input
                       type="checkbox"
                       checked={isHoliday}
                       onChange={(e) => setIsHoliday(e.target.checked)}
-                      className="rounded text-[#0066cc] focus:ring-[#0066cc]"
+                      className="rounded text-[#6E79F4] focus:ring-[#6E79F4]"
                     />
                     Govt Holiday
                   </label>
@@ -244,10 +244,10 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
               </div>
 
               {isSunday ? (
-                <div className="p-8 text-center text-slate-500 font-semibold space-y-2">
-                  <Smile size={32} className="mx-auto text-[#0066cc]" />
+                <div className="p-8 text-center text-[#C2C6D1] font-semibold space-y-2">
+                  <Smile size={32} className="mx-auto text-[#6E79F4]" />
                   <p className="text-sm">Sunday (Weekly Leave)</p>
-                  <p className="text-[10px] text-[#86868b] max-w-xs mx-auto">Sundays are automatically skipped and excluded from attendance statistics.</p>
+                  <p className="text-[10px] text-[#C2C6D1] max-w-xs mx-auto">Sundays are automatically skipped and excluded from attendance statistics.</p>
                 </div>
               ) : isHoliday ? (
                 <div className="p-6 space-y-4">
@@ -259,36 +259,36 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="font-bold text-[10px] text-[#86868b] uppercase tracking-wider">Holiday Title / Description</label>
+                    <label className="font-bold text-[10px] text-[#C2C6D1] uppercase tracking-wider">Holiday Title / Description</label>
                     <input
                       type="text"
                       placeholder="e.g. Independence Day, Christmas..."
                       value={holidayName}
                       onChange={(e) => setHolidayName(e.target.value)}
-                      className="bg-white border border-[#d2d2d7] px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#0066cc] w-full"
+                      className="bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6E79F4] w-full"
                     />
                   </div>
                   <button
                     onClick={handleSaveAttendance}
                     disabled={saveLoading}
-                    className="w-full bg-[#0066cc] text-white py-2 rounded-xl font-bold hover:bg-[#0066cc]/95 transition-all shadow-xs"
+                    className="w-full bg-[#6E79F4] text-white py-2 rounded-xl font-bold hover:bg-[#6E79F4]/95 transition-all shadow-xs"
                   >
                     {saveLoading ? "Saving Holiday..." : "Confirm Government Holiday"}
                   </button>
                 </div>
               ) : cohortStudents.length === 0 ? (
-                <div className="p-8 text-center text-[#86868b] font-semibold bg-slate-50/10">
+                <div className="p-8 text-center text-[#C2C6D1] font-semibold bg-[#16171D]/10">
                   No active students enrolled in this cohort batch.
                 </div>
               ) : (
-                <div className="divide-y divide-[#d2d2d7]">
+                <div className="divide-y divide-[#23252C]">
                   {cohortStudents.map((student) => {
                     const currentStatus = studentStatuses[student.id] || "present";
                     return (
-                      <div key={student.id} className="px-6 py-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-slate-50/20 transition-all">
+                      <div key={student.id} className="px-6 py-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:bg-[#16171D]/20 transition-all">
                         <div className="min-w-0">
-                          <span className="font-bold text-sm text-[#1d1d1f] block">{student.full_name || "Enrolled Student"}</span>
-                          <span className="text-[10px] text-[#86868b] block">{student.email}</span>
+                          <span className="font-bold text-sm text-[#EDEFF5] block">{student.full_name || "Enrolled Student"}</span>
+                          <span className="text-[10px] text-[#C2C6D1] block">{student.email}</span>
                         </div>
 
                         {/* Status Toggle Radio Pills (Excused Removed) */}
@@ -305,11 +305,11 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
                               className={`px-3 py-1 rounded-lg font-bold capitalize text-[10px] border transition-all ${
                                 currentStatus === statusOption
                                   ? statusOption === "present"
-                                    ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/30"
+                                    ? "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/30"
                                     : statusOption === "absent"
-                                    ? "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/30"
-                                    : "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30"
-                                  : "bg-white border-[#d2d2d7] text-[#86868b] hover:text-[#1d1d1f] hover:bg-slate-50"
+                                    ? "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/30"
+                                    : "bg-[#F5B04A]/10 text-[#F5B04A] border-[#F5B04A]/30"
+                                  : "bg-[#131418] border-[#23252C] text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#16171D]"
                               }`}
                             >
                               {statusOption}
@@ -320,11 +320,11 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
                     );
                   })}
 
-                  <div className="px-6 py-4 bg-slate-50 border-t border-[#d2d2d7]">
+                  <div className="px-6 py-4 bg-[#16171D] border-t border-[#23252C]">
                     <button
                       onClick={handleSaveAttendance}
                       disabled={saveLoading}
-                      className="w-full bg-[#0066cc] text-white py-2.5 rounded-xl font-bold hover:bg-[#0066cc]/95 transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5"
+                      className="w-full bg-[#6E79F4] text-white py-2.5 rounded-xl font-bold hover:bg-[#6E79F4]/95 transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5"
                     >
                       <Check size={14} />
                       {saveLoading ? "Saving Attendance Sheet..." : "Save Today's Attendance Sheet"}
@@ -338,31 +338,31 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               
               {/* Standings list */}
-              <div className="lg:col-span-2 bg-white border border-[#d2d2d7] rounded-xl p-6 shadow-sm space-y-4">
-                <h4 className="font-bold text-xs text-[#1d1d1f] uppercase tracking-wider flex items-center gap-1.5">
-                  <Users size={14} className="text-[#0066cc]" />
+              <div className="lg:col-span-2 bg-[#131418] border border-[#23252C] rounded-xl p-6 shadow-sm space-y-4">
+                <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider flex items-center gap-1.5">
+                  <Users size={14} className="text-[#6E79F4]" />
                   Students Standings & Analytics
                 </h4>
 
                 {loading ? (
-                  <div className="text-center py-8 font-bold text-[#86868b] animate-pulse">Calculating data metrics...</div>
+                  <div className="text-center py-8 font-bold text-[#C2C6D1] animate-pulse">Calculating data metrics...</div>
                 ) : report ? (
-                  <div className="divide-y divide-[#d2d2d7]">
+                  <div className="divide-y divide-[#23252C]">
                     {report.studentStats.map((stat: any) => {
                       const isUnderThreshold = stat.percentage < 70;
                       return (
-                        <div key={stat.id} className="py-3 flex justify-between items-center hover:bg-slate-50/20 px-2 rounded-lg transition-all">
+                        <div key={stat.id} className="py-3 flex justify-between items-center hover:bg-[#16171D]/20 px-2 rounded-lg transition-all">
                           <div className="min-w-0 pr-2">
-                            <span className="font-bold block text-sm text-[#1d1d1f]">{stat.name}</span>
-                            <span className="text-[10px] text-[#86868b] block mt-0.5">
+                            <span className="font-bold block text-sm text-[#EDEFF5]">{stat.name}</span>
+                            <span className="text-[10px] text-[#C2C6D1] block mt-0.5">
                               Present: {stat.present}d | Absent: {stat.absent}d | Late: {stat.late}d
                             </span>
                           </div>
                           
                           <span className={`px-2.5 py-0.5 rounded-lg text-xs font-black border shrink-0 ${
                             isUnderThreshold 
-                              ? "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20" 
-                              : "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
+                              ? "bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20" 
+                              : "bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20"
                           }`}>
                             {stat.percentage}%
                           </span>
@@ -370,33 +370,33 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
                       );
                     })}
                     {report.studentStats.length === 0 && (
-                      <div className="text-center py-6 text-slate-400">No student records enrolled.</div>
+                      <div className="text-center py-6 text-[#A3A9B6]">No student records enrolled.</div>
                     )}
                   </div>
                 ) : (
-                  <div className="text-center py-6 text-slate-400">No logs mapped for this cohort batch.</div>
+                  <div className="text-center py-6 text-[#A3A9B6]">No logs mapped for this cohort batch.</div>
                 )}
               </div>
 
               {/* Sessions Summary Metadata block */}
-              <div className="bg-white border border-[#d2d2d7] rounded-xl p-4 shadow-sm space-y-4">
-                <h4 className="font-bold text-xs text-[#1d1d1f] uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar size={14} className="text-[#0066cc]" />
+              <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 shadow-sm space-y-4">
+                <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar size={14} className="text-[#6E79F4]" />
                   Active Days Log
                 </h4>
 
                 {report ? (
                   <div className="space-y-4 text-xs">
                     <div className="grid grid-cols-2 gap-3 text-center">
-                      <div className="bg-slate-50 border border-[#d2d2d7] p-3 rounded-lg">
-                        <span className="text-[9px] font-bold text-[#86868b] uppercase tracking-wider block">Marked Days</span>
-                        <span className="font-black text-sm text-[#1d1d1f] block mt-0.5">
+                      <div className="bg-[#16171D] border border-[#23252C] p-3 rounded-lg">
+                        <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider block">Marked Days</span>
+                        <span className="font-black text-sm text-[#EDEFF5] block mt-0.5">
                           {report.sessions.filter((s: any) => !s.is_holiday).length} Days
                         </span>
                       </div>
-                      <div className="bg-slate-50 border border-[#d2d2d7] p-3 rounded-lg">
-                        <span className="text-[9px] font-bold text-[#86868b] uppercase tracking-wider block">Govt Holidays</span>
-                        <span className="font-black text-sm text-[#1d1d1f] block mt-0.5">
+                      <div className="bg-[#16171D] border border-[#23252C] p-3 rounded-lg">
+                        <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider block">Govt Holidays</span>
+                        <span className="font-black text-sm text-[#EDEFF5] block mt-0.5">
                           {report.sessions.filter((s: any) => s.is_holiday).length} Days
                         </span>
                       </div>
@@ -404,15 +404,15 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
 
                     <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                       {report.sessions.map((session: any) => (
-                        <div key={session.id} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-[#d2d2d7]">
+                        <div key={session.id} className="flex justify-between items-center bg-[#16171D] p-2 rounded-lg border border-[#23252C]">
                           <div>
-                            <span className="font-bold text-slate-700 block">{session.session_date}</span>
+                            <span className="font-bold text-[#E2E4EB] block">{session.session_date}</span>
                             {session.is_holiday && (
-                              <span className="text-[9px] text-[#F59E0B] font-semibold block">{session.holiday_name || "Govt Holiday"}</span>
+                              <span className="text-[9px] text-[#F5B04A] font-semibold block">{session.holiday_name || "Govt Holiday"}</span>
                             )}
                           </div>
                           <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                            session.is_holiday ? "bg-[#F59E0B]/10 text-[#F59E0B]" : "bg-[#16A34A]/10 text-[#16A34A]"
+                            session.is_holiday ? "bg-[#F5B04A]/10 text-[#F5B04A]" : "bg-[#2FBF71]/10 text-[#2FBF71]"
                           }`}>
                             {session.is_holiday ? "Holiday" : "Active"}
                           </span>
@@ -421,7 +421,7 @@ export default function AttendancePanel({ cohorts, students, enrollments, userRo
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-6 text-slate-400">No logs found.</div>
+                  <div className="text-center py-6 text-[#A3A9B6]">No logs found.</div>
                 )}
               </div>
               

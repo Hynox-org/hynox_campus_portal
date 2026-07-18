@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { BarChart3, Trophy, AlertTriangle, Target, Award, Users } from "lucide-react";
 import { HBarChart, VBarChart, DonutChart, StatTile, HBarDatum, VBarDatum, DonutDatum } from "@/components/analytics-charts";
+import { CustomSelect } from "@/components/custom-select";
 
 interface AnalyticsTabProps {
   cohorts: any[];
@@ -125,7 +126,7 @@ export default function AnalyticsTab({
     return [
       { id: "passed", label: "Passed", value: passedAttempts, color: "var(--success)" },
       { id: "failed", label: "Failed", value: Math.max(0, failed), color: "var(--error)" },
-      { id: "not_attempted", label: "Not Attempted", value: notAttempted, color: "#CBD5E1" },
+      { id: "not_attempted", label: "Not Attempted", value: notAttempted, color: "#A6ACBB" },
     ];
   }, [scopedQuizAttempts, passedAttempts, totalStudents, quizzes.length]);
 
@@ -189,23 +190,21 @@ export default function AnalyticsTab({
       {/* Cohort filter */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-            <BarChart3 size={14} className="text-[#2563EB]" /> Performance Analytics
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5">
+            <BarChart3 size={14} className="text-[#6E79F4]" /> Performance Analytics
           </h3>
-          <p className="text-[11px] text-[#475569] mt-0.5">Deep-dive metrics for this campus only.</p>
+          <p className="text-[11px] text-[#C2C6D1] mt-0.5">Deep-dive metrics for this campus only.</p>
         </div>
-        <select
+        <CustomSelect
+          className="w-full sm:w-60"
+          required
           value={selectedCohortFilter}
-          onChange={(e) => setSelectedCohortFilter(e.target.value)}
-          className="bg-white border border-[#E2E8F0] px-3 py-1.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#2563EB] w-full sm:w-60 cursor-pointer"
-        >
-          <option value="all">All Cohorts</option>
-          {cohorts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} ({c.code})
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setSelectedCohortFilter(v || "all")}
+          options={[
+            { id: "all", name: "All Cohorts" },
+            ...cohorts.map((c) => ({ id: c.id, name: c.name, code: c.code })),
+          ]}
+        />
       </div>
 
       {/* KPI tiles */}
@@ -219,44 +218,44 @@ export default function AnalyticsTab({
       </div>
 
       {forfeitedAttempts > 0 && (
-        <div className="flex items-center gap-2 bg-[#DC2626]/5 border border-[#DC2626]/15 rounded-xl px-4 py-2.5 text-[11px] text-[#DC2626] font-semibold">
+        <div className="flex items-center gap-2 bg-[#F0555D]/5 border border-[#F0555D]/15 rounded-xl px-4 py-2.5 text-[11px] text-[#F0555D] font-semibold">
           <AlertTriangle size={14} /> {forfeitedAttempts} quiz attempt{forfeitedAttempts !== 1 ? "s" : ""} forfeited (strict-mode violations) in this scope.
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Cohort performance */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
-          <h4 className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 pb-3 border-b border-[#E2E8F0]">
-            <Users size={14} className="text-[#2563EB]" /> Average Progress by Cohort
+        <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 shadow-sm space-y-4">
+          <h4 className="text-xs font-bold text-[#EDEFF5] flex items-center gap-1.5 pb-3 border-b border-[#23252C]">
+            <Users size={14} className="text-[#6E79F4]" /> Average Progress by Cohort
           </h4>
           <HBarChart data={cohortPerformance} emptyLabel="No cohorts to compare yet." />
         </div>
 
         {/* Quiz status donut */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
-          <h4 className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 pb-3 border-b border-[#E2E8F0]">
-            <Target size={14} className="text-[#2563EB]" /> Quiz Outcomes
+        <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 shadow-sm space-y-4">
+          <h4 className="text-xs font-bold text-[#EDEFF5] flex items-center gap-1.5 pb-3 border-b border-[#23252C]">
+            <Target size={14} className="text-[#6E79F4]" /> Quiz Outcomes
           </h4>
           {quizzes.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">No quizzes published yet.</div>
+            <div className="text-center py-8 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">No quizzes published yet.</div>
           ) : (
             <DonutChart data={quizStatusDonut} centerLabel="Total Slots" />
           )}
         </div>
 
         {/* Score distribution */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
-          <h4 className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 pb-3 border-b border-[#E2E8F0]">
-            <BarChart3 size={14} className="text-[#2563EB]" /> Quiz Score Distribution
+        <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 shadow-sm space-y-4">
+          <h4 className="text-xs font-bold text-[#EDEFF5] flex items-center gap-1.5 pb-3 border-b border-[#23252C]">
+            <BarChart3 size={14} className="text-[#6E79F4]" /> Quiz Score Distribution
           </h4>
           <VBarChart data={scoreDistribution} emptyLabel="No quiz attempts recorded yet." />
         </div>
 
         {/* Engagement */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
-          <h4 className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 pb-3 border-b border-[#E2E8F0]">
-            <Award size={14} className="text-[#2563EB]" /> Activity Engagement Rate
+        <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 shadow-sm space-y-4">
+          <h4 className="text-xs font-bold text-[#EDEFF5] flex items-center gap-1.5 pb-3 border-b border-[#23252C]">
+            <Award size={14} className="text-[#6E79F4]" /> Activity Engagement Rate
           </h4>
           <HBarChart data={engagementChart} emptyLabel="No activities published yet." />
         </div>
@@ -264,41 +263,41 @@ export default function AnalyticsTab({
 
       {/* Rankings */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
-          <h4 className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 pb-3 border-b border-[#E2E8F0]">
-            <Trophy size={14} className="text-[#F59E0B]" /> Top Performers
+        <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 shadow-sm space-y-4">
+          <h4 className="text-xs font-bold text-[#EDEFF5] flex items-center gap-1.5 pb-3 border-b border-[#23252C]">
+            <Trophy size={14} className="text-[#F5B04A]" /> Top Performers
           </h4>
           {topPerformers.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-[#475569]">No student data yet.</div>
+            <div className="text-center py-8 border border-dashed border-[#23252C] rounded-xl text-xs text-[#C2C6D1]">No student data yet.</div>
           ) : (
             <div className="space-y-2.5">
               {topPerformers.map((s, i) => (
-                <div key={s.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-slate-50 border border-[#E2E8F0]">
+                <div key={s.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-[#16171D] border border-[#23252C]">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="w-6 h-6 rounded-full bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 flex items-center justify-center font-black text-[10px] shrink-0">
+                    <span className="w-6 h-6 rounded-full bg-[#F5B04A]/10 text-[#F5B04A] border border-[#F5B04A]/20 flex items-center justify-center font-black text-[10px] shrink-0">
                       {i + 1}
                     </span>
-                    <span className="text-xs font-bold text-[#0F172A] truncate">{s.name}</span>
+                    <span className="text-xs font-bold text-[#EDEFF5] truncate">{s.name}</span>
                   </div>
-                  <span className="text-xs font-black text-[#16A34A] shrink-0">{s.composite}%</span>
+                  <span className="text-xs font-black text-[#2FBF71] shrink-0">{s.composite}%</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
-          <h4 className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 pb-3 border-b border-[#E2E8F0]">
-            <AlertTriangle size={14} className="text-[#DC2626]" /> Needs Attention (&lt;70%)
+        <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 shadow-sm space-y-4">
+          <h4 className="text-xs font-bold text-[#EDEFF5] flex items-center gap-1.5 pb-3 border-b border-[#23252C]">
+            <AlertTriangle size={14} className="text-[#F0555D]" /> Needs Attention (&lt;70%)
           </h4>
           {needsAttention.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-[#E2E8F0] rounded-xl text-xs text-emerald-600 font-semibold">All students in good standing!</div>
+            <div className="text-center py-8 border border-dashed border-[#23252C] rounded-xl text-xs text-emerald-600 font-semibold">All students in good standing!</div>
           ) : (
             <div className="space-y-2.5">
               {needsAttention.map((s) => (
-                <div key={s.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-[#DC2626]/5 border border-[#DC2626]/15">
-                  <span className="text-xs font-bold text-[#0F172A] truncate">{s.name}</span>
-                  <span className="text-xs font-black text-[#DC2626] shrink-0">{s.composite}%</span>
+                <div key={s.id} className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-[#F0555D]/5 border border-[#F0555D]/15">
+                  <span className="text-xs font-bold text-[#EDEFF5] truncate">{s.name}</span>
+                  <span className="text-xs font-black text-[#F0555D] shrink-0">{s.composite}%</span>
                 </div>
               ))}
             </div>

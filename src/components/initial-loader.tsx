@@ -103,7 +103,7 @@ export function InitialLoader({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#F8FAFC] transition-all duration-700 ease-in-out"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0B0C0F] transition-all duration-700 ease-in-out"
       style={{
         opacity: exiting ? 0 : 1,
         transform: exiting ? "scale(1.04)" : "scale(1)",
@@ -145,7 +145,7 @@ export function InitialLoader({
       <div
         className="absolute inset-0 opacity-[0.025] pointer-events-none"
         style={{
-          backgroundImage: `radial-gradient(circle, #0F172A 1px, transparent 1px)`,
+          backgroundImage: `radial-gradient(circle, #EDEFF5 1px, transparent 1px)`,
           backgroundSize: "28px 28px",
         }}
       />
@@ -203,20 +203,20 @@ export function InitialLoader({
 
           {/* Center icon */}
           <div
-            className="relative w-[58px] h-[58px] flex items-center justify-center rounded-2xl bg-white"
+            className="relative w-[58px] h-[58px] flex items-center justify-center rounded-2xl bg-[#131418]"
             style={{
-              border: "1px solid #E2E8F0",
+              border: "1px solid #23252C",
               boxShadow:
                 "0 8px 32px rgba(37,99,235,0.12), 0 0 0 1px rgba(37,99,235,0.06)",
             }}
           >
-            <Terminal size={24} className="text-[#2563EB]" strokeWidth={2.5} />
+            <Terminal size={24} className="text-[#6E79F4]" strokeWidth={2.5} />
           </div>
         </div>
 
         {/* ── Wordmark ── */}
         <div className="flex flex-col items-center mb-2 select-none">
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#0F172A] leading-none">
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#EDEFF5] leading-none">
             Hynox Campus
           </h1>
           <span
@@ -228,7 +228,7 @@ export function InitialLoader({
         </div>
 
         {/* ── Tagline ── */}
-        <p className="mt-3 text-sm text-[#475569] text-center max-w-[300px] leading-relaxed">
+        <p className="mt-3 text-sm text-[#C2C6D1] text-center max-w-[300px] leading-relaxed">
           {message}
         </p>
 
@@ -269,10 +269,10 @@ export function InitialLoader({
                       ? "rgba(37,99,235,0.10)"
                       : "rgba(71,85,105,0.08)",
                     color: isDone
-                      ? "#16A34A"
+                      ? "#2FBF71"
                       : isActive
-                      ? "#2563EB"
-                      : "#94A3B8",
+                      ? "#6E79F4"
+                      : "#737A88",
                   }}
                 >
                   {isDone ? (
@@ -298,10 +298,10 @@ export function InitialLoader({
                     className="text-xs font-semibold leading-tight"
                     style={{
                       color: isDone
-                        ? "#16A34A"
+                        ? "#2FBF71"
                         : isActive
-                        ? "#0F172A"
-                        : "#94A3B8",
+                        ? "#EDEFF5"
+                        : "#737A88",
                     }}
                   >
                     {step.label}
@@ -312,8 +312,8 @@ export function InitialLoader({
                       color: isDone
                         ? "#86EFAC"
                         : isActive
-                        ? "#475569"
-                        : "#CBD5E1",
+                        ? "#9BA1AE"
+                        : "#A6ACBB",
                     }}
                   >
                     {isDone ? "Complete" : step.detail}
@@ -326,7 +326,7 @@ export function InitialLoader({
                     {[0, 1, 2].map((i) => (
                       <div
                         key={i}
-                        className="w-1 h-1 rounded-full bg-[#2563EB]"
+                        className="w-1 h-1 rounded-full bg-[#6E79F4]"
                         style={{
                           animation: `dotBounce 0.8s ease-in-out infinite`,
                           animationDelay: `${i * 0.15}s`,
@@ -343,20 +343,20 @@ export function InitialLoader({
         {/* ── Progress bar ── */}
         <div className="mt-8 w-[320px]">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-[10px] font-medium text-[#94A3B8] tracking-wide uppercase">
+            <span className="text-[10px] font-medium text-[#A3A9B6] tracking-wide uppercase">
               Initializing
             </span>
-            <span className="text-[10px] font-bold text-[#2563EB] tabular-nums">
+            <span className="text-[10px] font-bold text-[#6E79F4] tabular-nums">
               {Math.round(progress)}%
             </span>
           </div>
-          <div className="h-1 w-full bg-[#E2E8F0] rounded-full overflow-hidden">
+          <div className="h-1 w-full bg-[#23252C] rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-300 ease-out"
               style={{
                 width: `${progress}%`,
                 background:
-                  "linear-gradient(90deg, #2563EB 0%, #06B6D4 100%)",
+                  "linear-gradient(90deg, #6E79F4 0%, #22D3EE 100%)",
                 boxShadow: "0 0 10px rgba(37,99,235,0.4)",
               }}
             />
@@ -364,7 +364,7 @@ export function InitialLoader({
         </div>
 
         {/* ── Footer note ── */}
-        <p className="mt-6 text-[10px] text-[#CBD5E1] text-center select-none">
+        <p className="mt-6 text-[10px] text-[#C9CDD8] text-center select-none">
           This happens once per session for a faster experience
         </p>
       </div>
