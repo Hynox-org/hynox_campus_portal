@@ -1569,7 +1569,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         activeChildId={activeTab}
         onSelect={(id, childId) => {
           setActiveParentTab(id as typeof activeParentTab);
-          setActiveTab((childId ?? id) as typeof activeTab);
+          const parentItem = ADMIN_NAV_ITEMS.find((item) => item.id === id);
+          const defaultChildId = parentItem?.children?.[0]?.id;
+          setActiveTab((childId ?? defaultChildId ?? id) as typeof activeTab);
         }}
         userName={adminEmail}
         userMeta="Super Admin"

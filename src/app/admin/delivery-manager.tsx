@@ -206,7 +206,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         if (res.error) {
           showError(res.error);
         } else {
-          showSuccess("Cohort updated successfully!");
+          showSuccess("Group updated successfully!");
           setCohortModalOpen(false);
           setEditingCohort(null);
           await refreshLists();
@@ -225,7 +225,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         if (res.error) {
           showError(res.error);
         } else {
-          showSuccess("Cohort created successfully!");
+          showSuccess("Group created successfully!");
           setCohortModalOpen(false);
           await refreshLists();
         }
@@ -251,12 +251,12 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
   };
 
   const handleDeleteCohort = async (id: string) => {
-    if (!confirm("Are you sure you want to soft delete this cohort?")) return;
+    if (!confirm("Are you sure you want to soft delete this group?")) return;
     const res = await deleteCohortAction(id);
     if (res.error) {
       showError(res.error);
     } else {
-      showSuccess("Cohort deleted successfully!");
+      showSuccess("Group deleted successfully!");
       await refreshLists();
     }
   };
@@ -285,7 +285,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       if (errors.length > 0) {
         showError(`Enrolled some students, but encountered errors: ${errors.map(e => e.error).join(", ")}`);
       } else {
-        showSuccess(`Successfully enrolled ${selectedStudentIds.length} student(s) into the cohort!`);
+        showSuccess(`Successfully enrolled ${selectedStudentIds.length} student(s) into the group!`);
         setEnrollModalOpen(false);
       }
     } catch (err: any) {
@@ -326,7 +326,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         ass => ass.cohort_id === assignForm.cohort_id && ass.course_id === assignForm.course_id
       );
       if (isAlreadyAssigned) {
-        showError("This course is already assigned to the selected cohort.");
+        showError("This course is already assigned to the selected group.");
         return;
       }
 
@@ -341,7 +341,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       if (res.error) {
         showError(res.error);
       } else {
-        showSuccess("Course successfully assigned to cohort!");
+        showSuccess("Course successfully assigned to group!");
         setAssignModalOpen(false);
         await refreshLists();
       }
@@ -373,7 +373,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
             <Building size={15} /> Delivery Scope Management
           </h3>
           <p className="text-[10px] text-[#C2C6D1] leading-relaxed">
-            Manage student batches, enroll students, and assign courses to cohorts.
+            Manage student batches, enroll students, and assign courses to groups.
           </p>
         </div>
         <CustomSelect
@@ -435,7 +435,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       {!loading && activeSubTab === "cohorts" && (
         <div className="space-y-4">
           <div className="flex flex-wrap justify-between items-center gap-2">
-            <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider">Active Cohorts</h4>
+            <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider">Active Groups</h4>
             {!isTeacherMode && (
               <button
                 onClick={() => {
@@ -445,7 +445,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                 }}
                 className="bg-[#6E79F4] text-white px-3 py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-all flex items-center gap-1 shrink-0"
               >
-                <Plus size={13} /> Create Cohort
+                <Plus size={13} /> Create Group
               </button>
             )}
           </div>
@@ -455,7 +455,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#16171D] border-b border-[#23252C] font-bold text-[#C2C6D1]">
-                    <th className="px-6 py-3">Cohort Name</th>
+                    <th className="px-6 py-3">Group Name</th>
                     <th className="px-6 py-3">Code</th>
                     <th className="px-6 py-3">Program</th>
                     <th className="px-6 py-3">Status</th>
@@ -495,7 +495,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                   ) : (
                     <tr>
                       <td colSpan={isTeacherMode ? 5 : 6} className="px-6 py-8 text-center text-[#C2C6D1] font-semibold bg-[#16171D]/10">
-                        No cohorts defined under this campus yet.
+                        No groups defined under this campus yet.
                       </td>
                     </tr>
                   )}
@@ -511,12 +511,12 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-[#16171D] p-4 border border-[#23252C] rounded-xl shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <label className="font-bold text-xs text-[#C2C6D1] uppercase tracking-wider whitespace-nowrap">Filter Cohort Batch:</label>
+              <label className="font-bold text-xs text-[#C2C6D1] uppercase tracking-wider whitespace-nowrap">Filter Group Batch:</label>
               <CustomSelect
                 options={cohorts.map(coh => ({ id: coh.id, name: coh.name, code: coh.code }))}
                 value={selectedCohortFilter}
                 onChange={setSelectedCohortFilter}
-                placeholder="-- All Cohorts --"
+                placeholder="-- All Groups --"
                 className="sm:min-w-[200px] sm:w-auto"
               />
             </div>
@@ -546,7 +546,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                   <tr className="bg-[#16171D] border-b border-[#23252C] font-bold text-[#C2C6D1]">
                     <th className="px-6 py-3">Student Name</th>
                     <th className="px-6 py-3">Email</th>
-                    <th className="px-6 py-3">Cohort</th>
+                    <th className="px-6 py-3">Group</th>
                     <th className="px-6 py-3">Status</th>
                     <th className="px-6 py-3">Enrolled At</th>
                     <th className="px-6 py-3 text-right">Actions</th>
@@ -603,7 +603,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       {!loading && activeSubTab === "assignments" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider">Assigned Courses to Cohorts</h4>
+            <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider">Assigned Courses to Groups</h4>
             <button
               onClick={() => {
                 setAssignForm({ cohort_id: cohorts[0]?.id || "", course_id: allCourses[0]?.id || "", start_date: "", due_date: "", is_required: true });
@@ -621,7 +621,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                 <thead>
                   <tr className="bg-[#16171D] border-b border-[#23252C] font-bold text-[#C2C6D1]">
                     <th className="px-6 py-3">Course Name</th>
-                    <th className="px-6 py-3">Cohort</th>
+                    <th className="px-6 py-3">Group</th>
                     <th className="px-6 py-3">Type</th>
                     <th className="px-6 py-3">Required</th>
                     <th className="px-6 py-3 text-right">Actions</th>
@@ -676,7 +676,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
             <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex justify-between items-center shrink-0">
               <div>
                 <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
-                  <Users size={16} className="text-[#6E79F4]" /> {editingCohort ? "Edit Cohort" : "Create New Cohort"}
+                  <Users size={16} className="text-[#6E79F4]" /> {editingCohort ? "Edit Group" : "Create New Group"}
                 </h3>
                 <p className="text-[10px] text-[#C2C6D1] mt-0.5">Define student batch timelines and assign program pathways.</p>
               </div>
@@ -709,7 +709,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                 )}
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#C2C6D1]">Cohort Name *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Group Name *</label>
                   <input
                     type="text"
                     placeholder="e.g. FSD-2026-A"
@@ -754,7 +754,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#C2C6D1]">Cohort Status *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Group Status *</label>
                   <select
                     value={cohortForm.status_code || "active"}
                     onChange={(e) => setCohortForm({ ...cohortForm, status_code: e.target.value })}
@@ -788,7 +788,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                   disabled={loading}
                   className="bg-[#6E79F4] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 disabled:opacity-50 transition-colors"
                 >
-                  {loading ? (editingCohort ? "Saving..." : "Creating...") : (editingCohort ? "Save Changes" : "Create Cohort")}
+                  {loading ? (editingCohort ? "Saving..." : "Creating...") : (editingCohort ? "Save Changes" : "Create Group")}
                 </button>
               </div>
             </form>
@@ -813,7 +813,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                 <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
                   <Users size={16} className="text-[#6E79F4]" /> Enroll Students
                 </h3>
-                <p className="text-[10px] text-[#C2C6D1] mt-0.5">Select a cohort and enroll multiple students at once.</p>
+                <p className="text-[10px] text-[#C2C6D1] mt-0.5">Select a group and enroll multiple students at once.</p>
               </div>
               <button
                 onClick={() => setEnrollModalOpen(false)}
@@ -828,7 +828,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
               <div className="p-6 space-y-5 flex-1 overflow-y-auto min-h-0">
                 {/* Cohort Select */}
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#C2C6D1]">Select Cohort Batch *</label>
+                  <label className="block font-bold text-[#C2C6D1]">Select Group Batch *</label>
                   <select
                     value={enrollForm.cohort_id}
                     onChange={(e) => {
@@ -843,7 +843,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                     className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm"
                     required
                   >
-                    <option value="">-- Choose Cohort Batch --</option>
+                    <option value="">-- Choose Group Batch --</option>
                     {cohorts.map(coh => (
                       <option key={coh.id} value={coh.id}>{coh.name} ({coh.code})</option>
                     ))}
@@ -1022,21 +1022,21 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                   <>
                     <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                       <div className="space-y-1">
-                        <label className="block font-bold text-[#C2C6D1]">Select Cohort *</label>
+                        <label className="block font-bold text-[#C2C6D1]">Select Group *</label>
                         <select
                           value={assignForm.cohort_id}
                           onChange={(e) => setAssignForm({ ...assignForm, cohort_id: e.target.value, start_date: "", due_date: "" })}
                           className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-medium"
                           required
                         >
-                          <option value="">-- Choose Cohort Batch --</option>
+                          <option value="">-- Choose Group Batch --</option>
                           {cohorts.map(coh => (
                             <option key={coh.id} value={coh.id}>{coh.name} ({coh.code})</option>
                           ))}
                         </select>
                         {selectedCohortForAssign && (
                           <p className="text-[10px] text-[#C2C6D1] font-medium mt-1">
-                            Cohort functioning dates:{" "}
+                            Group functioning dates:{" "}
                             <span className="text-[#6E79F4] font-semibold">
                               {selectedCohortForAssign.start_date ? selectedCohortForAssign.start_date.split("T")[0] : "No Start"}
                             </span>{" "}
@@ -1167,7 +1167,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                     <p className="text-xs text-[#C2C6D1] truncate">{selectedStudent.student?.email}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
-                        {selectedStudent.cohort?.name || "No cohort"}
+                        {selectedStudent.cohort?.name || "No group"}
                       </span>
                       <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
                     </div>
