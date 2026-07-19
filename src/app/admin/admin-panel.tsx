@@ -702,37 +702,37 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
   const handleMapTeacher = async (userId: string, cohortId: string) => {
     if (!cohortId) {
-      showError("Please select a target cohort.");
+      showError("Please select a target group.");
       return;
     }
     setLoadingTeachers(true);
     const res = await assignTeacherToCohortAction(cohortId, userId);
     if (res.success) {
-      showSuccess("Teacher assigned to cohort successfully!");
+      showSuccess("Teacher assigned to group successfully!");
       const freshCohorts = await listTeacherCohortsAction(userId, false);
       if (freshCohorts.cohorts) {
         setTeacherInstDetails(freshCohorts.cohorts);
       }
     } else {
-      showError(res.error || "Failed to assign teacher to cohort.");
+      showError(res.error || "Failed to assign teacher to group.");
     }
     setLoadingTeachers(false);
   };
 
   const handleUnmapTeacher = async (userId: string, cohortId: string) => {
-    if (!confirm("Are you sure you want to remove this cohort mapping?")) {
+    if (!confirm("Are you sure you want to remove this group mapping?")) {
       return;
     }
     setLoadingTeachers(true);
     const res = await removeTeacherFromCohortAction(cohortId, userId);
     if (res.success) {
-      showSuccess("Teacher removed from cohort successfully!");
+      showSuccess("Teacher removed from group successfully!");
       const freshCohorts = await listTeacherCohortsAction(userId, false);
       if (freshCohorts.cohorts) {
         setTeacherInstDetails(freshCohorts.cohorts);
       }
     } else {
-      showError(res.error || "Failed to remove teacher from cohort.");
+      showError(res.error || "Failed to remove teacher from group.");
     }
     setLoadingTeachers(false);
   };
@@ -1418,14 +1418,14 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
             <div className="space-y-4">
               <h4 className="text-[11px] font-bold text-[#EDEFF5] uppercase tracking-wider pb-2 border-b border-[#23252C]">
-                Assigned Cohorts
+                Assigned Groups
               </h4>
 
               {teacherDetailsLoading ? (
-                <SecondaryLoader variant="skeleton" message="Loading cohort assignments..." className="!border-0 !p-0 shadow-none" />
+                <SecondaryLoader variant="skeleton" message="Loading group assignments..." className="!border-0 !p-0 shadow-none" />
               ) : teacherInstDetails.length === 0 ? (
                 <div className="text-center py-8 text-xs text-[#C2C6D1] border border-dashed border-[#23252C] rounded-xl">
-                  No cohort assignments found.
+                  No group assignments found.
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1447,7 +1447,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                         }}
                         className="text-[10px] text-red-500 font-bold hover:underline"
                       >
-                        Remove Cohort
+                        Remove Group
                       </button>
                     </div>
                   ))}
@@ -1455,13 +1455,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               )}
             </div>
 
-            {/* Assign Additional Cohort */}
+            {/* Assign Additional Group */}
             <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 shadow-sm space-y-3">
               <h5 className="text-[11px] font-bold text-[#EDEFF5] uppercase tracking-wider">
-                Assign Additional Cohort
+                Assign Additional Group
               </h5>
               <p className="text-[10px] text-[#C2C6D1] font-medium leading-relaxed">
-                Map this teacher/trainer to an active cohort. They will be able to mark student attendance and access assigned courses under that cohort.
+                Map this teacher/trainer to an active group. They will be able to mark student attendance and access assigned courses under that group.
               </p>
               <div className="flex flex-col gap-3 pt-1">
                 <div className="relative">
@@ -1470,7 +1470,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                     onChange={(e) => setMappingInstId(e.target.value)}
                     className="w-full bg-[#1A1C22] border border-[#23252C] hover:border-[#9BA1AE] px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[#EDEFF5] focus:outline-none focus:ring-2 focus:ring-[#6E79F4]/10 focus:border-[#6E79F4] transition-all appearance-none cursor-pointer pr-10"
                   >
-                    <option value="">Choose cohort...</option>
+                    <option value="">Choose group...</option>
                     {systemCohorts.map(cohort => {
                       const isAssigned = teacherInstDetails.some(c => c.id === cohort.id);
                       return (
@@ -1502,7 +1502,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                   ) : (
                     <Plus size={14} />
                   )}
-                  Assign Cohort
+                  Assign Group
                 </button>
               </div>
             </div>
@@ -2561,7 +2561,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               <div className="bg-[#131418] border border-[#23252C] rounded-xl shadow-sm p-6 space-y-4">
                 <div>
                   <h3 className="text-sm font-bold text-[#EDEFF5]">Invite & Onboard New Teacher</h3>
-                  <p className="text-[11px] text-[#C2C6D1] mt-0.5">Onboard a platform-wide teacher/trainer instantly. Teachers are not bound to any institution on invite; they are assigned to cohorts later.</p>
+                  <p className="text-[11px] text-[#C2C6D1] mt-0.5">Onboard a platform-wide teacher/trainer instantly. Teachers are not bound to any institution on invite; they are assigned to groups later.</p>
                 </div>
                 <form onSubmit={handleTeacherOnboardSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end text-xs">
                   <div>
@@ -2732,13 +2732,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
             </div>
           )}
 
-          {/* TAB: TEACHER COHORT MAPPING & ASSIGNMENTS */}
+          {/* TAB: TEACHER GROUP MAPPING & ASSIGNMENTS */}
           {activeTab === "teacher_assignments" && (
             <div className="space-y-6 animate-fadeIn">
               <div className="bg-[#131418] border border-[#23252C] rounded-xl shadow-sm p-6">
                 <div>
-                  <h3 className="text-sm font-bold text-[#EDEFF5]">Teacher Cohort Mapping & Assignments</h3>
-                  <p className="text-[11px] text-[#C2C6D1] mt-0.5">Assign, manage, and map platform educators to their respective active cohort learning groups.</p>
+                  <h3 className="text-sm font-bold text-[#EDEFF5]">Teacher Group Mapping & Assignments</h3>
+                  <p className="text-[11px] text-[#C2C6D1] mt-0.5">Assign, manage, and map platform educators to their respective active learning groups.</p>
                 </div>
 
                 <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[#23252C]">
@@ -4385,7 +4385,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       Deleting this institution will cascade delete all linked data. The following records will be permanently removed from all tables:
                     </p>
                     <ul className="list-disc pl-4 text-[10px] space-y-1 font-semibold text-amber-950">
-                      <li>{relationCounts.cohorts} Cohort(s)</li>
+                      <li>{relationCounts.cohorts} Group(s)</li>
                       <li>{relationCounts.programs} Academic Program(s)</li>
                       <li>{relationCounts.users} User(s) (will be unlinked/tenant set to NULL)</li>
                     </ul>

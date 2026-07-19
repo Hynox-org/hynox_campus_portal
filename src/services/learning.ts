@@ -1300,6 +1300,42 @@ export async function submitChallengeCode(
 ) {
   const supabase = await createClient();
 
+  // Enforce Max Attempts limit
+  const { data: challengeObj, error: chalFetchError } = await supabase
+    .schema("learning")
+    .from("programming_challenges")
+    .select("activity_id, max_attempts")
+    .eq("id", challengeId)
+    .single();
+
+  if (chalFetchError) throw chalFetchError;
+
+  const { count: submissionCount, error: countError } = await supabase
+    .schema("learning")
+    .from("challenge_submissions")
+    .select("*", { count: "exact", head: true })
+    .eq("challenge_id", challengeId)
+    .eq("student_id", studentId);
+
+  if (countError) throw countError;
+  if (submissionCount !== null && submissionCount >= (challengeObj.max_attempts ?? 3)) {
+    throw new Error("Maximum attempts limit reached for this coding challenge.");
+  }
+
+  const { data: passedSubmission } = await supabase
+    .schema("learning")
+    .from("challenge_submissions")
+    .select("id")
+    .eq("challenge_id", challengeId)
+    .eq("student_id", studentId)
+    .eq("submission_status_code", "accepted")
+    .limit(1)
+    .maybeSingle();
+
+  if (passedSubmission) {
+    throw new Error("You have already passed this coding challenge. No further attempts are needed.");
+  }
+
   let actualProgressId = progressId;
   if (!progressId || progressId === "new") {
     const { data: chal } = await supabase

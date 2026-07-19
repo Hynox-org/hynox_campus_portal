@@ -204,13 +204,13 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
           </div>
 
           <div>
-            <label className="block font-bold text-[#C2C6D1] mb-1">3. Cohort Batch</label>
+            <label className="block font-bold text-[#C2C6D1] mb-1">3. Group Batch</label>
             <CustomSelect
               disabled={!selectedProgramId}
               options={cohorts.map(c => ({ ...c, name: c.name }))}
               value={selectedCohortId}
               onChange={(val) => setSelectedCohortId(val)}
-              placeholder="-- Choose Cohort --"
+              placeholder="-- Choose Group --"
               className="font-semibold"
             />
           </div>
@@ -296,13 +296,13 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
             </div>
           ) : (
             <div className="text-center py-12 border border-dashed border-[#23252C] rounded-xl text-[#A3A9B6] font-semibold bg-[#16171D]/10">
-              No students enrolled in this cohort batch.
+              No students enrolled in this group batch.
             </div>
           )}
         </div>
       ) : (
         <div className="text-center py-12 border border-dashed border-[#23252C] rounded-xl text-[#A3A9B6] font-semibold bg-[#131418] shadow-sm">
-          Please select program and cohort selections from the panels above to inspect progress logs.
+          Please select program and group selections from the panels above to inspect progress logs.
         </div>
       )}
 
@@ -363,7 +363,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                     <p className="text-xs text-[#C2C6D1] truncate">{selectedStudent.student?.email}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
-                        {selectedStudent.cohort?.name || "No cohort"}
+                        {selectedStudent.cohort?.name || "No group"}
                       </span>
                       <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
                     </div>

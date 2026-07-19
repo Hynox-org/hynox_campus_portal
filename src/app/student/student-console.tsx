@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { 
   listModulesAction, 
   listLessonsAction, 
@@ -2021,18 +2022,21 @@ export default function StudentConsole({
                     {syllabusPanel}
                   </div>
 
-                  {/* Mobile drawer overlay */}
-                  {isSyllabusDrawerOpen && (
+                  {/* Mobile drawer overlay — portaled to <body> so it isn't boxed in by
+                      ancestor elements using CSS transforms (e.g. .animate-pageIn), which
+                      would otherwise turn "fixed" into a relative-to-ancestor position. */}
+                  {isSyllabusDrawerOpen && typeof document !== "undefined" && createPortal(
                     <div className="fixed inset-0 z-50 lg:hidden">
                       <div
                         className="absolute inset-0 bg-black/40"
                         onClick={() => setIsSyllabusDrawerOpen(false)}
                         aria-hidden="true"
                       />
-                      <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-[#131418] shadow-xl flex flex-col overflow-hidden animate-fadeIn">
+                      <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-[#131418] shadow-xl flex flex-col overflow-hidden animate-slideOverLeft">
                         {syllabusPanel}
                       </div>
-                    </div>
+                    </div>,
+                    document.body
                   )}
 
                   {/* Main content area: lesson player */}

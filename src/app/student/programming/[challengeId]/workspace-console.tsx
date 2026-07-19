@@ -57,6 +57,10 @@ export default function WorkspaceConsole({
   const strictMode = !!challenge.strict_mode;
 
   const [submissions, setSubmissions] = useState(initialData.submissions);
+  const maxAttempts = challenge.max_attempts ?? 3;
+  const attemptsUsed = submissions.length;
+  const isPassed = submissions.some((s: any) => s.submission_status_code === "accepted");
+  const attemptsExhausted = !isPassed && attemptsUsed >= maxAttempts;
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
   const [code, setCode] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -244,6 +248,11 @@ export default function WorkspaceConsole({
   };
 
   const handleSubmitSolution = async () => {
+    if (attemptsExhausted) {
+      setRunConsoleError("Maximum attempts limit reached for this coding challenge.");
+      setActiveTab("results");
+      return;
+    }
     setSubmitting(true);
     setStatusMessage("Creating submission & queuing judge...");
     setActiveTab("results");
@@ -611,6 +620,24 @@ export default function WorkspaceConsole({
                 />
               </div>
 
+              <div className="px-3 sm:px-4 pt-3">
+                {isPassed ? (
+                  <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/20 text-[#2FBF71] rounded-lg p-3 text-xs font-semibold flex items-center gap-2">
+                    <CheckCircle2 size={14} />
+                    <span>You've passed this challenge — no further attempts needed.</span>
+                  </div>
+                ) : attemptsExhausted ? (
+                  <div className="bg-[#F0555D]/5 border border-[#F0555D]/20 text-[#F0555D] rounded-lg p-3 text-xs font-semibold flex items-center gap-2">
+                    <AlertTriangle size={14} />
+                    <span>You have reached the maximum allowed attempts limit for this challenge. Submissions are locked.</span>
+                  </div>
+                ) : (
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[#9BA1AE]">
+                    Attempts: {attemptsUsed}/{maxAttempts}
+                  </div>
+                )}
+              </div>
+
               <div className="p-3 sm:p-4 border-t border-[#23252C] bg-[#16171D]/30 flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={handleRunCode}
@@ -623,7 +650,7 @@ export default function WorkspaceConsole({
 
                 <button
                   onClick={handleSubmitSolution}
-                  disabled={runningCode || submitting}
+                  disabled={runningCode || submitting || attemptsExhausted || isPassed}
                   className="bg-[#6E79F4] text-white hover:bg-[#6E79F4]/95 px-4.5 py-2 rounded-lg shadow-sm font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer sm:ml-auto"
                 >
                   {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}

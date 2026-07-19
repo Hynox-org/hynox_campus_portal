@@ -1001,9 +1001,9 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
             <div className="bg-[#16171D] px-6 py-5 border-b border-[#23252C] flex justify-between items-center shrink-0">
               <div>
                 <h3 className="font-bold text-sm text-[#EDEFF5] flex items-center gap-1.5">
-                  <BookOpen size={16} className="text-[#6E79F4]" /> Assign Course to Cohort
+                  <BookOpen size={16} className="text-[#6E79F4]" /> Assign Course to Group
                 </h3>
-                <p className="text-[10px] text-[#C2C6D1] mt-0.5">Publish syllabus courses and schedule cohort milestones.</p>
+                <p className="text-[10px] text-[#C2C6D1] mt-0.5">Publish syllabus courses and schedule group milestones.</p>
               </div>
               <button
                 onClick={() => setAssignModalOpen(false)}

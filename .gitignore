@@ -49,3 +49,11 @@ CLAUDE.md
 .claude/
 .gemini/
 
+# Docs / text files (code only in this repo — keep root README.md)
+*.md
+*.txt
+!README.md
+
+# Standalone sandbox-engine now lives in its own separate project
+/sandbox-engine/
+

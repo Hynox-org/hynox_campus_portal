@@ -163,12 +163,21 @@ body {
   to { transform: translateX(0); }
 }
 
+@keyframes slideOverLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out forwards;
 }
 
 .animate-slideOver {
   animation: slideOver 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slideOverLeft {
+  animation: slideOverLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Page/section entrance — apply to top-level containers on mount */

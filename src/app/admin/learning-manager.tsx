@@ -408,7 +408,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
     }
 
     if (!assignCohortId) {
-      showError("Please select a Target Cohort in the Academic Navigator.");
+      showError("Please select a Target Group in the Academic Navigator.");
       return;
     }
 
@@ -704,7 +704,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       });
 
       if (assignRes.error) {
-        throw new Error(`Failed assigning to cohort: ${assignRes.error}`);
+        throw new Error(`Failed assigning to group: ${assignRes.error}`);
       }
 
       showSuccess(`Learning activity "${title}" successfully published & assigned!`);
@@ -825,7 +825,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createdActivityId || !assignCohortId) {
-      showError("Please select a target Cohort for assignment.");
+      showError("Please select a target Group for assignment.");
       return;
     }
 
@@ -840,12 +840,12 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       if (assignFrom) {
         const fromDate = new Date(assignFrom);
         if (start && fromDate < start) {
-          showError(`Available From date (${fromDate.toLocaleDateString()}) cannot be before cohort start date (${start.toLocaleDateString()}).`);
+          showError(`Available From date (${fromDate.toLocaleDateString()}) cannot be before group start date (${start.toLocaleDateString()}).`);
           setLoading(false);
           return;
         }
         if (end && fromDate > end) {
-          showError(`Available From date (${fromDate.toLocaleDateString()}) cannot be after cohort end date (${end.toLocaleDateString()}).`);
+          showError(`Available From date (${fromDate.toLocaleDateString()}) cannot be after group end date (${end.toLocaleDateString()}).`);
           setLoading(false);
           return;
         }
@@ -853,12 +853,12 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       if (assignUntil) {
         const untilDate = new Date(assignUntil);
         if (start && untilDate < start) {
-          showError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be before cohort start date (${start.toLocaleDateString()}).`);
+          showError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be before group start date (${start.toLocaleDateString()}).`);
           setLoading(false);
           return;
         }
         if (end && untilDate > end) {
-          showError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be after cohort end date (${end.toLocaleDateString()}).`);
+          showError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be after group end date (${end.toLocaleDateString()}).`);
           setLoading(false);
           return;
         }
@@ -883,7 +883,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
     });
 
     if (res.assignment) {
-      showSuccess("Activity assigned to cohort successfully!");
+      showSuccess("Activity assigned to group successfully!");
       setCreatedActivityId("");
       setCreatedQuizId("");
       setCreatedChallengeId("");
@@ -933,12 +933,12 @@ export default function LearningManager({ institutions, mode = "create", lockIns
           if (assign.available_from) {
             const fromDate = new Date(assign.available_from);
             if (start && fromDate < start) {
-              showError(`Assignment start date (${fromDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be before cohort start date (${start.toLocaleDateString()}).`);
+              showError(`Assignment start date (${fromDate.toLocaleDateString()}) for group "${cohort.name}" cannot be before group start date (${start.toLocaleDateString()}).`);
               setLoading(false);
               return;
             }
             if (end && fromDate > end) {
-              showError(`Assignment start date (${fromDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be after cohort end date (${end.toLocaleDateString()}).`);
+              showError(`Assignment start date (${fromDate.toLocaleDateString()}) for group "${cohort.name}" cannot be after group end date (${end.toLocaleDateString()}).`);
               setLoading(false);
               return;
             }
@@ -946,12 +946,12 @@ export default function LearningManager({ institutions, mode = "create", lockIns
           if (assign.available_until) {
             const untilDate = new Date(assign.available_until);
             if (start && untilDate < start) {
-              showError(`Assignment end date (${untilDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be before cohort start date (${start.toLocaleDateString()}).`);
+              showError(`Assignment end date (${untilDate.toLocaleDateString()}) for group "${cohort.name}" cannot be before group start date (${start.toLocaleDateString()}).`);
               setLoading(false);
               return;
             }
             if (end && untilDate > end) {
-              showError(`Assignment end date (${untilDate.toLocaleDateString()}) for cohort "${cohort.name}" cannot be after cohort end date (${end.toLocaleDateString()}).`);
+              showError(`Assignment end date (${untilDate.toLocaleDateString()}) for group "${cohort.name}" cannot be after group end date (${end.toLocaleDateString()}).`);
               setLoading(false);
               return;
             }
@@ -960,7 +960,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
             const fromDate = new Date(assign.available_from);
             const untilDate = new Date(assign.available_until);
             if (fromDate > untilDate) {
-              showError(`Assignment start date cannot be after end date for cohort "${cohort.name}".`);
+              showError(`Assignment start date cannot be after end date for group "${cohort.name}".`);
               setLoading(false);
               return;
             }
@@ -1171,12 +1171,12 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-[#C2C6D1] mb-1">Target Cohort *</label>
+                  <label className="block font-semibold text-[#C2C6D1] mb-1">Target Group *</label>
                   <CustomSelect
                     options={cohorts.map(c => ({ id: c.id, name: c.name, code: c.code }))}
                     value={assignCohortId}
                     onChange={setAssignCohortId}
-                    placeholder="-- Select Cohort --"
+                    placeholder="-- Select Group --"
                     required
                   />
                 </div>
@@ -1776,7 +1776,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                     onClick={() => setCreatedChallengeId("")}
                     className="bg-[#2FBF71] text-white px-4 py-2 rounded-lg font-bold hover:bg-[#2FBF71]/95 text-xs w-full cursor-pointer"
                   >
-                    Finished Challenge Content &rarr; Go to Assign Cohort
+                    Finished Challenge Content &rarr; Go to Assign Group
                   </button>
                 </div>
               )}
@@ -1819,7 +1819,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                   {/* Allocation Details */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="border border-[#23252C] p-3 rounded-lg">
-                      <span className="text-[10px] text-[#C2C6D1] block font-semibold mb-0.5">Target Cohort</span>
+                      <span className="text-[10px] text-[#C2C6D1] block font-semibold mb-0.5">Target Group</span>
                       <span className="font-bold text-xs text-[#EDEFF5]">
                         {cohorts.find(c => c.id === assignCohortId)?.name || "N/A"}
                       </span>
@@ -1952,7 +1952,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                   </div>
                   {scopeLabel && (
                     <div>
-                      <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Group / Cohort</label>
+                      <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Group</label>
                       <p className="text-xs font-semibold text-[#EDEFF5] px-2.5 py-1.5 bg-[#16171D] border border-[#23252C] rounded-lg truncate">
                         {scopeLabel}
                       </p>
@@ -1973,9 +1973,9 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Cohort</label>
+                    <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Group</label>
                     <CustomSelect
-                      options={[{ id: "all", name: "All Cohorts" }, ...cohorts.map(c => ({ id: c.id, name: c.name, code: c.code }))]}
+                      options={[{ id: "all", name: "All Groups" }, ...cohorts.map(c => ({ id: c.id, name: c.name, code: c.code }))]}
                       value={cohortFilter}
                       onChange={setCohortFilter}
                       required
@@ -2005,7 +2005,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                     required
                   />
                   <CustomSelect
-                    options={[{ id: "all", name: "All Cohorts" }, ...cohorts.map(c => ({ id: c.id, name: c.name, code: c.code }))]}
+                    options={[{ id: "all", name: "All Groups" }, ...cohorts.map(c => ({ id: c.id, name: c.name, code: c.code }))]}
                     value={cohortFilter}
                     onChange={setCohortFilter}
                     className="min-w-[190px]"
@@ -2667,11 +2667,11 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                       </div>
                     )}
 
-                    {/* Cohort Schedule / Allocation Updates */}
+                    {/* Group Schedule / Allocation Updates */}
                     {editForm.assignments && editForm.assignments.length > 0 && (
                       <div className="border-t border-[#23252C] pt-4 space-y-4">
                         <h4 className="font-bold text-xs uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1">
-                          <Calendar size={14} className="text-[#6E79F4]" /> Cohort Scheduling Allocations
+                          <Calendar size={14} className="text-[#6E79F4]" /> Group Scheduling Allocations
                         </h4>
                         <div className="space-y-4">
                           {editForm.assignments.map((assign, index) => {
@@ -2680,7 +2680,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                               <div key={assign.id} className="bg-[#16171D] border border-[#23252C] p-3 rounded-lg space-y-3">
                                 <div className="flex justify-between items-center border-b border-[#23252C] pb-2">
                                   <span className="font-bold text-xs text-[#EDEFF5]">
-                                    Cohort: {cohort ? cohort.name : "Unknown Cohort"}
+                                    Group: {cohort ? cohort.name : "Unknown Group"}
                                   </span>
                                   <div className="flex items-center gap-1.5">
                                     <input
