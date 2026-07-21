@@ -387,9 +387,9 @@ export default function InstitutionPanel({
                               <div key={lesson.id} className="flex justify-between items-center text-xs p-2.5 bg-[#131418] border border-[#23252C] rounded-xl hover:bg-[#16171D] transition-all shadow-sm">
                                 <div className="flex items-center gap-2.5">
                                   {lesson.status === "completed" ? (
-                                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-[10px] border border-emerald-200">✓</div>
+                                    <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center border border-emerald-200"><CheckCircle className="w-3 h-3" /></div>
                                   ) : lesson.status === "in_progress" ? (
-                                    <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-[10px] border border-amber-200">⏳</div>
+                                    <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center border border-amber-200"><Clock className="w-3 h-3" /></div>
                                   ) : (
                                     <div className="w-5 h-5 rounded-full bg-[#1A1C22] text-[#A3A9B6] flex items-center justify-center font-bold text-[10px] border border-[#23252C]">•</div>
                                   )}

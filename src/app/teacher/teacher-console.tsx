@@ -1427,9 +1427,9 @@ export default function TeacherConsole({
             </div>
             <button 
               onClick={() => setSelectedActivity(null)}
-              className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors font-bold"
+              className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -2120,9 +2120,9 @@ export default function TeacherConsole({
                               <div key={lesson.id} className="flex justify-between items-center text-xs p-2.5 bg-[#131418] border border-[#23252C] rounded-xl hover:bg-[#16171D] transition-all shadow-sm">
                                 <div className="flex items-center gap-2.5">
                                   {lesson.status === "completed" ? (
-                                    <div className="w-5 h-5 rounded-full bg-[#2FBF71]/10 text-[#2FBF71] flex items-center justify-center font-bold text-[10px] border border-[#2FBF71]/20">✓</div>
+                                    <div className="w-5 h-5 rounded-full bg-[#2FBF71]/10 text-[#2FBF71] flex items-center justify-center border border-[#2FBF71]/20"><CheckCircle2 className="w-3 h-3" /></div>
                                   ) : lesson.status === "in_progress" ? (
-                                    <div className="w-5 h-5 rounded-full bg-[#F5B04A]/10 text-[#F5B04A] flex items-center justify-center font-bold text-[10px] border border-[#F5B04A]/20">⏳</div>
+                                    <div className="w-5 h-5 rounded-full bg-[#F5B04A]/10 text-[#F5B04A] flex items-center justify-center border border-[#F5B04A]/20"><Clock className="w-3 h-3" /></div>
                                   ) : (
                                     <div className="w-5 h-5 rounded-full bg-[#1A1C22] text-[#A3A9B6] flex items-center justify-center font-bold text-[10px] border border-[#23252C]">•</div>
                                   )}
@@ -3297,13 +3297,14 @@ export default function TeacherConsole({
 
                 return (
                   <div className="space-y-4">
-                    <div className="w-full sm:w-80">
+                    <div className="w-full sm:w-80 relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#C2C6D1]/60" />
                       <input
                         type="text"
-                        placeholder="🔍 Search student by name or email..."
+                        placeholder="Search student by name or email..."
                         value={rosterSearchQuery}
                         onChange={(e) => setRosterSearchQuery(e.target.value)}
-                        className="bg-[#131418] border border-[#23252C] px-3 py-1.5 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
+                        className="bg-[#131418] border border-[#23252C] pl-8 pr-3 py-1.5 rounded-xl text-xs focus:outline-none focus:border-[#6E79F4] w-full"
                       />
                     </div>
 

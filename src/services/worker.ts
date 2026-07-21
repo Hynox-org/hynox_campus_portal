@@ -26,7 +26,7 @@ function loadEnvLocal() {
 
 // Startup recovery function to sweep crashed/hanging executions
 async function recoverHangingJobs(supabase: any) {
-  console.log("🤖 [worker] [startup] Scanning for hanging jobs...");
+  console.log("[worker] [startup] Scanning for hanging jobs...");
   // Clear any jobs marked as running that were started more than 5 minutes ago
   const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   
@@ -38,12 +38,12 @@ async function recoverHangingJobs(supabase: any) {
     .lt("started_at", fiveMinsAgo);
 
   if (error) {
-    console.error("❌ [worker] Error fetching hanging jobs:", error);
+    console.error("[worker] Error fetching hanging jobs:", error);
     return;
   }
 
   if (hangingJobs && hangingJobs.length > 0) {
-    console.log(`🤖 [worker] Found ${hangingJobs.length} hanging job(s) from a previous worker run. Marking them failed...`);
+    console.log(`[worker] Found ${hangingJobs.length} hanging job(s) from a previous worker run. Marking them failed...`);
     for (const job of hangingJobs) {
       try {
         await supabase
@@ -90,13 +90,13 @@ async function recoverHangingJobs(supabase: any) {
             })
             .eq("id", sub.student_activity_progress_id);
         }
-        console.log(`✅ [worker] Recovered crashed run for submission: ${job.submission_id}`);
+        console.log(`[worker] Recovered crashed run for submission: ${job.submission_id}`);
       } catch (recoveryErr) {
-        console.error(`❌ [worker] Failed to recover hanging job ${job.id}:`, recoveryErr);
+        console.error(`[worker] Failed to recover hanging job ${job.id}:`, recoveryErr);
       }
     }
   } else {
-    console.log("🤖 [worker] No hanging jobs found. System is clean.");
+    console.log("[worker] No hanging jobs found. System is clean.");
   }
 }
 
@@ -106,17 +106,17 @@ async function startWorker() {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
-    console.error("❌ [worker] Env variables NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in .env.local!");
+    console.error("[worker] Env variables NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in .env.local!");
     process.exit(1);
   }
 
   const supabase = createClient(url, anonKey);
-  console.log("🤖 [worker] Decoupled Judge Queue Worker is starting up...");
+  console.log("[worker] Decoupled Judge Queue Worker is starting up...");
   
   // Perform worker crash recovery sweep on launch
   await recoverHangingJobs(supabase);
 
-  console.log("🤖 [worker] Polling loop started. Listening for submissions...");
+  console.log("[worker] Polling loop started. Listening for submissions...");
 
   while (true) {
     try {
@@ -130,7 +130,7 @@ async function startWorker() {
         .limit(1);
 
       if (error) {
-        console.error("❌ [worker] Error reading queue:", error);
+        console.error("[worker] Error reading queue:", error);
         await sleep(5000);
         continue;
       }
@@ -155,7 +155,7 @@ async function startWorker() {
         .select();
 
       if (lockError) {
-        console.error("❌ [worker] Optimistic lock error:", lockError);
+        console.error("[worker] Optimistic lock error:", lockError);
         await sleep(1000);
         continue;
       }
@@ -165,20 +165,20 @@ async function startWorker() {
         continue;
       }
 
-      console.log(`🤖 [worker] [processing] Found and locked submission: ${item.submission_id}`);
+      console.log(`[worker] [processing] Found and locked submission: ${item.submission_id}`);
 
       // Run code compilation and grading
       await executeAllTestsAndGrade(item.submission_id);
 
-      console.log(`🤖 [worker] [finished] Grading complete for submission: ${item.submission_id}`);
+      console.log(`[worker] [finished] Grading complete for submission: ${item.submission_id}`);
     } catch (err) {
-      console.error("❌ [worker] Unexpected exception in worker thread loop:", err);
+      console.error("[worker] Unexpected exception in worker thread loop:", err);
       await sleep(5000);
     }
   }
 }
 
 startWorker().catch(err => {
-  console.error("❌ [worker] Fatal startup crash:", err);
+  console.error("[worker] Fatal startup crash:", err);
   process.exit(1);
 });

@@ -38,7 +38,9 @@ import {
   Clock,
   ExternalLink,
   ChevronDown,
-  X
+  X,
+  Search,
+  CheckCircle2
 } from "lucide-react";
 import { SecondaryLoader } from "@/components/secondary-loader";
 import { CustomSelect } from "@/components/custom-select";
@@ -682,9 +684,9 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
               </div>
               <button
                 onClick={() => setCohortModalOpen(false)}
-                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#A3A9B6] hover:text-[#C2C6D1] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#A3A9B6] hover:text-[#C2C6D1] transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -817,9 +819,9 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
               </div>
               <button
                 onClick={() => setEnrollModalOpen(false)}
-                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#A3A9B6] hover:text-[#C2C6D1] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#A3A9B6] hover:text-[#C2C6D1] transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -882,13 +884,16 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                       <>
                         <div className="space-y-1.5 mb-1.5 shrink-0">
                           <label className="block font-bold text-[#C2C6D1]">Search Student</label>
+                          <div className="relative">
+                          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#C2C6D1]/60" />
                           <input
                             type="text"
-                            placeholder="🔍 Search student name or email..."
+                            placeholder="Search student name or email..."
                             value={studentSearchQuery}
                             onChange={(e) => setStudentSearchQuery(e.target.value)}
-                            className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-semibold text-[#EDEFF5]"
+                            className="w-full bg-[#131418] border border-[#23252C] rounded-lg pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-semibold text-[#EDEFF5]"
                           />
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between border-b border-[#1F2128] pb-1.5 mb-1 shrink-0">
@@ -1007,9 +1012,9 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
               </div>
               <button
                 onClick={() => setAssignModalOpen(false)}
-                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#A3A9B6] hover:text-[#C2C6D1] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#A3A9B6] hover:text-[#C2C6D1] transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1300,9 +1305,9 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                                   <div key={lesson.id} className="flex justify-between items-center text-xs p-2.5 bg-[#131418] border border-[#23252C] rounded-xl hover:bg-[#16171D] transition-all shadow-sm">
                                     <div className="flex items-center gap-2.5">
                                       {lesson.status === "completed" ? (
-                                        <div className="w-5 h-5 rounded-full bg-[#2FBF71]/10 text-[#2FBF71] flex items-center justify-center font-bold text-[10px] border border-[#2FBF71]/20">✓</div>
+                                        <div className="w-5 h-5 rounded-full bg-[#2FBF71]/10 text-[#2FBF71] flex items-center justify-center border border-[#2FBF71]/20"><CheckCircle2 className="w-3 h-3" /></div>
                                       ) : lesson.status === "in_progress" ? (
-                                        <div className="w-5 h-5 rounded-full bg-[#F5B04A]/10 text-[#F5B04A] flex items-center justify-center font-bold text-[10px] border border-[#F5B04A]/20">⏳</div>
+                                        <div className="w-5 h-5 rounded-full bg-[#F5B04A]/10 text-[#F5B04A] flex items-center justify-center border border-[#F5B04A]/20"><Clock className="w-3 h-3" /></div>
                                       ) : (
                                         <div className="w-5 h-5 rounded-full bg-[#1A1C22] text-[#A3A9B6] flex items-center justify-center font-bold text-[10px] border border-[#23252C]">•</div>
                                       )}

@@ -24,7 +24,8 @@ import {
   Cpu,
   BookOpen,
   Loader2,
-  ShieldAlert
+  ShieldAlert,
+  Lightbulb
 } from "lucide-react";
 
 const LANGUAGE_OPTIONS = [
@@ -434,7 +435,7 @@ export default function WorkspaceConsole({
 
             {challenge.instructions && (
               <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/15 p-3 rounded-lg text-xs text-[#EDEFF5] space-y-1">
-                <span className="font-bold text-[#6E79F4] block text-[9px] uppercase tracking-wider">💡 Instructions & Hints</span>
+                <span className="font-bold text-[#6E79F4] flex items-center gap-1 text-[9px] uppercase tracking-wider"><Lightbulb className="w-3 h-3" /> Instructions & Hints</span>
                 <p className="leading-relaxed whitespace-pre-wrap">{challenge.instructions}</p>
               </div>
             )}

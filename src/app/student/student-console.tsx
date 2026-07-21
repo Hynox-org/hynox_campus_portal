@@ -63,7 +63,9 @@ import {
   Menu,
   X,
   ShieldAlert,
-  Maximize2
+  Maximize2,
+  Lightbulb,
+  Sparkles
 } from "lucide-react";
 
 import { useStudentDeliveryData } from "@/hooks/use-delivery";
@@ -1544,8 +1546,8 @@ export default function StudentConsole({
                       </span>
                     )}
                   </div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight pt-1">
-                    Welcome back, {fullName.split(" ")[0]}! 👋
+                  <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight pt-1 flex items-center gap-2">
+                    Welcome back, {fullName.split(" ")[0]}! <Sparkles className="w-5 h-5 text-amber-300" />
                   </h1>
                   <p className="text-xs text-slate-300 font-medium max-w-xl">
                     {continueCourse
@@ -2210,7 +2212,7 @@ export default function StudentConsole({
                         {(activeLesson.content_json?.body || activeLesson.content_json?.text) && (
                           <div className="bg-[#131418] border border-[#23252C] p-4 sm:p-6 md:p-8 rounded-2xl shadow-subtle space-y-4">
                             <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5 border-b border-[#23252C] pb-3">
-                              📖 Lesson Syllabus & Study Guide
+                              <BookOpenCheck className="w-3.5 h-3.5" /> Lesson Syllabus & Study Guide
                             </h4>
                             <div className="prose max-w-none text-[#E2E4EB] leading-relaxed text-[13px]">
                               <MarkdownRenderer content={activeLesson.content_json.body || activeLesson.content_json.text} />
@@ -2962,7 +2964,7 @@ export default function StudentConsole({
 
                         {challengeDetails.instructions && (
                           <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/15 p-3 rounded-lg text-xs text-[#EDEFF5] space-y-1">
-                            <span className="font-bold text-[#6E79F4] block text-[9px] uppercase tracking-wider">💡 Instructions & Hints</span>
+                            <span className="font-bold text-[#6E79F4] flex items-center gap-1 text-[9px] uppercase tracking-wider"><Lightbulb className="w-3 h-3" /> Instructions & Hints</span>
                             <p className="leading-relaxed whitespace-pre-wrap">{challengeDetails.instructions}</p>
                           </div>
                         )}

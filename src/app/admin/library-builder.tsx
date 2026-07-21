@@ -23,9 +23,9 @@ import {
   fetchResourceTemplates
 } from "@/hooks/use-library";
 import { 
-  BookOpen, Plus, Edit, Trash2, X, FolderPlus, 
-  Folder, ArrowRight, Save, Clock, ChevronRight, 
-  ChevronDown, FileText, Link2, ExternalLink, Sparkles, Play
+  BookOpen, Plus, Edit, Trash2, X, FolderPlus,
+  Folder, ArrowRight, Save, Clock, ChevronRight,
+  ChevronDown, FileText, Link2, ExternalLink, Sparkles, Play, Search
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SecondaryLoader } from "@/components/secondary-loader";
@@ -370,7 +370,7 @@ export default function LibraryBuilder() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-[#16171D] border border-[#23252C] rounded-lg px-3 py-1.5 text-xs text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] focus:bg-[#131418] transition-all pl-7"
             />
-            <span className="absolute left-2.5 top-2 text-[#C2C6D1]/60 text-[10px]">🔍</span>
+            <Search className="w-3 h-3 absolute left-2.5 top-2.5 text-[#C2C6D1]/60" />
           </div>
 
           <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
@@ -780,9 +780,9 @@ export default function LibraryBuilder() {
               </div>
               <button
                 onClick={() => setCourseDrawerOpen(false)}
-                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -923,9 +923,9 @@ export default function LibraryBuilder() {
               </div>
               <button
                 onClick={() => setModuleDrawerOpen(false)}
-                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1010,9 +1010,9 @@ export default function LibraryBuilder() {
               </div>
               <button
                 onClick={() => setLessonDrawerOpen(false)}
-                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1112,9 +1112,9 @@ export default function LibraryBuilder() {
               </div>
               <button
                 onClick={() => setResourceDrawerOpen(false)}
-                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold"
+                className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

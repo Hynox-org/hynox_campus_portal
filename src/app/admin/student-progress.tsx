@@ -28,8 +28,10 @@ import {
   Search, 
   TrendingUp, 
   ChevronDown, 
-  X, 
-  ExternalLink 
+  X,
+  ExternalLink,
+  CheckCircle2,
+  Clock
 } from "lucide-react";
 import { SecondaryLoader } from "@/components/secondary-loader";
 import { CustomSelect } from "@/components/custom-select";
@@ -496,9 +498,9 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                                   <div key={lesson.id} className="flex justify-between items-center text-xs p-2.5 bg-[#131418] border border-[#23252C] rounded-xl hover:bg-[#16171D] transition-all shadow-sm">
                                     <div className="flex items-center gap-2.5">
                                       {lesson.status === "completed" ? (
-                                        <div className="w-5 h-5 rounded-full bg-[#2FBF71]/10 text-[#2FBF71] flex items-center justify-center font-bold text-[10px] border border-[#2FBF71]/20">✓</div>
+                                        <div className="w-5 h-5 rounded-full bg-[#2FBF71]/10 text-[#2FBF71] flex items-center justify-center border border-[#2FBF71]/20"><CheckCircle2 className="w-3 h-3" /></div>
                                       ) : lesson.status === "in_progress" ? (
-                                        <div className="w-5 h-5 rounded-full bg-[#F5B04A]/10 text-[#F5B04A] flex items-center justify-center font-bold text-[10px] border border-[#F5B04A]/20">⏳</div>
+                                        <div className="w-5 h-5 rounded-full bg-[#F5B04A]/10 text-[#F5B04A] flex items-center justify-center border border-[#F5B04A]/20"><Clock className="w-3 h-3" /></div>
                                       ) : (
                                         <div className="w-5 h-5 rounded-full bg-[#1A1C22] text-[#A3A9B6] flex items-center justify-center font-bold text-[10px] border border-[#23252C]">•</div>
                                       )}
