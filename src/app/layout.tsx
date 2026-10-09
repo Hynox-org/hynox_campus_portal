@@ -4,6 +4,8 @@ import "./globals.css";
 import { QueryProvider } from "@/components/query-provider";
 import { CacheProvider } from "@/components/cache-provider";
 import { ToastProvider } from "@/components/toast";
+import { DemoModeProvider } from "@/components/demo-mode-provider";
+import { isDemoMode } from "@/lib/demo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +38,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <DemoModeProvider enabled={isDemoMode()}>
         <QueryProvider>
           <CacheProvider>
             <ToastProvider>
@@ -43,6 +46,7 @@ export default function RootLayout({
             </ToastProvider>
           </CacheProvider>
         </QueryProvider>
+        </DemoModeProvider>
       </body>
     </html>
   );

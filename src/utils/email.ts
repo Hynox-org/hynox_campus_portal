@@ -1,4 +1,5 @@
 import { BrevoClient } from "@getbrevo/brevo";
+import { isDemoMode } from "@/lib/demo";
 
 const apiKey = process.env.BREVO_API_KEY || "";
 const senderEmail = process.env.BREVO_SENDER_EMAIL || "noreply-campus@hynox.in";
@@ -14,6 +15,8 @@ export async function sendOnboardingEmail(
   roleLabel: string,
   institutionName: string
 ) {
+  if (isDemoMode()) return;
+
   const htmlContent = `
     <!DOCTYPE html>
     <html>

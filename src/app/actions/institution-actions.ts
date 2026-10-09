@@ -24,6 +24,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { DEMO_USERS, isDemoMode } from "@/lib/demo";
 
 export async function createNewInstitutionAction(formData: FormData) {
   const name = formData.get("name") as string;
@@ -435,6 +436,9 @@ export async function deleteInstitutionAction(institutionId: string) {
 }
 
 export async function deleteUserAction(userId: string) {
+  if (isDemoMode() && Object.values(DEMO_USERS).some((id) => id === userId)) {
+    return { error: "This profile is required for demo access and cannot be deleted." };
+  }
   try {
     const userDetails = await getCurrentUser();
     if (!userDetails || userDetails.primaryRole !== "super_admin") {

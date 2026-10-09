@@ -3181,7 +3181,7 @@ export default function TeacherConsole({
                       <p className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider">Timeline</p>
                       <p className="text-xs font-bold text-[#EDEFF5] truncate">
                         {selectedCohort?.start_date
-                          ? `${new Date(selectedCohort.start_date).toLocaleDateString()} – ${selectedCohort.end_date ? new Date(selectedCohort.end_date).toLocaleDateString() : "Ongoing"}`
+                          ? `${new Date(selectedCohort.start_date).toLocaleDateString("en-GB", { timeZone: "UTC" })} – ${selectedCohort.end_date ? new Date(selectedCohort.end_date).toLocaleDateString("en-GB", { timeZone: "UTC" }) : "Ongoing"}`
                           : "—"}
                       </p>
                     </div>

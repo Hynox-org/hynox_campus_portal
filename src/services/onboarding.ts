@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { sendOnboardingEmail } from "@/utils/email";
+import { isDemoMode } from "@/lib/demo";
 
 export interface OnboardingResult {
   email: string;
@@ -183,7 +184,7 @@ export async function processCsvOnboarding(
       const roleLabel = roleNameMap[invitationType] || "Member";
       const institutionName = finalTenantId ? (instMap.get(finalTenantId) || "Hynox Campus") : "Hynox Campus";
 
-      let mailStatus = "sent";
+      let mailStatus = isDemoMode() ? "created" : "sent";
       try {
         await sendOnboardingEmail(email, link, name, roleLabel, institutionName);
       } catch (mailErr: any) {
@@ -416,7 +417,7 @@ export async function regenerateInvitation(invitationId: string, invitedByUserId
     }
   }
 
-  let mailStatus = "sent";
+  let mailStatus = isDemoMode() ? "created" : "sent";
   try {
     await sendOnboardingEmail(user.email, link, user.full_name || "Member", roleLabel, institutionName);
   } catch (mailErr: any) {
@@ -575,7 +576,7 @@ export async function onboardSingleUser(params: {
     const roleLabel = roleNameMap[invitationType] || "Member";
     const institutionName = inst?.name || "Hynox Campus";
 
-    let mailStatus = "sent";
+    let mailStatus = isDemoMode() ? "created" : "sent";
     try {
       await sendOnboardingEmail(email, link, name, roleLabel, institutionName);
     } catch (mailErr: any) {
@@ -718,7 +719,7 @@ export async function onboardSuperAdmin(params: {
     const link = `${appUrl}/onboarding/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
     // Send automated email notification
-    let mailStatus = "sent";
+    let mailStatus = isDemoMode() ? "created" : "sent";
     try {
       await sendOnboardingEmail(email, link, name, "Super Administrator", "Hynox Campus");
     } catch (mailErr: any) {

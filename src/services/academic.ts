@@ -1,4 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
+import { getCurrentUser } from "./auth";
+import { isDemoMode } from "@/lib/demo";
 
 export interface ProgramInput {
   title: string;
@@ -78,6 +80,10 @@ export async function getAcademicLookups() {
 
 // User-tenant helper
 export async function getSessionTenant() {
+  if (isDemoMode()) {
+    const details = await getCurrentUser();
+    return details ? { tenantId: details.tenantId, userId: details.user.id, roles: [details.primaryRole] } : null;
+  }
   const supabase = await createClient();
   
   // Check auth user status

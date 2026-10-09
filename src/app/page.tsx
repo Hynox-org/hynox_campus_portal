@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { Terminal, ArrowRight } from "lucide-react";
 import { DashboardLoader } from "@/components/dashboard-loader";
+import { useDemoMode } from "@/components/demo-mode-provider";
 
 export default function Home() {
+  const demoMode = useDemoMode();
   const [scrollY, setScrollY] = useState(0);
   const [showLoader, setShowLoader] = useState(false);
 
@@ -45,10 +47,10 @@ export default function Home() {
 
           <div>
             <a 
-              href="/login" 
+              href={demoMode ? "/demo" : "/login"}
               className="bg-[#6E79F4] text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-md hover:bg-[#6E79F4]/95 hover:shadow-lg transition-all duration-200 flex items-center gap-1.5"
             >
-              Portal Login
+              {demoMode ? "Explore Demo" : "Portal Login"}
               <ArrowRight size={14} />
             </a>
           </div>
@@ -138,7 +140,7 @@ export default function Home() {
           {/* Action button inside viewport */}
           <div className="mt-12 pointer-events-auto flex flex-col sm:flex-row gap-4 items-center justify-center">
             <a 
-              href="/login" 
+              href={demoMode ? "/demo" : "/login"}
               className="inline-flex items-center gap-2 bg-[#6E79F4] text-white text-sm font-semibold px-8 py-3.5 rounded-xl shadow-lg hover:bg-[#6E79F4]/90 transition-all hover:shadow-xl duration-200"
             >
               Enter the Campus

@@ -2,8 +2,11 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { logout } from "@/services/auth";
+import { isDemoMode } from "@/lib/demo";
 
 export async function signInWithGoogle(redirectTo?: string) {
+  if (isDemoMode()) return { url: "/demo" };
   const supabase = await createClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
@@ -29,12 +32,17 @@ export async function signInWithGoogle(redirectTo?: string) {
 }
 
 export async function signOutAction() {
+  if (isDemoMode()) {
+    await logout();
+    redirect("/demo");
+  }
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
 }
 
 export async function signUpPublicUserAction(formData: FormData) {
+  if (isDemoMode()) return { error: "Demo access does not require an account. Choose a dashboard at /demo." };
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const fullName = formData.get("fullName") as string;
@@ -63,6 +71,7 @@ export async function signUpPublicUserAction(formData: FormData) {
 }
 
 export async function signInWithPasswordAction(formData: FormData) {
+  if (isDemoMode()) return { error: "Demo access does not require a password. Choose a dashboard at /demo." };
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
