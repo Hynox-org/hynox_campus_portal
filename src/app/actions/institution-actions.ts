@@ -16,6 +16,7 @@ import {
 } from "@/services/institution";
 import { 
   processCsvOnboarding,
+  parseCsv,
   listOnboardingInvitations,
   regenerateInvitation,
   onboardSingleUser,
@@ -95,6 +96,19 @@ export async function uploadCsvOnboardingAction(institutionId: string, csvConten
 
     if (!isSuperAdmin && !isInstAdmin) {
       return { error: "Access denied. Insufficient permissions." };
+    }
+
+    // Validate every row before any account or invitation is changed.
+    for (const row of parseCsv(csvContent)) {
+      const role = row.role.trim().toLowerCase();
+      if (!["student", "institution_admin", "teacher", "trainer", "mentor"].includes(role)) {
+        return { error: "Unsupported onboarding role. Use the dedicated super administrator invitation flow for super admins." };
+      }
+      if (isInstAdmin && (role !== "student" || (row.institution_id && row.institution_id !== institutionId))) {
+        return { error: "Institution administrators can only onboard students into their own institution." };
+      }
+      const conflict = await checkEmailRoleConflict(row.email, role);
+      if (conflict) return { error: conflict };
     }
 
     const results = await processCsvOnboarding(csvContent, institutionId, userDetails.user.id);
@@ -231,10 +245,14 @@ export async function onboardSingleUserAction(params: {
     if (!userDetails) return { error: "Access denied." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
-    const isInstAdmin = !isTeacher && userDetails.primaryRole === "institution_admin" && userDetails.tenantId === institutionId;
+    const isInstAdmin = role === "student" && userDetails.primaryRole === "institution_admin" && userDetails.tenantId === institutionId;
 
     if (!isSuperAdmin && !isInstAdmin) {
       return { error: "Access denied." };
+    }
+
+    if (!["student", "institution_admin", "teacher", "trainer", "mentor"].includes(role)) {
+      return { error: "Unsupported onboarding role." };
     }
 
     const conflictMsg = await checkEmailRoleConflict(email, role);

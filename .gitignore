@@ -57,3 +57,6 @@ CLAUDE.md
 # Standalone sandbox-engine now lives in its own separate project
 /sandbox-engine/
 
+# Supabase CLI runtime cache
+/supabase/.temp/
+

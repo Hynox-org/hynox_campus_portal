@@ -359,8 +359,8 @@ export default function StudentConsole({
       ]);
       if (registerRes.register) {
         const logs = registerRes.register.dates
-          .filter((d) => !d.isHoliday)
-          .map((d) => ({ date: d.date, status: registerRes.register!.records[studentId]?.[d.date] || "absent" }));
+          .filter((d) => !d.isHoliday && registerRes.register!.records[studentId]?.[d.date])
+          .map((d) => ({ date: d.date, status: registerRes.register!.records[studentId][d.date] }));
         setAttendanceLogs(logs);
         setAttendancePercentage(summaryRes.summary ? summaryRes.summary.percentage : 100);
       } else if (registerRes.error) {
@@ -1774,7 +1774,7 @@ export default function StudentConsole({
                             >
                               {Math.round(attendancePercentage)}%
                             </span>
-                            <p className="text-[10px] text-[#C2C6D1] font-semibold mt-1">Present across {attendanceLogs.length} session{attendanceLogs.length !== 1 ? "s" : ""}</p>
+                            <p className="text-[10px] text-[#C2C6D1] font-semibold mt-1">Based on {attendanceLogs.length} marked session{attendanceLogs.length !== 1 ? "s" : ""}</p>
                           </div>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wide ${

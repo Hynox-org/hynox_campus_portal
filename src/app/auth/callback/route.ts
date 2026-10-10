@@ -10,7 +10,9 @@ export async function GET(request: Request) {
   }
   const publicOrigin = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || origin);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/";
+  const requestedNext = searchParams.get("next") || "/";
+  const next = requestedNext.startsWith("/") && !requestedNext.startsWith("//") && !requestedNext.includes("\\")
+    ? requestedNext : "/";
 
   if (code) {
     const supabase = await createClient();
@@ -44,6 +46,9 @@ export async function GET(request: Request) {
 
       // If user is pre-provisioned but not linked yet, run the link flow
       if (dbUser) {
+        if (dbUser.auth_user_id && dbUser.auth_user_id !== user.id) {
+          return NextResponse.redirect(`${publicOrigin}/login?error=AccountMismatch`);
+        }
         if (!dbUser.auth_user_id) {
           // Link Google Auth ID to pre-provisioned core.users
           await supabase
@@ -55,22 +60,20 @@ export async function GET(request: Request) {
             })
             .eq("id", dbUser.id);
           
-          // Accept pending invitations
-          await supabase
-            .schema("core")
-            .from("user_invitations")
-            .update({
-              status: "accepted",
-              accepted_at: new Date().toISOString()
-            })
-            .eq("user_id", dbUser.id)
-            .in("status", ["created", "sent", "pending"]);
-
           // Refresh JWT claims
           await supabase
             .schema("core")
             .rpc("set_user_role_claim", { target_user_id: user.id });
         }
+        // Returning accounts can also receive a fresh onboarding invitation.
+        const acceptedAt = new Date().toISOString();
+        await supabase
+          .schema("core")
+          .from("user_invitations")
+          .update({ status: "accepted", accepted_at: acceptedAt })
+          .eq("user_id", dbUser.id)
+          .in("status", ["created", "sent", "pending"])
+          .gte("expires_at", acceptedAt);
       } else {
         // If user is not found, double check if trigger created them
         const { data: triggerUser } = await supabase

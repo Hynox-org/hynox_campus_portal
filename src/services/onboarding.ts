@@ -1,5 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { sendOnboardingEmail } from "@/utils/email";
+import { read, utils } from "xlsx";
 
 export interface OnboardingResult {
   email: string;
@@ -9,21 +11,18 @@ export interface OnboardingResult {
 }
 
 export function parseCsv(csvContent: string) {
-  const lines = csvContent.split(/\r?\n/);
+  const workbook = read(csvContent, { type: "string", raw: true });
+  const lines = utils.sheet_to_json<string[]>(workbook.Sheets[workbook.SheetNames[0]], {
+    header: 1, defval: "", blankrows: false, raw: true,
+  });
   const result: Array<{ name: string; email: string; role: string; institution_id?: string }> = [];
 
   if (lines.length === 0) return result;
 
-  const cleanVal = (val: string) => {
-    let trimmed = val.trim();
-    if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-      trimmed = trimmed.substring(1, trimmed.length - 1);
-    }
-    return trimmed;
-  };
+  const cleanVal = (val: string) => val.trim();
 
   // Read headers to map columns
-  const headers = lines[0].split(",").map((h) => cleanVal(h).toLowerCase());
+  const headers = lines[0].map((h) => cleanVal(String(h)).toLowerCase());
   const nameIdx = headers.findIndex(h => h.includes("name"));
   const emailIdx = headers.findIndex(h => h.includes("email") || h.includes("mail"));
   const roleIdx = headers.findIndex(h => h.includes("role"));
@@ -34,10 +33,7 @@ export function parseCsv(csvContent: string) {
   }
 
   for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const columns = line.split(",").map((c) => cleanVal(c));
+    const columns = lines[i].map((c) => cleanVal(String(c)));
     if (columns.length < 2) continue;
 
     result.push({
@@ -133,12 +129,19 @@ export async function processCsvOnboarding(
 
         if (roleLinkError) throw roleLinkError;
       } else {
-        // If user already exists in core.users, update their tenant_id
-        await supabase
+        // Preserve existing roles while ensuring the invitation's role is assigned.
+        const { error: existingRoleError } = await supabase
+          .schema("core")
+          .from("user_roles")
+          .upsert({ user_id: userId, role_id: roleId }, { onConflict: "user_id,role_id", ignoreDuplicates: true });
+        if (existingRoleError) throw existingRoleError;
+
+        const { error: tenantUpdateError } = await supabase
           .schema("core")
           .from("users")
           .update({ tenant_id: finalTenantId })
           .eq("id", userId);
+        if (tenantUpdateError) throw tenantUpdateError;
       }
 
       // Determine invitation type
@@ -198,6 +201,7 @@ export async function processCsvOnboarding(
         .update({ status: mailStatus })
         .eq("token", token);
 
+      if (mailStatus === "failed") throw new Error("User provisioned, but the invitation email failed. Regenerate the invitation to retry.");
       results.push({ email, status: "success", link });
     } catch (err: any) {
       results.push({
@@ -212,7 +216,9 @@ export async function processCsvOnboarding(
 }
 
 export async function verifyInvitation(token: string, email: string) {
-  const supabase = await createClient();
+  // Token and email checks below bound this server-only lookup. Anonymous
+  // visitors must never need permission to list every pending invitation.
+  const supabase = createAdminClient();
 
   const { data: invitation, error } = await supabase
     .schema("core")
@@ -264,6 +270,7 @@ export async function verifyInvitation(token: string, email: string) {
   // Fetch institution name
   let institutionName = "Hynox Campus";
   if (user.tenant_id) {
+    // Only reveal this institution after verifying the invitation token and email.
     const { data: inst } = await supabase
       .schema("institution")
       .from("institutions")
@@ -387,7 +394,8 @@ export async function regenerateInvitation(invitationId: string, invitedByUserId
     .schema("core")
     .from("users")
     .update({ status: "invited" })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    .is("auth_user_id", null);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const link = `${appUrl}/onboarding/verify?token=${newToken}&email=${encodeURIComponent(user.email)}`;
@@ -433,6 +441,7 @@ export async function regenerateInvitation(invitationId: string, invitedByUserId
     .select("*")
     .single();
 
+  if (mailStatus === "failed") throw new Error("The invitation email failed. Regenerate the invitation to retry.");
   return {
     ...(finalUpdated || updated),
     link,
@@ -525,12 +534,19 @@ export async function onboardSingleUser(params: {
 
       if (roleLinkError) throw roleLinkError;
     } else {
-      // If user already exists in core.users, update their tenant_id
-      await supabase
+      // Preserve existing roles while ensuring the invitation's role is assigned.
+      const { error: existingRoleError } = await supabase
+        .schema("core")
+        .from("user_roles")
+        .upsert({ user_id: userId, role_id: roleId }, { onConflict: "user_id,role_id", ignoreDuplicates: true });
+      if (existingRoleError) throw existingRoleError;
+
+      const { error: tenantUpdateError } = await supabase
         .schema("core")
         .from("users")
         .update({ tenant_id: finalTenantId })
         .eq("id", userId);
+      if (tenantUpdateError) throw tenantUpdateError;
     }
 
     // Determine invitation type
@@ -590,6 +606,7 @@ export async function onboardSingleUser(params: {
       .update({ status: mailStatus })
       .eq("token", token);
 
+    if (mailStatus === "failed") throw new Error("User provisioned, but the invitation email failed. Regenerate the invitation to retry.");
     return { email, status: "success", link };
   } catch (err: any) {
     return {
@@ -733,6 +750,7 @@ export async function onboardSuperAdmin(params: {
       .update({ status: mailStatus })
       .eq("token", token);
 
+    if (mailStatus === "failed") throw new Error("User provisioned, but the invitation email failed. Regenerate the invitation to retry.");
     return { email, status: "success", link };
   } catch (err: any) {
     return {

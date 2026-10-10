@@ -67,13 +67,13 @@ export async function verifyAttendanceMarkingPermission(cohortId: string, userId
   const { data: teacher, error: teacherError } = await supabase
     .schema("core")
     .from("users")
-    .select("tenant_id, institution_id")
+    .select("tenant_id")
     .eq("id", userId)
     .single();
 
   if (teacherError || !teacher) return false;
 
-  return teacher.institution_id === cohort.institution_id || teacher.tenant_id === cohort.institution_id;
+  return teacher.tenant_id === cohort.institution_id;
 }
 
 // Fetch the full register for a cohort: roster, dates, holidays, and existing records
