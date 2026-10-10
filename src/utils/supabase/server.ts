@@ -1,11 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createAdminClient } from "./admin";
-import { isDemoMode } from "@/lib/demo";
 
 export async function createClient() {
-  if (isDemoMode()) return createAdminClient();
-
   const cookieStore = await cookies();
 
   return createServerClient(

@@ -2,8 +2,6 @@ import { createClient } from "@supabase/supabase-js";
 import { executeAllTestsAndGrade } from "./runner";
 import * as fs from "fs";
 import * as path from "path";
-import { createAdminClient } from "@/utils/supabase/admin";
-import { isDemoMode } from "@/lib/demo";
 
 // Sleep helper function
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -112,7 +110,7 @@ async function startWorker() {
     process.exit(1);
   }
 
-  const supabase = isDemoMode() ? createAdminClient() : createClient(url, anonKey);
+  const supabase = createClient(url, anonKey);
   console.log("[worker] Decoupled Judge Queue Worker is starting up...");
   
   // Perform worker crash recovery sweep on launch

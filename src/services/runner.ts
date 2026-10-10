@@ -3,8 +3,6 @@ import { cookies } from "next/headers";
 import { syncCourseProgressByActivity } from "./delivery";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { createAdminClient } from "@/utils/supabase/admin";
-import { isDemoMode } from "@/lib/demo";
 
 interface RunResult {
   stdout: string;
@@ -23,7 +21,6 @@ export function normalizeNewlines(str: string): string {
 // Resolve Supabase client statically based on environment (Next.js server context vs standalone background worker process)
 let cachedSupabase: any = null;
 export async function getSupabaseClient() {
-  if (isDemoMode()) return createAdminClient();
   // Standalone node script execution fallback (worker mode or non-Next.js runtime)
   if (process.env.IS_WORKER === "true" || !process.env.NEXT_RUNTIME) {
     if (cachedSupabase) return cachedSupabase;

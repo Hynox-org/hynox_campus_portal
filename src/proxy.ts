@@ -1,24 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
-import { DEMO_ROLE_COOKIE, DEMO_ROLE_HEADER, isDemoMode, resolveDemoRole } from "@/lib/demo";
 
 export async function proxy(request: NextRequest) {
-  if (isDemoMode()) {
-    const pathname = request.nextUrl.pathname;
-    if (["/login", "/auth/callback", "/onboarding/verify", "/public"].some((path) => pathname === path || pathname.startsWith(path + "/"))) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/demo";
-      url.search = "";
-      return NextResponse.redirect(url);
-    }
-    const role = resolveDemoRole(pathname, request.cookies.get(DEMO_ROLE_COOKIE)?.value);
-    // Overwrite incoming headers so only the fixed demo profiles can be selected.
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set(DEMO_ROLE_HEADER, role);
-    const response = NextResponse.next({ request: { headers: requestHeaders } });
-    response.cookies.set(DEMO_ROLE_COOKIE, role, { httpOnly: true, sameSite: "lax", path: "/", secure: request.nextUrl.protocol === "https:" });
-    return response;
-  }
   const { supabase, supabaseResponse, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 

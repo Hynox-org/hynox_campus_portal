@@ -1,7 +1,4 @@
 import { createClient } from "@/utils/supabase/server";
-import { cookies, headers } from "next/headers";
-import { cache } from "react";
-import { DEMO_ROLE_COOKIE, DEMO_ROLE_HEADER, DEMO_USERS, isDemoMode, isDemoRole } from "@/lib/demo";
 
 export interface UserDetails {
   authUser: any;
@@ -11,38 +8,8 @@ export interface UserDetails {
   institution: any | null;
 }
 
-export const getCurrentUser = cache(async (): Promise<UserDetails | null> => {
+export async function getCurrentUser(): Promise<UserDetails | null> {
   const supabase = await createClient();
-
-  if (isDemoMode()) {
-    const requestHeaders = await headers();
-    const cookieStore = await cookies();
-    const selectedRole = requestHeaders.get(DEMO_ROLE_HEADER) || cookieStore.get(DEMO_ROLE_COOKIE)?.value;
-    const primaryRole = isDemoRole(selectedRole) ? selectedRole : "student";
-    const { data: user, error } = await supabase.schema("core").from("users")
-      .select("*").eq("id", DEMO_USERS[primaryRole]).eq("status", "active").is("deleted_at", null).maybeSingle();
-    if (error || !user) throw new Error(`Demo ${primaryRole} profile is unavailable. ${error?.message || "Check the configured user ID."}`);
-
-    const { data: roleLinks, error: roleError } = await supabase.schema("core").from("user_roles")
-      .select("roles:role_id(name)").eq("user_id", user.id);
-    if (roleError || !roleLinks?.some((link) => {
-      const roles = Array.isArray(link.roles) ? link.roles : [link.roles];
-      return roles.some((role) => role?.name === primaryRole);
-    })) throw new Error(`Demo profile does not have the ${primaryRole} role.`);
-
-    let institution = null;
-    if (user.tenant_id) {
-      const result = await supabase.schema("institution").from("institutions").select("*").eq("id", user.tenant_id).single();
-      if (result.error) throw new Error(`Demo institution is unavailable: ${result.error.message}`);
-      institution = result.data;
-    }
-    if (primaryRole !== "super_admin" && !institution) throw new Error("Demo campus profile needs an institution.");
-
-    return {
-      authUser: { id: user.auth_user_id || user.id, email: user.email },
-      user, primaryRole, tenantId: user.tenant_id, institution,
-    };
-  }
 
   const {
     data: { user: authUser },
@@ -168,13 +135,9 @@ export const getCurrentUser = cache(async (): Promise<UserDetails | null> => {
     tenantId: user.tenant_id,
     institution,
   };
-});
+}
 
 export async function logout() {
-  if (isDemoMode()) {
-    (await cookies()).delete(DEMO_ROLE_COOKIE);
-    return;
-  }
   const supabase = await createClient();
   await supabase.auth.signOut();
 }

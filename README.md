@@ -1,6 +1,4 @@
-Hynox Campus: a Next.js portal for Hynox admins, institution admins, teachers, and students.
-
-The `dev` branch provides login-free demo access. See [Demo setup and verification](DEMO_SETUP.md) before running or deploying it against the shared database.
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
