@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Terminal, Menu, X, LucideIcon } from "lucide-react";
 import SignOutButton from "@/components/sign-out-button";
+import SharedDashboardSwitch from "@/components/shared-dashboard-switch";
 import { cx } from "@/components/ui/primitives";
 
 /* ============================================================
@@ -178,8 +179,7 @@ export default function AppShell({
             {initials || "U"}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold text-[#EDEFF5] truncate leading-tight">{userName}</p>
-            {userMeta && <p className="text-[9px] text-[#A3A9B6] truncate">{userMeta}</p>}
+            <SharedDashboardSwitch userName={userName} userMeta={userMeta} />
           </div>
           <SignOutButton compact />
         </div>

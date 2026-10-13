@@ -1,16 +1,24 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
 import { SHARED_ROLE_COOKIE } from "@/lib/shared-login";
 
 const subscribe = () => () => {};
-export default function SharedDashboardSwitch() {
-  const pathname = usePathname();
+export default function SharedDashboardSwitch({ userName, userMeta }: { userName: string; userMeta?: string }) {
+  const [pending, setPending] = useState(false);
   const active = useSyncExternalStore(subscribe,
     () => document.cookie.split("; ").some(c => c.startsWith(`${SHARED_ROLE_COOKIE}=`)),
     () => false);
-  if (!active || pathname.startsWith("/super-admin-login") || pathname === "/login") return null;
+  const className = "block text-[11px] font-bold text-[#EDEFF5] truncate leading-tight";
+  if (!active) return <>
+    <p className={className}>{userName}</p>
+    {userMeta && <p className="text-[9px] text-[#A3A9B6] truncate">{userMeta}</p>}
+  </>;
   // Full navigation clears dashboard caches when changing roles.
-  return <a href="/super-admin-login/dashboards" className="fixed bottom-5 left-5 z-50 rounded-lg border border-blue-400/30 bg-[#131418] px-4 py-3 text-sm font-semibold text-blue-300 shadow-lg hover:bg-blue-950">Switch Dashboard</a>;
+  return <a href="/super-admin-login/dashboards" aria-disabled={pending} aria-busy={pending} onClick={event => {
+    if (pending) event.preventDefault();
+    else if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) setPending(true);
+  }} className={`${className} rounded hover:text-[#6E79F4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#6E79F4]`}>
+    {pending ? "Switching…" : "Switch Dashboard"}
+  </a>;
 }
