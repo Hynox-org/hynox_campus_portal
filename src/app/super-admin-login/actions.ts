@@ -1,7 +1,6 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentUser } from "@/services/auth";
 import { isSharedLogin, SHARED_DASHBOARDS, SHARED_ROLE_COOKIE } from "@/lib/shared-login";
@@ -40,5 +39,5 @@ export async function chooseSharedDashboard(formData: FormData) {
   (await cookies()).set(SHARED_ROLE_COOKIE, `${current.authUser.id}:${role}`, {
     path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 8,
   });
-  redirect(SHARED_DASHBOARDS[role as keyof typeof SHARED_DASHBOARDS].path);
+  return { path: SHARED_DASHBOARDS[role as keyof typeof SHARED_DASHBOARDS].path };
 }

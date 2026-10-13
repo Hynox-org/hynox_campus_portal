@@ -2,11 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/services/auth", () => ({ getCurrentUser: vi.fn() }));
 vi.mock("@/utils/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: vi.fn() }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 import { getCurrentUser } from "@/services/auth";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { chooseSharedDashboard, sharedSignIn } from "./actions";
 
 describe("shared login actions", () => {
@@ -30,11 +28,14 @@ describe("shared login actions", () => {
     const form = new FormData(); form.set("email", "member@example.com"); form.set("password", "wrong-password");
     expect(await sharedSignIn(form)).toEqual({ error: "Unable to sign in. Check your email and password." });
   });
-  it("selects student permissions and the student dashboard", async () => {
-    const form = new FormData(); form.set("role", "student");
-    await chooseSharedDashboard(form);
-    expect(set).toHaveBeenCalledWith("campus-dashboard-role", "auth-1:student", expect.objectContaining({ sameSite: "lax", path: "/" }));
-    expect(redirect).toHaveBeenCalledWith("/student");
+  it.each([
+    ["super_admin", "/admin"], ["teacher", "/teacher"],
+    ["institution_admin", "/institution"], ["student", "/student"],
+  ])("saves %s permissions before returning its full-navigation destination", async (role, path) => {
+    vi.mocked(getCurrentUser).mockResolvedValue({ sharedLogin: true, availableRoles: [role], authUser: { id: "auth-1" }, tenantId: "campus-1", institution: { status: "active" } } as never);
+    const form = new FormData(); form.set("role", role);
+    expect(await chooseSharedDashboard(form)).toEqual({ path });
+    expect(set).toHaveBeenCalledWith("campus-dashboard-role", `auth-1:${role}`, expect.objectContaining({ sameSite: "lax", path: "/" }));
   });
   it("rejects unassigned roles", async () => {
     const form = new FormData(); form.set("role", "teacher");

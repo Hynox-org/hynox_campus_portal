@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/services/auth";
-import { SHARED_DASHBOARDS } from "@/lib/shared-login";
-import { chooseSharedDashboard } from "../actions";
+import DashboardChoices from "./dashboard-choices";
 import SignOutButton from "@/components/sign-out-button";
 
 export default async function SharedDashboardsPage() {
@@ -13,14 +12,7 @@ export default async function SharedDashboardsPage() {
         <h1 className="text-xl font-bold">Which dashboard would you like to open?</h1>
         <p className="mt-2 text-sm text-slate-400">{current.authUser.email}</p>
         <p className="mt-1 text-sm text-slate-400">Institution: {current.institution?.name || "Unassigned"}</p>
-        <div className="my-8 grid gap-3 sm:grid-cols-2">
-          {Object.entries(SHARED_DASHBOARDS).filter(([role]) => current.availableRoles?.includes(role)).map(([role, dashboard]) => (
-            <form key={role} action={chooseSharedDashboard}>
-              <input type="hidden" name="role" value={role} />
-              <button className="w-full rounded-lg border border-white/15 bg-blue-500/10 p-5 text-left font-semibold hover:bg-blue-500/20 cursor-pointer">{dashboard.label}</button>
-            </form>
-          ))}
-        </div>
+        <DashboardChoices availableRoles={current.availableRoles || []} />
         <SignOutButton />
       </section>
     </main>
