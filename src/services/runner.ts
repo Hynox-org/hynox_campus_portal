@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { syncCourseProgressByActivity } from "./delivery";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { SHARED_ROLE_COOKIE, SHARED_ROLE_HEADER } from "@/lib/shared-login";
 
 interface RunResult {
   stdout: string;
@@ -37,6 +38,7 @@ export async function getSupabaseClient() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        global: { headers: { [SHARED_ROLE_HEADER]: cookieStore.get(SHARED_ROLE_COOKIE)?.value || "" } },
         cookies: {
           getAll() {
             return cookieStore.getAll();

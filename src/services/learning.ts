@@ -1132,11 +1132,12 @@ export async function getProgrammingChallengeDetails(activityId: string, student
     .eq("student_id", studentId)
     .order("submitted_at", { ascending: false });
 
-  const { data: starterTemplates } = await supabase
+  const { data: starterTemplates, error: starterError } = await supabase
     .schema("learning")
     .from("challenge_starter_templates")
     .select("language, starter_code")
     .eq("challenge_id", challenge.id);
+  if (starterError) throw starterError;
 
   const starterCodeByLanguage: Record<string, string> = {};
   for (const tpl of starterTemplates || []) {

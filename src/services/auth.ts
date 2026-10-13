@@ -1,4 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
+import { isSharedLogin, selectedSharedRole, SHARED_ROLE_COOKIE } from "@/lib/shared-login";
 
 export interface UserDetails {
   authUser: any;
@@ -6,6 +8,8 @@ export interface UserDetails {
   primaryRole: string;
   tenantId: string | null;
   institution: any | null;
+  sharedLogin?: boolean;
+  availableRoles?: string[];
 }
 
 export async function getCurrentUser(): Promise<UserDetails | null> {
@@ -116,6 +120,13 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
   }
 
   // Fetch tenant/institution details if tenant_id is linked
+  const availableRoles = (userRoles || []).flatMap((ur: any) => ur.roles?.name ? [ur.roles.name] : []);
+  const sharedLogin = isSharedLogin(authUser);
+  if (sharedLogin) {
+    if (user.status !== "active") return null;
+    primaryRole = selectedSharedRole((await cookies()).get(SHARED_ROLE_COOKIE)?.value, authUser.id, availableRoles) || "public";
+  }
+
   let institution = null;
   if (user.tenant_id) {
     const { data: instData } = await supabase
@@ -134,6 +145,8 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
     primaryRole,
     tenantId: user.tenant_id,
     institution,
+    sharedLogin,
+    availableRoles,
   };
 }
 

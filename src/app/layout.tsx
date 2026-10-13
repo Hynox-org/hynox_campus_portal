@@ -4,6 +4,7 @@ import "./globals.css";
 import { QueryProvider } from "@/components/query-provider";
 import { CacheProvider } from "@/components/cache-provider";
 import { ToastProvider } from "@/components/toast";
+import SharedDashboardSwitch from "@/components/shared-dashboard-switch";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
           <CacheProvider>
             <ToastProvider>
               {children}
+              <SharedDashboardSwitch />
             </ToastProvider>
           </CacheProvider>
         </QueryProvider>

@@ -2,6 +2,8 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { isSharedLogin, SHARED_ROLE_COOKIE } from "@/lib/shared-login";
 
 export async function signInWithGoogle(redirectTo?: string) {
   const supabase = await createClient();
@@ -30,8 +32,10 @@ export async function signInWithGoogle(redirectTo?: string) {
 
 export async function signOutAction() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   await supabase.auth.signOut();
-  redirect("/login");
+  (await cookies()).delete(SHARED_ROLE_COOKIE);
+  redirect(isSharedLogin(user) ? "/super-admin-login" : "/login");
 }
 
 export async function signUpPublicUserAction(formData: FormData) {

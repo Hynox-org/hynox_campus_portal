@@ -2,6 +2,7 @@
 
 import * as service from "@/services/learning";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 export async function getStudentAssignedActivitiesAction(studentId: string) {
   try {
@@ -119,8 +120,11 @@ export async function submitChallengeCodeAction(
     
     // Automatically trigger Judge Engine execution in background only if external worker process is disabled
     if (process.env.JUDGE_WORKER_ENABLED !== "true") {
-      const runner = await import("@/services/runner");
-      runner.executeAllTestsAndGrade(submission.id).catch(console.error);
+      // Keep grading alive after the response on serverless hosts such as Vercel.
+      after(async () => {
+        const runner = await import("@/services/runner");
+        await runner.executeAllTestsAndGrade(submission.id);
+      });
     }
 
     return { submission };
@@ -390,11 +394,12 @@ export async function getActivityDetailsNoStudentAction(activityId: string, acti
         .eq("challenge_id", challenge.id)
         .order("position", { ascending: true });
 
-      const { data: starterTemplates } = await supabase
+      const { data: starterTemplates, error: starterError } = await supabase
         .schema("learning")
         .from("challenge_starter_templates")
         .select("language, starter_code")
         .eq("challenge_id", challenge.id);
+      if (starterError) throw starterError;
 
       const starterCodeByLanguage: Record<string, string> = {};
       for (const tpl of starterTemplates || []) {

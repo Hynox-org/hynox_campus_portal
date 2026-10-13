@@ -31,6 +31,28 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
+Use the Next.js framework preset, repository root, `npm run build`, and the default output directory. Node.js 24 is pinned in `package.json` and matches the locally tested runtime.
+
+Set these variables in Vercel for each deployment environment; `.env.local` is not uploaded:
+
+| Variable | Value to configure |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Selected Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | That project's public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | That project's private server key; never use a `NEXT_PUBLIC_` name |
+| `NEXT_PUBLIC_APP_URL` | Deployed HTTPS origin, without a trailing slash |
+| `SANDBOX_ENGINE_URL` | Reachable external sandbox-engine origin for coding Run/Submit |
+| `SANDBOX_ENGINE_API_KEY` | Matching sandbox-engine server key |
+| `JUDGE_WORKER_ENABLED` | Leave unset or `false` for grading through Next.js `after`; use `true` only with a separately running judge worker |
+
+The sandbox engine runs outside the Vercel application. Do not point it at localhost. Grading through `after` remains subject to Vercel's function duration limit; large test suites should use the separate worker. Set email-provider variables separately if enabling onboarding emails.
+
+Use the same Supabase project to retain the shared account and existing campus data. Its starter-template permissions and shared-login migrations were applied on 13 October 2026; another database needs the corresponding migrations and account setup. Configure the deployed origin and auth callback URL in Supabase Auth's URL settings, then redeploy after changing Vercel environment variables.
+
+After deployment, open `/super-admin-login`, sign in, and verify all four role choices. Check course teacher assignments and save/reload a coding starter as Admin or an assigned Teacher, then verify it in the enrolled Student workspace.
+
+The production build and local `next start` behavior can be verified before hosting. A successful local check does not verify the deployed domain, Vercel environment values, or connectivity from Vercel to the sandbox engine.
+
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

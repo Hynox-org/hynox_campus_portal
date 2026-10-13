@@ -35,6 +35,7 @@ export default function ChallengeEditor({
   const [codeByLanguage, setCodeByLanguage] = useState<Record<string, string>>(initialStarterCode || {});
   const [savingLanguage, setSavingLanguage] = useState<string | null>(null);
   const [savedLanguage, setSavedLanguage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setCodeByLanguage(initialStarterCode || {});
@@ -43,16 +44,21 @@ export default function ChallengeEditor({
   const handleSaveStarterCode = async (language: string) => {
     setSavingLanguage(language);
     setSavedLanguage(null);
+    setSaveError(null);
     try {
       const res = await upsertChallengeStarterTemplateAction({
         challengeId,
         language,
         starterCode: codeByLanguage[language] || "",
       });
-      if (!res.error) {
+      if (res.error) {
+        setSaveError(res.error);
+      } else {
         setSavedLanguage(language);
         setTimeout(() => setSavedLanguage(null), 2000);
       }
+    } catch {
+      setSaveError("Unable to save starter code. Please try again.");
     } finally {
       setSavingLanguage(null);
     }
@@ -120,6 +126,8 @@ export default function ChallengeEditor({
           ? "Saved"
           : `Save ${LANGUAGES.find((l) => l.code === activeLanguage)?.label} Starter`}
       </button>
+
+      {saveError && <p role="alert" className="text-xs text-[#F0555D]">{saveError}</p>}
 
       <div className="pt-3 border-t border-[#23252C]">
         <label className="flex items-center gap-2 text-xs cursor-pointer">

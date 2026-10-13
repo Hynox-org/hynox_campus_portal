@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SHARED_ROLE_COOKIE, SHARED_ROLE_HEADER } from "@/lib/shared-login";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -10,6 +11,7 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { headers: { [SHARED_ROLE_HEADER]: request.cookies.get(SHARED_ROLE_COOKIE)?.value || "" } },
       cookies: {
         getAll() {
           return request.cookies.getAll();

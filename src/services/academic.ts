@@ -436,15 +436,21 @@ export async function getCourseInstructors(courseId: string) {
   const { data, error } = await supabase
     .schema("academic")
     .from("course_instructors")
-    .select(`
-      user_id,
-      instructor_role,
-      user:user_id(id, full_name, email)
-    `)
+    .select("user_id, instructor_role")
     .eq("course_id", courseId);
 
   if (error) throw error;
-  return data || [];
+  if (!data?.length) return [];
+
+  // PostgREST cannot embed this relationship across the academic and core schemas.
+  const { data: users, error: usersError } = await supabase
+    .schema("core")
+    .from("users")
+    .select("id, full_name, email")
+    .in("id", [...new Set(data.map(instructor => instructor.user_id))]);
+  if (usersError) throw usersError;
+  const usersById = new Map((users || []).map(user => [user.id, user]));
+  return data.map(instructor => ({ ...instructor, user: usersById.get(instructor.user_id) || null }));
 }
 
 export async function assignCourseInstructors(courseId: string, instructorIds: string[]) {

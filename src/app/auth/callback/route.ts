@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { isSharedLogin } from "@/lib/shared-login";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -20,6 +21,9 @@ export async function GET(request: Request) {
 
     if (!error && sessionData?.user) {
       const user = sessionData.user;
+      if (isSharedLogin(user)) {
+        return NextResponse.redirect(`${publicOrigin}/super-admin-login/dashboards`);
+      }
 
       // 1. Resolve business user from core.users (by auth_user_id or email)
       let { data: dbUser } = await supabase

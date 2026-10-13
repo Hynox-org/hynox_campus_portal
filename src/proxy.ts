@@ -1,12 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
+import { isSharedLogin, selectedSharedRole, SHARED_ROLE_COOKIE } from "@/lib/shared-login";
 
 export async function proxy(request: NextRequest) {
   const { supabase, supabaseResponse, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
 
   // Paths that can be accessed without logging in
-  const publicPaths = ["/login", "/auth/callback", "/onboarding/verify"];
+  const publicPaths = ["/login", "/super-admin-login", "/auth/callback", "/onboarding/verify"];
+  const redirectTo = (path: string) => {
+    const url = request.nextUrl.clone();
+    url.pathname = path;
+    url.search = "";
+    const response = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
+    return response;
+  };
   
   const isPublicPath = publicPaths.some(
     (path) => pathname === path || pathname.startsWith(path + "/")
@@ -15,21 +24,20 @@ export async function proxy(request: NextRequest) {
   if (!user) {
     // If not logged in and trying to access a protected page, redirect to login
     if (!isPublicPath) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
+      return redirectTo(pathname.startsWith("/super-admin-login") ? "/super-admin-login" : "/login");
     }
     return supabaseResponse;
   }
 
   // User is authenticated, resolve their role
   let role = "public";
+  let assignedRoles: string[] = [];
   
   // Resolve user from core.users and core.user_roles dynamically
   let { data: dbUser } = await supabase
     .schema("core")
     .from("users")
-    .select("id")
+    .select("id, status")
     .eq("auth_user_id", user.id)
     .is("deleted_at", null)
     .maybeSingle();
@@ -39,7 +47,7 @@ export async function proxy(request: NextRequest) {
     const { data: emailUser } = await supabase
       .schema("core")
       .from("users")
-      .select("id")
+      .select("id, status")
       .eq("email", user.email)
       .is("deleted_at", null)
       .maybeSingle();
@@ -63,15 +71,31 @@ export async function proxy(request: NextRequest) {
       .eq("user_id", dbUser.id);
 
     if (userRoles && userRoles.length > 0) {
+      const roles = userRoles.map(ur => ur.roles as unknown as { name: string; priority: number } | null);
+      assignedRoles = roles.flatMap(r => r?.name ? [r.name] : []);
       let maxPriority = -1;
-      userRoles.forEach((ur: any) => {
-        const r = ur.roles as any;
+      roles.forEach(r => {
         if (r && r.priority > maxPriority) {
           maxPriority = r.priority;
           role = r.name;
         }
       });
     }
+  }
+
+  if (isSharedLogin(user)) {
+    if (!dbUser || dbUser.status !== "active") {
+      await supabase.auth.signOut();
+      return redirectTo("/super-admin-login");
+    }
+    const selected = selectedSharedRole(request.cookies.get(SHARED_ROLE_COOKIE)?.value, user.id, assignedRoles);
+    if (pathname === "/super-admin-login") return redirectTo("/super-admin-login/dashboards");
+    if (!selected && !pathname.startsWith("/super-admin-login/") && pathname !== "/auth/callback") {
+      return redirectTo("/super-admin-login/dashboards");
+    }
+    role = selected || "public";
+  } else if (pathname.startsWith("/super-admin-login/dashboards")) {
+    return redirectTo("/login");
   }
 
   // Define dashboard URLs
@@ -89,40 +113,28 @@ export async function proxy(request: NextRequest) {
 
   // Prevent authenticated users from going back to login or root landing page '/'
   if (pathname === "/login" || pathname === "/") {
-    const url = request.nextUrl.clone();
-    url.pathname = myDashboard;
-    return NextResponse.redirect(url);
+    return redirectTo(myDashboard);
   }
 
   // Enforce route protection by role dashboards
   if (pathname.startsWith("/admin") && role !== "super_admin") {
-    const url = request.nextUrl.clone();
-    url.pathname = myDashboard;
-    return NextResponse.redirect(url);
+    return redirectTo(myDashboard);
   }
 
   if (pathname.startsWith("/institution") && role !== "institution_admin") {
-    const url = request.nextUrl.clone();
-    url.pathname = myDashboard;
-    return NextResponse.redirect(url);
+    return redirectTo(myDashboard);
   }
 
   if (pathname.startsWith("/teacher") && role !== "teacher" && role !== "trainer") {
-    const url = request.nextUrl.clone();
-    url.pathname = myDashboard;
-    return NextResponse.redirect(url);
+    return redirectTo(myDashboard);
   }
 
   if (pathname.startsWith("/student") && role !== "student") {
-    const url = request.nextUrl.clone();
-    url.pathname = myDashboard;
-    return NextResponse.redirect(url);
+    return redirectTo(myDashboard);
   }
 
   if (pathname.startsWith("/public") && role !== "public" && role !== "mentor") {
-    const url = request.nextUrl.clone();
-    url.pathname = myDashboard;
-    return NextResponse.redirect(url);
+    return redirectTo(myDashboard);
   }
 
   return supabaseResponse;
