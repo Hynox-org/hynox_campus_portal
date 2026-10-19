@@ -34,6 +34,7 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useCache } from "@/components/cache-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import AppShell from "@/components/app-shell";
+import CareerWorkspace, { type CareerView } from "@/components/career/career-workspace";
 import { seedAcademicListCaches, unwrapActionResult } from "@/lib/dashboard-query";
 import { 
   Building, 
@@ -65,7 +66,8 @@ import {
   ShieldAlert,
   Maximize2,
   Lightbulb,
-  Sparkles
+  Sparkles,
+  BriefcaseBusiness
 } from "lucide-react";
 
 import { useStudentDeliveryData } from "@/hooks/use-delivery";
@@ -94,20 +96,30 @@ export default function StudentConsole({
   const { data: academicPrefetch } = useAcademicPrefetchData(institution?.id);
   const initialPrograms = studentDeliveryRes?.programs || [];
 
-  const [activeTab, setActiveTab] = useState<"overview" | "academics" | "quizzes" | "projects" | "challenges">("overview");
-  const [activeParentTab, setActiveParentTab] = useState<"overview" | "curriculum" | "assessments">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "academics" | "quizzes" | "projects" | "challenges" | "career">("overview");
+  const [activeParentTab, setActiveParentTab] = useState<"overview" | "curriculum" | "assessments" | "career">("overview");
+  const [careerView, setCareerView] = useState<CareerView>("resumes");
+  const [careerVisited, setCareerVisited] = useState(false);
+  const [navigationReady, setNavigationReady] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab && ["overview", "academics", "quizzes", "projects", "challenges"].includes(tab)) {
+      if (tab && ["overview", "academics", "quizzes", "projects", "challenges", "career"].includes(tab)) {
         setActiveTab(tab as any);
       }
       const parent = params.get("parentTab");
-      if (parent && ["overview", "curriculum", "assessments"].includes(parent)) {
+      if (parent && ["overview", "curriculum", "assessments", "career"].includes(parent)) {
         setActiveParentTab(parent as any);
       }
+      if (parent === "career") {
+        setActiveTab("career");
+        setCareerVisited(true);
+        const view = params.get("view");
+        if (view === "builder" || view === "scanner") setCareerView(view);
+      }
+      setNavigationReady(true);
     }
   }, []);
 
@@ -162,6 +174,7 @@ export default function StudentConsole({
   const [isSyllabusDrawerOpen, setIsSyllabusDrawerOpen] = useState(false);
 
   useEffect(() => {
+    if (!navigationReady) return;
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       let changed = false;
@@ -171,6 +184,13 @@ export default function StudentConsole({
       }
       if (params.get("parentTab") !== activeParentTab) {
         params.set("parentTab", activeParentTab);
+        changed = true;
+      }
+      if (activeParentTab === "career" && params.get("view") !== careerView) {
+        params.set("view", careerView);
+        changed = true;
+      } else if (activeParentTab !== "career" && params.has("view")) {
+        params.delete("view");
         changed = true;
       }
 
@@ -221,7 +241,7 @@ export default function StudentConsole({
         window.history.replaceState(null, "", newUrl);
       }
     }
-  }, [activeTab, activeParentTab, selectedCourse, activeLesson, selectedCohort, modules]);
+  }, [activeTab, activeParentTab, careerView, navigationReady, selectedCourse, activeLesson, selectedCohort, modules]);
 
   // Guards: restore from URL only once per session to prevent background
   // React Query refetches from overriding the user's active selections.
@@ -1411,6 +1431,8 @@ export default function StudentConsole({
             ? "Overview"
             : activeParentTab === "curriculum"
             ? "Syllabus"
+            : activeParentTab === "career"
+            ? "Career Tools"
             : activeTab === "projects"
             ? "Projects"
             : "Quizzes"
@@ -1418,6 +1440,11 @@ export default function StudentConsole({
         items={[
           { id: "overview", label: "Overview", icon: Building },
           { id: "curriculum", label: "Syllabus", icon: BookOpen, badge: selectedCohort?.courses?.length || 0 },
+          { id: "career", label: "Career Tools", icon: BriefcaseBusiness, children: [
+            { id: "resumes", label: "My Resumes" },
+            { id: "builder", label: "Resume Builder" },
+            { id: "scanner", label: "ATS Resume Scanner" },
+          ] },
           {
             id: "assessments",
             label: "Assessments",
@@ -1430,8 +1457,15 @@ export default function StudentConsole({
           },
         ]}
         activeId={activeParentTab}
-        activeChildId={activeTab}
+        activeChildId={activeParentTab === "career" ? careerView : activeTab}
         onSelect={(id, childId) => {
+          if (id === "career") {
+            setActiveParentTab("career");
+            setActiveTab("career");
+            setCareerVisited(true);
+            setCareerView(childId === "scanner" ? "scanner" : childId === "builder" ? "builder" : "resumes");
+            return;
+          }
           if (id === "overview") {
             setActiveParentTab("overview");
             setActiveTab("overview");
@@ -1524,6 +1558,9 @@ export default function StudentConsole({
 
         {/* Main Content Area */}
         <div className="flex-1 min-w-0 flex flex-col gap-6">
+        {careerVisited && <div hidden={activeParentTab !== "career"}>
+          <CareerWorkspace studentId={studentId} fullName={fullName} email={studentEmail} view={careerView} onViewChange={setCareerView} />
+        </div>}
         
         {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
