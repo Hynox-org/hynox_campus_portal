@@ -35,6 +35,7 @@ import { useCache } from "@/components/cache-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import AppShell from "@/components/app-shell";
 import CareerWorkspace, { type CareerView } from "@/components/career/career-workspace";
+import StudentNewsletterPreferences from "@/features/newsletter/student-preferences";
 import { seedAcademicListCaches, unwrapActionResult } from "@/lib/dashboard-query";
 import { 
   Building, 
@@ -96,21 +97,22 @@ export default function StudentConsole({
   const { data: academicPrefetch } = useAcademicPrefetchData(institution?.id);
   const initialPrograms = studentDeliveryRes?.programs || [];
 
-  const [activeTab, setActiveTab] = useState<"overview" | "academics" | "quizzes" | "projects" | "challenges" | "career">("overview");
-  const [activeParentTab, setActiveParentTab] = useState<"overview" | "curriculum" | "assessments" | "career">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "academics" | "quizzes" | "projects" | "challenges" | "career" | "newsletters">("overview");
+  const [activeParentTab, setActiveParentTab] = useState<"overview" | "curriculum" | "assessments" | "career" | "newsletters">("overview");
   const [careerView, setCareerView] = useState<CareerView>("resumes");
   const [careerVisited, setCareerVisited] = useState(false);
+  const [newsletterVisited, setNewsletterVisited] = useState(false);
   const [navigationReady, setNavigationReady] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab && ["overview", "academics", "quizzes", "projects", "challenges", "career"].includes(tab)) {
+      if (tab && ["overview", "academics", "quizzes", "projects", "challenges", "career", "newsletters"].includes(tab)) {
         setActiveTab(tab as any);
       }
       const parent = params.get("parentTab");
-      if (parent && ["overview", "curriculum", "assessments", "career"].includes(parent)) {
+      if (parent && ["overview", "curriculum", "assessments", "career", "newsletters"].includes(parent)) {
         setActiveParentTab(parent as any);
       }
       if (parent === "career") {
@@ -118,6 +120,11 @@ export default function StudentConsole({
         setCareerVisited(true);
         const view = params.get("view");
         if (view === "builder" || view === "scanner") setCareerView(view);
+      }
+      if (parent === "newsletters" || tab === "newsletters") {
+        setActiveParentTab("newsletters");
+        setActiveTab("newsletters");
+        setNewsletterVisited(true);
       }
       setNavigationReady(true);
     }
@@ -1433,6 +1440,8 @@ export default function StudentConsole({
             ? "Syllabus"
             : activeParentTab === "career"
             ? "Career Tools"
+            : activeParentTab === "newsletters"
+            ? "Daily Field Updates"
             : activeTab === "projects"
             ? "Projects"
             : "Quizzes"
@@ -1455,10 +1464,19 @@ export default function StudentConsole({
               { id: "challenges", label: "Code Challenges", badge: challengeCount },
             ],
           },
+          { id: "newsletters", label: "Daily Field Updates", icon: Send },
         ]}
         activeId={activeParentTab}
         activeChildId={activeParentTab === "career" ? careerView : activeTab}
         onSelect={(id, childId) => {
+          if (id === "newsletters") {
+            setActiveParentTab("newsletters");
+            setActiveTab("newsletters");
+            setNewsletterVisited(true);
+            setSelectedCourse(null);
+            setActiveLesson(null);
+            return;
+          }
           if (id === "career") {
             setActiveParentTab("career");
             setActiveTab("career");
@@ -1558,6 +1576,9 @@ export default function StudentConsole({
 
         {/* Main Content Area */}
         <div className="flex-1 min-w-0 flex flex-col gap-6">
+        {newsletterVisited && <div hidden={activeParentTab !== "newsletters"} className="w-full max-w-3xl">
+          <StudentNewsletterPreferences />
+        </div>}
         {careerVisited && <div hidden={activeParentTab !== "career"}>
           <CareerWorkspace studentId={studentId} fullName={fullName} email={studentEmail} view={careerView} onViewChange={setCareerView} />
         </div>}

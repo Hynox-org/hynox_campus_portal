@@ -60,3 +60,9 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 DEV branch created for development purpose
 DEV branch deployment initialization
+
+## Course newsletters
+
+Students can subscribe to daily news for their active course enrollments in the dashboard's Daily Field Updates tab at `/student?parentTab=newsletters&tab=newsletters`; `/student/newsletters` redirects there. Super admins manage delivery, preview course topics, and pause newsletters at `/admin/newsletters`. The isolated module uses free GDELT/Google News RSS discovery and Brevo marketing campaigns, with a default cap of 250 newsletter emails per day and 50 credits reserved for other mail.
+
+The scheduled Supabase worker runs independently of the laptop. Setup, credential rotation, tests, limitations, and complete removal instructions are in [the newsletter module guide](src/features/newsletter/README.md). After applying its migrations and deploying the Edge Function, configure transport with `node --env-file=.env.local scripts/newsletter-setup.mjs`. No paid service is purchased automatically.

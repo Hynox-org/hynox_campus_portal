@@ -102,7 +102,8 @@ import {
   Menu,
   X,
   Play,
-  Layers
+  Layers,
+  Mail
 } from "lucide-react";
 import LibraryBuilder from "./library-builder";
 import ProgramManager from "./program-manager";
@@ -118,6 +119,7 @@ import { CustomSelect } from "@/components/custom-select";
 import AppShell, { ShellNavItem } from "@/components/app-shell";
 
 const ADMIN_NAV_ITEMS: ShellNavItem[] = [
+  { id: "newsletters", label: "Course Newsletters", icon: Mail },
   {
     id: "institutions",
     label: "Institutions",
@@ -1568,6 +1570,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         activeId={activeParentTab}
         activeChildId={activeTab}
         onSelect={(id, childId) => {
+          if (id === "newsletters") { window.location.href = "/admin/newsletters"; return; }
           setActiveParentTab(id as typeof activeParentTab);
           const parentItem = ADMIN_NAV_ITEMS.find((item) => item.id === id);
           const defaultChildId = parentItem?.children?.[0]?.id;
