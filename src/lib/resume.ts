@@ -11,10 +11,10 @@ export interface ResumeContent {
 }
 export interface SavedResume { id: string; title: string; template: "classic" | "modern"; content: ResumeContent; version: number; updated_at: string }
 export interface LearningItem { source_key: string; kind: "courses" | "projects"; title: string; subtitle: string; completed_at: string | null; url: string }
-export const SECTION_LABELS: Record<SectionKind, string> = { education: "Education", projects: "Projects", skills: "Skills", experience: "Experience", courses: "Courses", certifications: "Certifications", achievements: "Achievements", languages: "Languages", custom: "Additional information" };
+export const SECTION_LABELS: Record<SectionKind, string> = { education: "Education", projects: "Personal Projects", skills: "Technical Skills & Interest", experience: "Experience", courses: "Courses", certifications: "Certifications", achievements: "Achievements", languages: "Languages", custom: "Additional information" };
 export const newEntry = (): ResumeEntry => ({ id: crypto.randomUUID(), title: "", subtitle: "", start: "", end: "", description: "", url: "" });
 export function emptyResume(fullName = "", email = ""): ResumeContent {
-  return { basics: { fullName, email, headline: "", phone: "", location: "", website: "", linkedin: "", github: "", summary: "" }, sections: ["education", "projects", "skills", "experience", "courses"].map(kind => ({ id: crypto.randomUUID(), kind: kind as SectionKind, title: SECTION_LABELS[kind as SectionKind], entries: [] })) };
+  return { basics: { fullName, email, headline: "", phone: "", location: "", website: "", linkedin: "", github: "", summary: "" }, sections: ["education", "experience", "projects", "skills", "certifications", "courses"].map(kind => ({ id: crypto.randomUUID(), kind: kind as SectionKind, title: SECTION_LABELS[kind as SectionKind], entries: [] })) };
 }
 export function safeLink(value: string): string | undefined {
   if (!value.trim()) return undefined;

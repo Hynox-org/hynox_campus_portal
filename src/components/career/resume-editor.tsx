@@ -80,15 +80,13 @@ export function ResumeEditor({ content, onChange, learning, announce, initialSec
   </div>;
 }
 
-export function ResumePreview({ content, template }: { content: ResumeContent; template: "classic" | "modern" }) {
+export function ResumePreview({ content }: { content: ResumeContent; template?: "classic" | "modern" }) {
   const b = content.basics;
-  return <article aria-label="Resume preview" className={`bg-white text-[#172033] p-6 sm:p-9 shadow-xl rounded-sm break-words min-h-[650px] text-[11px] leading-relaxed ${template === "modern" ? "border-t-4 border-indigo-700" : ""}`}>
-    <h2 className={`text-2xl font-bold ${template === "modern" ? "text-indigo-800" : ""}`}>{b.fullName || "Your name"}</h2>
-    {b.headline && <p className="text-sm mt-1">{b.headline}</p>}
-    <p className="mt-2 text-[10px] text-slate-600">{[b.email, b.phone, b.location].filter(Boolean).join(" | ") || "Your contact details"}</p>
-    {[b.website, b.linkedin, b.github].filter(Boolean).map((url, i) => <p key={i} className="text-[10px] text-slate-600">{url}</p>)}
-    {b.summary && <section className="mt-5"><h3 className="font-bold border-b border-slate-300 pb-1">Summary</h3><p className="mt-2 whitespace-pre-line">{b.summary}</p></section>}
-    {content.sections.filter(s => s.entries.length).map(s => <section key={s.id} className="mt-5"><h3 className={`font-bold border-b border-slate-300 pb-1 ${template === "modern" ? "text-indigo-800" : ""}`}>{s.title}</h3>{s.entries.map(e => <div key={e.id} className="mt-2.5"><p className="font-semibold">{e.title || "Entry title"}</p>{e.subtitle && <p>{e.subtitle}</p>}{(e.start || e.end) && <p className="text-[10px] text-slate-500">{[e.start, e.end].filter(Boolean).join(" – ")}</p>}{e.description && <p className="mt-1 whitespace-pre-line">{e.description}</p>}{e.url && <p className="text-[10px] text-slate-600">{e.url}</p>}</div>)}</section>)}
-    {!content.sections.some(s => s.entries.length) && <p className="mt-12 text-slate-400 text-center">Your story takes shape here.<br />Add education, skills, and projects to get started.</p>}
+  return <article aria-label="Resume preview" style={{ fontFamily: '"Times New Roman", serif' }} className="bg-white text-black px-8 py-7 shadow-xl break-words min-h-[650px] text-[11px] leading-[1.2]">
+    <h2 className="text-[26px] text-center mb-2">{b.fullName || "Your name"}</h2>
+    <div className="text-center text-[10px]">{[b.location, b.email, b.phone].filter(Boolean).join(" | ")}{[b.linkedin, b.github, b.website].filter(Boolean).map((url, i) => <span key={i}> | <span className="text-[#0000ff] underline">{url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</span></span>)}</div>
+    {b.headline && <p className="text-center mt-1">{b.headline}</p>}
+    {b.summary && <section className="mt-3"><h3 className="font-bold uppercase border-b border-black pb-1 mb-1.5">Summary</h3><p className="whitespace-pre-line">{b.summary}</p></section>}
+    {content.sections.filter(s => s.entries.length).map(s => <section key={s.id} className="mt-3"><h3 className="font-bold uppercase border-b border-black pb-1 mb-1.5 text-xs">{s.title}</h3>{s.entries.map(e => <div key={e.id} className="mb-1.5"><div className="flex justify-between gap-3">{s.kind === "skills" || s.kind === "certifications" ? <p><strong>{e.title}{e.subtitle ? ": " : ""}</strong>{e.subtitle}</p> : <p className={`font-bold ${safeLink(e.url) ? "text-[#0000ff] underline" : ""}`}>{e.title || "Entry title"}</p>}<p className="text-[10px] font-bold text-right shrink-0">{[e.start, e.end].filter(Boolean).join(" - ")}</p></div>{e.subtitle && s.kind !== "skills" && s.kind !== "certifications" && <p>{e.subtitle}</p>}{e.description && (s.kind === "projects" || s.kind === "experience" ? <ul className="list-disc pl-8">{e.description.split("\n").filter(line => line.trim()).map((line, i) => <li className="mt-1" key={i}>{line.replace(/^[•*-]\s*/, "")}</li>)}</ul> : <p className="whitespace-pre-line">{e.description}</p>)}</div>)}</section>)}
   </article>;
 }

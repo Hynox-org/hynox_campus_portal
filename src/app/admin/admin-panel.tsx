@@ -105,6 +105,7 @@ import {
   Layers,
   Mail
 } from "lucide-react";
+import NewsletterAdminPanel from "@/features/newsletter/admin-panel";
 import LibraryBuilder from "./library-builder";
 import ProgramManager from "./program-manager";
 import DeliveryManager from "./delivery-manager";
@@ -119,7 +120,6 @@ import { CustomSelect } from "@/components/custom-select";
 import AppShell, { ShellNavItem } from "@/components/app-shell";
 
 const ADMIN_NAV_ITEMS: ShellNavItem[] = [
-  { id: "newsletters", label: "Course Newsletters", icon: Mail },
   {
     id: "institutions",
     label: "Institutions",
@@ -173,6 +173,7 @@ const ADMIN_NAV_ITEMS: ShellNavItem[] = [
     icon: UserCheck,
     children: [{ id: "attendance", label: "Attendance Register" }],
   },
+  { id: "newsletters", label: "Course Newsletters", icon: Mail },
 ];
 
 const ADMIN_PAGE_TITLES: Record<string, string> = {
@@ -193,6 +194,7 @@ const ADMIN_PAGE_TITLES: Record<string, string> = {
   create_activity: "Create Activity",
   view_activities: "Published Activities",
   attendance: "Attendance Register",
+  newsletters: "Course Newsletters",
 };
 
 interface AdminPanelProps {
@@ -207,21 +209,21 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [showPreviewLoader, setShowPreviewLoader] = useState(false);
   const [showSecondaryPreview, setShowSecondaryPreview] = useState(false);
 
-  const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager" | "attendance">("institutions");
+  const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager" | "attendance" | "newsletters">("institutions");
   const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
 
-  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "teacher_assignments" | "program_student_progress" | "super_admin_invite" | "attendance">("institutions");
+  const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "teacher_assignments" | "program_student_progress" | "super_admin_invite" | "attendance" | "newsletters">("institutions");
 
   // Sync state with URL params after hydration on client
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const parent = params.get("parentTab");
-      if (parent && ["institutions", "onboarding", "library", "programs", "learning_manager", "attendance"].includes(parent)) {
+      const parent = params.get("parentTab") || (params.get("tab") === "newsletters" ? "newsletters" : null);
+      if (parent && ["institutions", "onboarding", "library", "programs", "learning_manager", "attendance", "newsletters"].includes(parent)) {
         setActiveParentTab(parent as any);
       }
-      const tab = params.get("tab");
-      const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "teacher_assignments", "program_student_progress", "super_admin_invite", "attendance"];
+      const tab = params.get("tab") || (parent === "newsletters" ? "newsletters" : null);
+      const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "teacher_assignments", "program_student_progress", "super_admin_invite", "attendance", "newsletters"];
       if (tab && validTabs.includes(tab)) {
         setActiveTab(tab as any);
       }
@@ -1570,7 +1572,6 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         activeId={activeParentTab}
         activeChildId={activeTab}
         onSelect={(id, childId) => {
-          if (id === "newsletters") { window.location.href = "/admin/newsletters"; return; }
           setActiveParentTab(id as typeof activeParentTab);
           const parentItem = ADMIN_NAV_ITEMS.find((item) => item.id === id);
           const defaultChildId = parentItem?.children?.[0]?.id;
@@ -3038,6 +3039,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           )}
 
           {/* TAB: ATTENDANCE REGISTER */}
+          {activeTab === "newsletters" && <NewsletterAdminPanel />}
+
           {activeTab === "attendance" && (
             <div className="space-y-6 animate-fade-in">
               <AttendanceModule institutions={institutions} userRole="super_admin" />

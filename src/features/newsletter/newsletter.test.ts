@@ -42,6 +42,7 @@ describe("newsletter content", () => {
   });
   it("escapes untrusted content and includes Brevo's unsubscribe placeholder", () => {
     const html = renderDigest([{ courseId: "1", title: '<script>alert("x")</script>', articles: [{ ...article, title: "<img src=x onerror=alert(1)>" }] }], "2026-10-21");
+    expect(html).toContain("HYNOX CAMPUS"); expect(html).toContain("COURSE BRIEF 01"); expect(html).toContain('role="presentation"'); expect(html).toContain("The Hynox Campus Team");
     expect(html).not.toContain("<script>"); expect(html).not.toContain("<img"); expect(html).toContain("{{ unsubscribe }}");
   });
   it("reserves credits and fails closed for unknown credit plans", () => {

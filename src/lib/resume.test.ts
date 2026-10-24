@@ -15,7 +15,7 @@ describe("resume validation", () => {
   it("keeps exported text in the chosen section order", () => {
     const r = emptyResume(); r.sections = r.sections.slice(0, 2).reverse();
     for (const s of r.sections) s.entries = [{ ...newEntry(), title: s.kind }];
-    expect(resumeText(r).indexOf("Projects")).toBeLessThan(resumeText(r).indexOf("Education"));
+    expect(resumeText(r).indexOf("Experience")).toBeLessThan(resumeText(r).indexOf("Education"));
   });
 });
 describe("transparent resume checks", () => {
@@ -40,3 +40,14 @@ describe("transparent resume checks", () => {
     expect(analyzeResume("Contact +91 90000 00000").findings.find(f => f.id === "phone")?.passed).toBe(true);
   });
 });
+
+ it("uses optional roles alone and together with job descriptions", () => {
+   expect(analyzeResume("HTML CSS JavaScript React Git", "", "text", null, "Frontend Developer").match).toBe(100);
+   const result = analyzeResume("React Git", "Requires TypeScript", "text", null, "Frontend Developer");
+   expect(result.missing).toContain("TypeScript");
+   expect(result.missing).toContain("HTML");
+   expect(result.matched).toContain("React");
+   expect(analyzeResume("Python", "", "text", null, "Python Developer").match).toBe(100);
+   expect(analyzeResume("text", "", "text", null, "Astronaut").match).toBeNull();
+   expect(() => analyzeResume("text", "", "text", null, "a".repeat(201))).toThrow("Role");
+ });

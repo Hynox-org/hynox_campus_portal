@@ -33,7 +33,7 @@ export async function saveResumeAction(input: { id: string; title: string; templ
     if (typeof input.title !== "string" || !input.title.trim() || input.title.trim().length > 120) throw new Error("Give your resume a name of 1–120 characters.");
     if (!["classic", "modern"].includes(input.template) || !Number.isInteger(input.version) || input.version < 0) throw new Error("Invalid resume settings.");
     const content = validateResume(input.content);
-    const row = { title: input.title.trim(), template: input.template, content, version: input.version + 1 };
+    const row = { title: input.title.trim(), template: "classic", content, version: input.version + 1 };
     const query = input.version === 0
       ? db.from("student_resumes").insert({ ...row, id, student_id: session.user.id, tenant_id: session.tenantId })
       : db.from("student_resumes").update(row).eq("id", id).eq("student_id", session.user.id).eq("version", input.version);
@@ -54,7 +54,7 @@ export async function deleteResumeAction(id: string) {
   } catch (error) { return { error: message(error) }; }
 }
 
-export async function scanResumeAction(input: { resumeId?: string; text?: string; label: string; job: string; pages: number | null; source: ScanReport["source"] }) {
+export async function scanResumeAction(input: { resumeId?: string; text?: string; label: string; job: string; role?: string; pages: number | null; source: ScanReport["source"] }) {
   try {
     const { session, db } = await studentContext();
     let text = input.text ?? "";
@@ -69,7 +69,7 @@ export async function scanResumeAction(input: { resumeId?: string; text?: string
     if (!["builder", "text", "pdf"].includes(input.source) || (input.source === "builder" && !id)) throw new Error("Invalid scan source.");
     if (input.pages !== null && (!Number.isInteger(input.pages) || input.pages < 1 || input.pages > 10)) throw new Error("Upload a PDF with no more than 10 pages.");
     if (typeof input.label !== "string" || !input.label.trim() || input.label.length > 120) throw new Error("Give this scan a name of up to 120 characters.");
-    const report = analyzeResume(text, input.job, input.source, input.pages);
+    const report = analyzeResume(text, input.job, input.source, input.pages, input.role);
     const { data, error } = await db.from("resume_scans").insert({ student_id: session.user.id, tenant_id: session.tenantId, resume_id: id, resume_version: version, label: input.label.trim(), fingerprint: createHash("sha256").update(text).digest("hex"), report }).select("id,resume_id,resume_version,label,report,created_at").single();
     if (error) throw new Error(error.message);
     return { data: data as ScanRecord, extractedText: text };

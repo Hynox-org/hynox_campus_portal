@@ -5,31 +5,44 @@ import type { ResumeContent } from "@/lib/resume";
 import { safeLink } from "@/lib/resume";
 
 Font.registerHyphenationCallback(word => [word]);
-const styles = StyleSheet.create({ page: { padding: 38, fontFamily: "Helvetica", fontSize: 10, color: "#18212d", lineHeight: 1.45 }, name: { fontSize: 24, lineHeight: 1.2, fontFamily: "Helvetica-Bold", marginBottom: 8 }, headline: { fontSize: 12, lineHeight: 1.3, marginBottom: 6 }, contacts: { fontSize: 9, lineHeight: 1.3, marginBottom: 4 }, section: { marginTop: 14 }, heading: { fontSize: 11, fontFamily: "Helvetica-Bold", paddingBottom: 4, borderBottomWidth: 1, borderBottomColor: "#d1d5db", marginBottom: 7 }, entry: { marginBottom: 9 }, title: { fontFamily: "Helvetica-Bold" }, muted: { color: "#4b5563", fontSize: 9 }, body: { marginTop: 3 }, link: { color: "#334155", fontSize: 9 }, footer: { position: "absolute", bottom: 20, right: 38, fontSize: 8, color: "#6b7280" } });
+const styles = StyleSheet.create({
+  page: { paddingTop: 32, paddingHorizontal: 35, paddingBottom: 26, fontFamily: "Times-Roman", fontSize: 10, color: "#000000", lineHeight: 1.2 },
+  name: { fontSize: 26, lineHeight: 1.2, textAlign: "center", marginBottom: 8 },
+  contacts: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", fontSize: 10 },
+  link: { color: "#0000ff", textDecoration: "underline" },
+  section: { marginTop: 9 },
+  heading: { fontSize: 12, fontFamily: "Times-Bold", borderBottomWidth: 1, borderBottomColor: "#000000", paddingBottom: 4, marginBottom: 6 },
+  entry: { marginBottom: 5 }, row: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
+  title: { fontFamily: "Times-Bold", flexShrink: 1 }, date: { fontFamily: "Times-Bold", fontSize: 9, maxWidth: "30%", textAlign: "right" },
+  bullet: { flexDirection: "row", marginTop: 4, paddingLeft: 18, gap: 10 }, body: { flex: 1 },
+});
 
-export function ResumePdf({ content, template = "classic" }: { content: ResumeContent; template?: "classic" | "modern" }) {
+// Legacy template values remain readable; every export uses the reference layout.
+export function ResumePdf({ content }: { content: ResumeContent; template?: "classic" | "modern" }) {
   const b = content.basics;
-  const accent = template === "modern" ? "#4338ca" : "#18212d";
   return <Document title={`${b.fullName || "Student"} - Resume`} author={b.fullName}>
     <Page size="A4" style={styles.page}>
-      <View><Text style={[styles.name, { color: accent }]}>{b.fullName || "Your name"}</Text>{b.headline && <Text style={styles.headline}>{b.headline}</Text>}
-        <Text style={styles.contacts}>{[b.email, b.phone, b.location].filter(Boolean).join(" | ")}</Text>
-        {[b.website, b.linkedin, b.github].filter(Boolean).map((url, i) => <Link key={i} src={safeLink(url) || ""} style={styles.link}>{url}</Link>)}
+      <Text style={styles.name}>{b.fullName || "Your name"}</Text>
+      <View style={styles.contacts}>
+        <Text>{[b.location, b.email, b.phone].filter(Boolean).join(" | ")}</Text>
+        {[b.linkedin, b.github, b.website].filter(Boolean).map((url, i) => <Text key={i}> | <Link src={safeLink(url) || ""} style={styles.link}>{url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}</Link></Text>)}
       </View>
-      {b.summary && <View style={styles.section}><Text style={[styles.heading, { color: accent }]}>Summary</Text><Text>{b.summary}</Text></View>}
+      {b.headline && <Text style={{ textAlign: "center", marginTop: 4 }}>{b.headline}</Text>}
+      {b.summary && <View style={styles.section}><Text style={styles.heading}>SUMMARY</Text><Text>{b.summary}</Text></View>}
       {content.sections.filter(s => s.entries.length).map(section => <View key={section.id} style={styles.section}>
-        <Text style={[styles.heading, { color: accent }]} minPresenceAhead={35}>{section.title}</Text>
+        <Text style={styles.heading} minPresenceAhead={35}>{section.title.toUpperCase()}</Text>
         {section.entries.map(e => <View key={e.id} style={styles.entry}>
-          <Text style={styles.title} minPresenceAhead={18}>{e.title}</Text>
-          {e.subtitle && <Text>{e.subtitle}</Text>}
-          {(e.start || e.end) && <Text style={styles.muted}>{[e.start, e.end].filter(Boolean).join(" – ")}</Text>}
-          {e.description && <Text style={styles.body}>{e.description}</Text>}
-          {safeLink(e.url) && <Link src={safeLink(e.url)!} style={styles.link}>{e.url}</Link>}
+          <View style={styles.row} minPresenceAhead={18}>
+            {section.kind === "skills" || section.kind === "certifications" ? <Text style={{ flex: 1 }}><Text style={styles.title}>{e.title}{e.subtitle ? ": " : ""}</Text>{e.subtitle}</Text> : safeLink(e.url) ? <Link src={safeLink(e.url)!} style={[styles.title, styles.link]}>{e.title}</Link> : <Text style={styles.title}>{e.title}</Text>}
+            {(e.start || e.end) && <Text style={styles.date}>{[e.start, e.end].filter(Boolean).join(" - ")}</Text>}
+          </View>
+          {e.subtitle && section.kind !== "skills" && section.kind !== "certifications" && <Text>{e.subtitle}</Text>}
+          {e.description && e.description.split("\n").filter(line => line.trim()).map((line, i) => section.kind === "projects" || section.kind === "experience"
+            ? <View key={i} style={styles.bullet}><Text>•</Text><Text style={styles.body}>{line.replace(/^[•*-]\s*/, "")}</Text></View>
+            : <Text key={i}>{line}</Text>)}
         </View>)}
       </View>)}
-      <Text fixed style={styles.footer} render={({ pageNumber, totalPages }) => totalPages > 1 ? `${pageNumber} / ${totalPages}` : ""} />
     </Page>
   </Document>;
 }
-export async function makeResumePdf(content: ResumeContent, template: "classic" | "modern") { return pdf(<ResumePdf content={content} template={template} />).toBlob(); }
-
+export async function makeResumePdf(content: ResumeContent) { return pdf(<ResumePdf content={content} />).toBlob(); }

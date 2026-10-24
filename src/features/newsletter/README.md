@@ -1,6 +1,6 @@
 # Course newsletters
 
-This module discovers active courses from enrollment records. Students explicitly subscribe in the dashboard's Daily Field Updates tab at `/student?parentTab=newsletters&tab=newsletters`. The legacy `/student/newsletters` URL redirects to that tab. Super admins manage delivery and course topic overrides at `/admin/newsletters`. Shared demonstration accounts are excluded. Course creation and enrollment services do not depend on this feature.
+This module discovers active courses from enrollment records. Students explicitly subscribe in the dashboard's Daily Field Updates tab at `/student?parentTab=newsletters&tab=newsletters`. The legacy `/student/newsletters` URL redirects to that tab. Super admins manage delivery and course topic overrides in the final dashboard tab at `/admin?parentTab=newsletters&tab=newsletters` (the legacy `/admin/newsletters` URL redirects there). Shared demonstration accounts are excluded. Course creation and enrollment services do not depend on this feature.
 
 ## Operation
 
