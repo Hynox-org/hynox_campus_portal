@@ -20,9 +20,11 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
+          const previousCookies = supabaseResponse.cookies.getAll();
           supabaseResponse = NextResponse.next({
             request,
           });
+          previousCookies.forEach(cookie => supabaseResponse.cookies.set(cookie));
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -33,8 +35,8 @@ export async function updateSession(request: NextRequest) {
 
   // Refresh session if expired
   const {
-    data: { user },
+    data: { user }, error,
   } = await supabase.auth.getUser();
 
-  return { supabase, supabaseResponse, user };
+  return { supabase, supabaseResponse, user: error ? null : user };
 }

@@ -11,7 +11,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 function submitLogin() {
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "shared@example.com" } });
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "test-password" } });
-  fireEvent.click(screen.getByRole("button", { name: "Sign In", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
 }
 
 it("shows sign-in progress and blocks repeated submissions", () => {
@@ -34,7 +34,7 @@ it.each(["credentials", "network"])("restores the form after a %s error", async 
   submitLogin();
   await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
   expect(screen.queryByRole("status")).toBeNull();
-  expect(screen.getByRole("button", { name: "Sign In", exact: true }).hasAttribute("disabled")).toBe(false);
-  fireEvent.click(screen.getByRole("button", { name: "Sign In", exact: true }));
+  expect(screen.getByRole("button", { name: "Sign In" }).hasAttribute("disabled")).toBe(false);
+  fireEvent.click(screen.getByRole("button", { name: "Sign In" }));
   await waitFor(() => expect(sharedSignIn).toHaveBeenCalledTimes(2));
 });

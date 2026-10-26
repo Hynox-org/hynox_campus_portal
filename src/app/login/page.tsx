@@ -1,50 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState, useSyncExternalStore } from "react";
 import { signInWithGoogle } from "@/app/actions/auth-actions";
 import { Terminal, ShieldCheck, AlertCircle } from "lucide-react";
 import ParticleField from "@/components/particle-field";
 
-export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const msg = params.get("message");
-      const err = params.get("error");
-      if (msg === "AlreadyActivated") {
-        setSuccessMessage("Your account is already activated. Please sign in with Google directly.");
-      } else if (err === "OAuthExchangeFailed") {
-        setErrorMessage("Google authentication failed. Please try again.");
-      }
-    }
-  }, []);
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setErrorMessage("");
-    try {
-      const res = await signInWithGoogle("/");
-      if (res?.error) {
-        setErrorMessage(res.error);
-        setLoading(false);
-      } else if (res?.url) {
-        window.location.href = res.url;
-      } else {
-        setErrorMessage("Failed to get Google Sign-In redirect URL.");
-        setLoading(false);
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to initialize Google Sign-In.");
-      setLoading(false);
-    }
-  };
-
-  // Google G Logo SVG
-  const GoogleIcon = () => (
+const subscribeToNavigation = (listener: () => void) => {
+  window.addEventListener("popstate", listener);
+  return () => window.removeEventListener("popstate", listener);
+};
+const callbackErrors: Record<string, string> = {
+  AccountMismatch: "This account cannot be linked. Please contact your campus administrator.",
+  AccountUnavailable: "This account is unavailable. Please contact your campus administrator.",
+  OAuthExchangeFailed: "Google authentication failed. Please try again.",
+};
+const GoogleIcon = () => (
     <svg className="w-4 h-4" viewBox="0 0 24 24">
       <path
         fill="#4285F4"
@@ -65,6 +35,40 @@ export default function LoginPage() {
     </svg>
   );
 
+
+export default function LoginPage() {
+  const busy = useRef(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const search = useSyncExternalStore(subscribeToNavigation, () => window.location.search, () => "");
+  const params = new URLSearchParams(search);
+  const displayError = errorMessage || (!loading ? callbackErrors[params.get("error") || ""] : "");
+  const successMessage = params.get("message") === "AlreadyActivated"
+    ? "Your account is already activated. Please sign in with Google directly." : "";
+
+  const handleGoogleSignIn = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setLoading(true);
+    setErrorMessage("");
+    try {
+      const res = await signInWithGoogle("/");
+      if (res?.error) {
+        setErrorMessage(res.error);
+        busy.current = false; setLoading(false);
+      } else if (res?.url) {
+        window.location.href = res.url;
+      } else {
+        setErrorMessage("Failed to get Google Sign-In redirect URL.");
+        busy.current = false; setLoading(false);
+      }
+    } catch {
+      setErrorMessage("Unable to start Google sign-in. Please try again.");
+      busy.current = false; setLoading(false);
+    }
+  };
+
+
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center p-6 text-slate-100 overflow-hidden bg-[#050810]">
       <ParticleField />
@@ -81,15 +85,15 @@ export default function LoginPage() {
         </div>
 
         {/* Alert Messages */}
-        {errorMessage && (
-          <div className="mb-4 bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg p-3 text-xs flex items-start gap-2">
+        {displayError && (
+          <div role="alert" className="mb-4 bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg p-3 text-xs flex items-start gap-2">
             <AlertCircle size={14} className="mt-0.5 shrink-0" />
-            <span>{errorMessage}</span>
+            <span>{displayError}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-4 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-lg p-3 text-xs flex items-start gap-2">
+          <div role="status" className="mb-4 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-lg p-3 text-xs flex items-start gap-2">
             <ShieldCheck size={14} className="mt-0.5 shrink-0" />
             <span>{successMessage}</span>
           </div>
@@ -100,6 +104,7 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleSignIn}
             disabled={loading}
+            aria-busy={loading}
             className="w-full bg-white hover:bg-slate-200 border border-white/10 text-slate-900 text-xs font-semibold py-3 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 duration-200 cursor-pointer"
           >
             <GoogleIcon />

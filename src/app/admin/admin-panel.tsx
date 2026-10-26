@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import InvitationStatusBadge from "@/components/invitation-status-badge";
+import InstitutionUserTable from "@/components/institution-user-table";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePrograms, useTenantInstructors, useCourses, useCourseModules, useCourseInstructors, useAcademicLookups } from "@/hooks/use-academics";
 import { DataTable } from "@/components/data-table";
@@ -52,7 +54,6 @@ import {
   listTenantInstructorsAction,
   getAcademicLookupsAction
 } from "@/app/actions/academic-actions";
-import { signOutAction } from "@/app/actions/auth-actions";
 import {
   listTeacherCohortsAction,
   assignTeacherToCohortAction,
@@ -277,6 +278,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [relationCounts, setRelationCounts] = useState<{ cohorts: number; programs: number; users: number } | null>(null);
   const [checkingRelations, setCheckingRelations] = useState(false);
+  const [relationError, setRelationError] = useState("");
 
   // User deletion states
   const [isUserDeleteModalOpen, setIsUserDeleteModalOpen] = useState(false);
@@ -313,6 +315,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       setInstitutions(prev => prev.map(i => i.id === selectedInstForSidebar.id ? res.institution : i));
       setSelectedInstForSidebar(res.institution);
       setIsEditingInst(false);
+      void queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
     }
     setLoading(false);
   };
@@ -321,22 +324,25 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     setInstToDelete(inst);
     setDeleteConfirmName("");
     setCheckingRelations(true);
+    setRelationCounts(null);
+    setRelationError("");
     setIsDeleteModalOpen(true);
     try {
       const res = await getInstitutionRelationsCountAction(inst.id);
       if (res.success && res.counts) {
         setRelationCounts(res.counts);
       } else {
-        setRelationCounts({ cohorts: 0, programs: 0, users: 0 });
+        setRelationError("Unable to check linked records. Close this dialog and try again.");
       }
-    } catch (err) {
-      setRelationCounts({ cohorts: 0, programs: 0, users: 0 });
+    } catch {
+      setRelationError("Unable to check linked records. Close this dialog and try again.");
     }
     setCheckingRelations(false);
   };
 
   const handleConfirmDelete = async () => {
     if (!instToDelete) return;
+    if (!relationCounts || checkingRelations || relationCounts.cohorts || relationCounts.programs || relationCounts.users) return;
     if (deleteConfirmName !== instToDelete.name) {
       showError("Name does not match.");
       return;
@@ -351,6 +357,14 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       setIsDeleteModalOpen(false);
       setInstToDelete(null);
       setIsInstSidebarOpen(false);
+      if (explorerSelectedId === instToDelete.id) {
+        explorerRequest.current++;
+        setExplorerSelectedId("");
+        setExplorerUsers([]);
+        setExplorerLoading(false);
+      }
+      if (selectedInstId === instToDelete.id) setSelectedInstId("");
+      void queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
     }
     setLoading(false);
   };
@@ -368,6 +382,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     } else {
       showSuccess(`User successfully deleted.`);
       userToDelete.callback();
+      void queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
       setIsUserDeleteModalOpen(false);
       setUserToDelete(null);
       setUserDeleteConfirmEmail("");
@@ -391,6 +406,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [explorerLoading, setExplorerLoading] = useState(false);
   const [explorerSearch, setExplorerSearch] = useState("");
   const [explorerRoleFilter, setExplorerRoleFilter] = useState<"all" | "admin" | "teacher" | "student">("all");
+  const explorerRequest = useRef(0);
 
   // Teacher mapping states
   const [teachersList, setTeachersList] = useState<any[]>([]);
@@ -408,20 +424,24 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [teacherOnboardLoading, setTeacherOnboardLoading] = useState(false);
 
   const handleSelectInstitutionForExplorer = async (instId: string) => {
+    const request = ++explorerRequest.current;
     setExplorerSelectedId(instId);
+    setExplorerUsers([]);
     if (!instId) {
-      setExplorerUsers([]);
+      setExplorerLoading(false);
       return;
     }
     setExplorerLoading(true);
-    const res = await listInstitutionUsersAction(instId);
-    if (res.error) {
-      showError(res.error);
-      setExplorerUsers([]);
-    } else if (res.users) {
-      setExplorerUsers(res.users);
+    try {
+      const res = await listInstitutionUsersAction(instId);
+      if (request !== explorerRequest.current) return;
+      if (res.error) showError(res.error);
+      else if (res.users) setExplorerUsers(res.users);
+    } catch {
+      if (request === explorerRequest.current) showError("Unable to load institution users. Please try again.");
+    } finally {
+      if (request === explorerRequest.current) setExplorerLoading(false);
     }
-    setExplorerLoading(false);
   };
 
   const handleRegenerateInvite = async (invitationId: string) => {
@@ -1012,6 +1032,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       showSuccess(`Institution '${instName}' successfully registered!`);
       // Update local state list
       setInstitutions([res.institution, ...institutions]);
+      void queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
       if (!selectedInstId) {
         setSelectedInstId(res.institution.id);
       }
@@ -1113,7 +1134,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     } else if (res.result) {
       setLinks([res.result]);
       if (res.result.status === "success") {
-        showSuccess(`Successfully invited '${singleEmail}'!`);
+        showSuccess(`Account ready for '${singleEmail}'. ${res.result.queued ? 'Invitation email queued.' : 'Existing invitation reused.'}`);
         setSingleName("");
         setSingleEmail("");
         
@@ -1146,7 +1167,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       showError(res.error);
     } else if (res.result) {
       if (res.result.status === "success") {
-        showSuccess(`Successfully onboarded and invited teacher '${teacherOnboardEmail}'!`);
+        showSuccess(`Teacher '${teacherOnboardEmail}' ready. ${res.result.queued ? 'Invitation email queued.' : 'Existing invitation reused.'}`);
         setTeacherOnboardName("");
         setTeacherOnboardEmail("");
         loadAllTeachersData();
@@ -1181,7 +1202,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     } else if (res.result) {
       setLinks([res.result]);
       if (res.result.status === "success") {
-        showSuccess(`Successfully invited Super Admin '${superAdminEmail}'!`);
+        showSuccess(`Super Admin '${superAdminEmail}' ready. ${res.result.queued ? 'Invitation email queued.' : 'Existing invitation reused.'}`);
         setSuperAdminName("");
         setSuperAdminEmail("");
         
@@ -1330,6 +1351,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
             </div>
             <button 
               onClick={() => setSelectedUserDetail(null)}
+                aria-label="Close user details"
               className="p-1 hover:bg-[#23252C] rounded-lg transition-all border border-transparent hover:border-[#23252C] cursor-pointer"
             >
               <svg className="w-4 h-4 text-[#C2C6D1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1772,7 +1794,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               <div className="bg-[#131418] border border-[#23252C] rounded-xl p-6 shadow-sm">
                 
                 {/* Onboarding Mode Selection Toggle */}
-                <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#23252C]">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 mb-5 border-b border-[#23252C]">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5">
                     <UserPlus size={15} /> User Onboarding
                   </h3>
@@ -2012,7 +2034,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           {activeTab === "super_admin_invite" && (
             <div className="space-y-6">
               <div className="bg-[#131418] border border-[#23252C] rounded-xl p-6 shadow-sm">
-                <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#23252C]">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 mb-5 border-b border-[#23252C]">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1.5">
                     <ShieldCheck size={15} /> Super Admin Onboarding
                   </h3>
@@ -2131,49 +2153,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           const appUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
                           const fullInviteLink = `${appUrl}/onboarding/verify?token=${inv.token}&email=${encodeURIComponent(inv.user?.email || "")}`;
 
-                          let statusBadge = (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#6E79F4]/10 text-[#6E79F4] border-[#6E79F4]/20 flex items-center gap-1 w-fit">
-                              <Clock size={10} /> Pending
-                            </span>
-                          );
-
-                          if (isAccepted) {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20 flex items-center gap-1 w-fit">
-                                <CheckCircle size={10} /> Accepted
-                              </span>
-                            );
-                          } else if (isExpired) {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#F5B04A]/10 text-[#F5B04A] border-[#F5B04A]/20 flex items-center gap-1 w-fit">
-                                <XCircle size={10} /> Expired
-                              </span>
-                            );
-                          } else if (inv.status === "failed") {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20 flex items-center gap-1 w-fit">
-                                <XCircle size={10} /> Mail Failed
-                              </span>
-                            );
-                          } else if (inv.status === "revoked") {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#4A5060]/10 text-[#C2C6D1] border-[#3A3F4B]/20 flex items-center gap-1 w-fit">
-                                <Ban size={10} /> Revoked
-                              </span>
-                            );
-                          } else if (inv.status === "created") {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#22D3EE]/10 text-[#22D3EE] border-[#22D3EE]/20 flex items-center gap-1 w-fit">
-                                <Clock size={10} /> Mail Pending
-                              </span>
-                            );
-                          } else if (inv.status === "sent") {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/10 text-emerald-600 border-emerald-500/20 flex items-center gap-1 w-fit">
-                                <CheckCircle size={10} /> Mail Sent
-                              </span>
-                            );
-                          }
+                          const statusBadge = <InvitationStatusBadge status={inv.status} expiresAt={inv.expires_at} />;
 
                           return (
                             <tr key={inv.id} className="hover:bg-[#16171D]/20 transition-colors">
@@ -2194,7 +2174,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                               <td className="px-6 py-4">{statusBadge}</td>
                               <td className="px-6 py-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
-                                  {!isExpired && !isAccepted && inv.status !== "revoked" && (
+                                  {!isExpired && !isAccepted && ["created", "sent", "pending"].includes(inv.status) && (
                                     <button
                                       onClick={() => {
                                         navigator.clipboard.writeText(fullInviteLink);
@@ -2427,49 +2407,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           const roleLabel = roleNameMap[inv.invitation_type] || "Member";
 
                           // Determine badge color
-                          let statusBadge = (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#6E79F4]/10 text-[#6E79F4] border-[#6E79F4]/20 flex items-center gap-1 w-fit">
-                              <Clock size={10} /> Pending
-                            </span>
-                          );
-
-                          if (isAccepted) {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20 flex items-center gap-1 w-fit">
-                                <CheckCircle size={10} /> Accepted
-                              </span>
-                            );
-                          } else if (isExpired) {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#F5B04A]/10 text-[#F5B04A] border-[#F5B04A]/20 flex items-center gap-1 w-fit">
-                                <XCircle size={10} /> Expired
-                              </span>
-                            );
-                          } else if (inv.status === "failed") {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20 flex items-center gap-1 w-fit">
-                                <XCircle size={10} /> Mail Failed
-                              </span>
-                            );
-                          } else if (inv.status === "revoked") {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#4A5060]/10 text-[#C2C6D1] border-[#3A3F4B]/20 flex items-center gap-1 w-fit">
-                                <Ban size={10} /> Revoked
-                              </span>
-                            );
-                          } else if (inv.status === "created") {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#22D3EE]/10 text-[#22D3EE] border-[#22D3EE]/20 flex items-center gap-1 w-fit">
-                                <Clock size={10} /> Mail Pending
-                              </span>
-                            );
-                          } else if (inv.status === "sent") {
-                            statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-500/10 text-emerald-600 border-emerald-500/20 flex items-center gap-1 w-fit">
-                                <CheckCircle size={10} /> Mail Sent
-                              </span>
-                            );
-                          }
+                          const statusBadge = <InvitationStatusBadge status={inv.status} expiresAt={inv.expires_at} />;
 
                           return (
                             <tr key={inv.id} className="hover:bg-[#16171D]/20 transition-colors">
@@ -2494,7 +2432,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                               <td className="px-6 py-4">{statusBadge}</td>
                               <td className="px-6 py-4 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
-                                  {!isExpired && !isAccepted && inv.status !== "revoked" && (
+                                  {!isExpired && !isAccepted && ["created", "sent", "pending"].includes(inv.status) && (
                                     <button
                                       onClick={() => {
                                         navigator.clipboard.writeText(fullInviteLink);
@@ -2636,31 +2574,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             const appUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
                             const fullInviteLink = `${appUrl}/onboarding/verify?token=${inv.token}&email=${encodeURIComponent(inv.user?.email || "")}`;
 
-                            let statusBadge = (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#6E79F4]/10 text-[#6E79F4] border-[#6E79F4]/20 flex items-center gap-1 w-fit">
-                                <Clock size={10} /> Pending
-                              </span>
-                            );
-
-                            if (isAccepted) {
-                              statusBadge = (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20 flex items-center gap-1 w-fit">
-                                  <CheckCircle size={10} /> Accepted
-                                </span>
-                              );
-                            } else if (isExpired) {
-                              statusBadge = (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20 flex items-center gap-1 w-fit">
-                                  <AlertCircle size={10} /> Expired
-                                </span>
-                              );
-                            } else if (inv.status === "revoked") {
-                              statusBadge = (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20 flex items-center gap-1 w-fit">
-                                  <Ban size={10} /> Revoked
-                                </span>
-                              );
-                            }
+                            const statusBadge = <InvitationStatusBadge status={inv.status} expiresAt={inv.expires_at} />;
 
                             return (
                               <tr key={inv.id} className="hover:bg-[#16171D]/20 transition-colors">
@@ -2679,7 +2593,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
-                                    {!isExpired && !isAccepted && (
+                                    {!isExpired && !isAccepted && ["created", "sent", "pending"].includes(inv.status) && (
                                       <button
                                         onClick={() => {
                                           navigator.clipboard.writeText(fullInviteLink);
@@ -2920,115 +2834,20 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           </div>
                         </div>
 
-                        {/* Directory Directory Table */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left border-collapse text-xs">
-                            <thead>
-                              <tr className="bg-[#16171D]/30 border-b border-[#23252C] font-bold text-[#C2C6D1]">
-                                <th className="px-6 py-3">User Details</th>
-                                <th className="px-6 py-3">Assigned Role</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3">Joined Date</th>
-                                <th className="px-6 py-3 text-right">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#23252C]">
-                              {filteredExplorerUsers.length > 0 ? (
-                                filteredExplorerUsers.map((user) => {
-                                  // Determine badge style for role
-                                  let roleBadge = (
-                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#1A1C22] text-[#C2C6D1] border-[#23252C]">
-                                      Member
-                                    </span>
-                                  );
-
-                                  if (user.roles.includes("super_admin") || user.roles.includes("institution_admin")) {
-                                    roleBadge = (
-                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20">
-                                        Admin
-                                      </span>
-                                    );
-                                  } else if (user.roles.includes("teacher") || user.roles.includes("trainer")) {
-                                    roleBadge = (
-                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#6E79F4]/10 text-[#6E79F4] border-[#6E79F4]/20">
-                                        Teacher
-                                      </span>
-                                    );
-                                  } else if (user.roles.includes("student")) {
-                                    roleBadge = (
-                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#22D3EE]/10 text-[#22D3EE] border-[#22D3EE]/20">
-                                        Student
-                                      </span>
-                                    );
-                                  }
-
-                                  // Determine badge for user status
-                                  let statusBadge = (
-                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#2FBF71]/10 text-[#2FBF71] border-[#2FBF71]/20">
-                                      {user.status}
-                                    </span>
-                                  );
-
-                                  if (user.status === "invited" || user.status === "pending_activation") {
-                                    statusBadge = (
-                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#F5B04A]/10 text-[#F5B04A] border-[#F5B04A]/20">
-                                        {user.status}
-                                      </span>
-                                    );
-                                  } else if (user.status === "suspended" || user.status === "inactive" || user.status === "blocked") {
-                                    statusBadge = (
-                                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#F0555D]/10 text-[#F0555D] border-[#F0555D]/20">
-                                        {user.status}
-                                      </span>
-                                    );
-                                  }
-
-                                  return (
-                                    <tr key={user.id} className="hover:bg-[#16171D]/50 transition-colors">
-                                      <td className="px-6 py-4 cursor-pointer" onClick={() => setSelectedUserDetail(user)}>
-                                        <div className="font-semibold text-[#EDEFF5]">{user.full_name || "N/A"}</div>
-                                        <div className="text-[#C2C6D1] text-[11px] font-medium">{user.email}</div>
-                                      </td>
-                                      <td className="px-6 py-4 cursor-pointer" onClick={() => setSelectedUserDetail(user)}>{roleBadge}</td>
-                                      <td className="px-6 py-4 cursor-pointer" onClick={() => setSelectedUserDetail(user)}>{statusBadge}</td>
-                                      <td className="px-6 py-4 text-[#C2C6D1] font-medium cursor-pointer" onClick={() => setSelectedUserDetail(user)}>
-                                        {new Date(user.created_at).toLocaleDateString()}
-                                      </td>
-                                      <td className="px-6 py-4 text-right">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setUserToDelete({
-                                              id: user.id,
-                                              name: user.full_name || "N/A",
-                                              email: user.email,
-                                              callback: () => {
-                                                queryClient.invalidateQueries({ queryKey: ["admin-prefetch"] });
-                                                handleSelectInstitutionForExplorer(explorerSelectedId);
-                                              }
-                                            });
-                                            setUserDeleteConfirmEmail("");
-                                            setIsUserDeleteModalOpen(true);
-                                          }}
-                                          className="p-1 hover:bg-[#1A1C22] rounded text-red-600 hover:text-red-700 cursor-pointer"
-                                          title="Delete User Completely"
-                                        >
-                                          <Trash2 size={12} />
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  );
-                                })
-                              ) : (
-                                <tr>
-                                  <td colSpan={5} className="px-6 py-8 text-center text-[#C2C6D1] font-medium">
-                                    No users found in this role group.
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
+                        <InstitutionUserTable
+                          users={filteredExplorerUsers}
+                          onView={setSelectedUserDetail}
+                          onDelete={(user) => {
+                            setUserToDelete({
+                              id: user.id,
+                              name: user.full_name || "N/A",
+                              email: user.email,
+                              callback: () => { void handleSelectInstitutionForExplorer(explorerSelectedId); },
+                            });
+                            setUserDeleteConfirmEmail("");
+                            setIsUserDeleteModalOpen(true);
+                          }}
+                        />
                       </div>
                     </>
                   )}
@@ -4167,6 +3986,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                   </div>
                   <button 
                     onClick={() => setIsInstSidebarOpen(false)} 
+                    aria-label="Close institution details"
                     className="p-1.5 hover:bg-black/5 rounded-full text-[#C2C6D1] hover:text-[#EDEFF5] transition-all cursor-pointer"
                   >
                     <X size={16} />
@@ -4354,7 +4174,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       {(() => {
         if (!isDeleteModalOpen || !instToDelete) return null;
 
-        const deleteButtonDisabled = deleteConfirmName !== instToDelete.name || loading || checkingRelations;
+        const deleteButtonDisabled = deleteConfirmName !== instToDelete.name || loading || checkingRelations || !relationCounts || Boolean(relationCounts.cohorts || relationCounts.programs || relationCounts.users);
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden text-xs">
@@ -4382,18 +4202,18 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                     <RefreshCw size={14} className="animate-spin" />
                     <span>Checking linked resources...</span>
                   </div>
-                ) : relationCounts && (relationCounts.cohorts > 0 || relationCounts.programs > 0 || relationCounts.users > 0) && (
+                ) : relationError ? <p role="alert" className="text-[#F0555D]">{relationError}</p> : relationCounts && (relationCounts.cohorts > 0 || relationCounts.programs > 0 || relationCounts.users > 0) && (
                   <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 space-y-2">
                     <h4 className="font-bold flex items-center gap-1 text-[11px]">
-                      <AlertCircle size={14} /> WARN: Cascading Deletion Detected
+                      <AlertCircle size={14} /> Linked records prevent deletion
                     </h4>
                     <p className="text-[11px] leading-normal text-amber-900">
-                      Deleting this institution will cascade delete all linked data. The following records will be permanently removed from all tables:
+                      Remove or reassign these linked records before deleting this institution:
                     </p>
                     <ul className="list-disc pl-4 text-[10px] space-y-1 font-semibold text-amber-950">
                       <li>{relationCounts.cohorts} Group(s)</li>
                       <li>{relationCounts.programs} Academic Program(s)</li>
-                      <li>{relationCounts.users} User(s) (will be unlinked/tenant set to NULL)</li>
+                      <li>{relationCounts.users} User(s)</li>
                     </ul>
                   </div>
                 )}

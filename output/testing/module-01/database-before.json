@@ -1,0 +1,146 @@
+{
+  "counts": {
+    "users": 11,
+    "auth_users": 10,
+    "user_roles": 15,
+    "invitations": 3
+  },
+  "policies": [
+    {
+      "cmd": "DELETE",
+      "name": "user_invitations_delete",
+      "check": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "user_invitations",
+      "using": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = user_invitations.tenant_id)))))"
+    },
+    {
+      "cmd": "INSERT",
+      "name": "user_invitations_insert",
+      "check": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = cu.tenant_id)))))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "user_invitations",
+      "using": null
+    },
+    {
+      "cmd": "SELECT",
+      "name": "user_invitations_select",
+      "check": null,
+      "roles": [
+        "public"
+      ],
+      "table": "user_invitations",
+      "using": "(((auth.role() = 'authenticated'::text) AND ((user_id = ( SELECT get_current_user.user_id\n   FROM core.get_current_user() get_current_user(user_id, tenant_id, roles, status))) OR (EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = user_invitations.tenant_id))))))) OR ((auth.role() = 'anon'::text) AND (status = ANY (ARRAY['created'::text, 'sent'::text, 'pending'::text]))))"
+    },
+    {
+      "cmd": "UPDATE",
+      "name": "user_invitations_update",
+      "check": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = cu.tenant_id)))))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "user_invitations",
+      "using": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = user_invitations.tenant_id)))))"
+    },
+    {
+      "cmd": "DELETE",
+      "name": "user_roles_delete",
+      "check": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "user_roles",
+      "using": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = core.get_user_tenant_id(cu.user_id))))))"
+    },
+    {
+      "cmd": "INSERT",
+      "name": "user_roles_insert",
+      "check": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = core.get_user_tenant_id(cu.user_id))))))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "user_roles",
+      "using": null
+    },
+    {
+      "cmd": "SELECT",
+      "name": "user_roles_select",
+      "check": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "user_roles",
+      "using": "((user_id = ( SELECT get_current_user.user_id\n   FROM core.get_current_user() get_current_user(user_id, tenant_id, roles, status))) OR (EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR ((('institution_admin'::text = ANY (cu.roles)) OR ('teacher'::text = ANY (cu.roles)) OR ('trainer'::text = ANY (cu.roles))) AND (cu.tenant_id = core.get_user_tenant_id(cu.user_id)))))))"
+    },
+    {
+      "cmd": "UPDATE",
+      "name": "user_roles_update",
+      "check": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = core.get_user_tenant_id(cu.user_id))))))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "user_roles",
+      "using": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = core.get_user_tenant_id(cu.user_id))))))"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "assigned_teacher_student_roster_select",
+      "check": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "users",
+      "using": "((deleted_at IS NULL) AND (EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE ((('teacher'::text = ANY (cu.roles)) OR ('trainer'::text = ANY (cu.roles))) AND (EXISTS ( SELECT 1\n           FROM ((delivery.enrollments e\n             JOIN delivery.cohort_teachers ct ON ((ct.cohort_id = e.cohort_id)))\n             JOIN delivery.cohorts c ON ((c.id = e.cohort_id)))\n          WHERE ((e.user_id = users.id) AND (e.deleted_at IS NULL) AND (ct.teacher_id = cu.user_id) AND (c.deleted_at IS NULL))))))))"
+    },
+    {
+      "cmd": "DELETE",
+      "name": "users_delete",
+      "check": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "users",
+      "using": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = users.tenant_id)))))"
+    },
+    {
+      "cmd": "INSERT",
+      "name": "users_insert",
+      "check": "(EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = cu.tenant_id)))))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "users",
+      "using": null
+    },
+    {
+      "cmd": "SELECT",
+      "name": "users_select",
+      "check": null,
+      "roles": [
+        "public"
+      ],
+      "table": "users",
+      "using": "(((auth.role() = 'authenticated'::text) AND (((auth_user_id = auth.uid()) AND (deleted_at IS NULL)) OR (EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR ((('institution_admin'::text = ANY (cu.roles)) OR ('teacher'::text = ANY (cu.roles)) OR ('trainer'::text = ANY (cu.roles))) AND (cu.tenant_id = users.tenant_id))))))) OR ((auth.role() = 'anon'::text) AND (id IN ( SELECT user_invitations.user_id\n   FROM core.user_invitations\n  WHERE (user_invitations.status = ANY (ARRAY['created'::text, 'sent'::text, 'pending'::text]))))))"
+    },
+    {
+      "cmd": "UPDATE",
+      "name": "users_update",
+      "check": "(((auth_user_id = auth.uid()) AND (deleted_at IS NULL)) OR (EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = cu.tenant_id))))))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "users",
+      "using": "(((auth_user_id = auth.uid()) AND (deleted_at IS NULL)) OR (EXISTS ( SELECT 1\n   FROM core.get_current_user() cu(user_id, tenant_id, roles, status)\n  WHERE (('super_admin'::text = ANY (cu.roles)) OR (('institution_admin'::text = ANY (cu.roles)) AND (cu.tenant_id = users.tenant_id))))))"
+    }
+  ],
+  "functions": [
+    "CREATE OR REPLACE FUNCTION core.get_current_user()\n RETURNS TABLE(user_id uuid, tenant_id uuid, roles text[], status text)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'core', 'auth', 'pg_catalog'\nAS $function$\n  select u.id, u.tenant_id,\n    coalesce(array_agg(r.name) filter (where r.name is not null and (\n      coalesce(a.raw_app_meta_data->>'shared_dashboard_login', 'false') <> 'true'\n      or (u.status = 'active' and\n        coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb\n          ->> 'x-campus-dashboard-role' = a.id::text || ':' || r.name)\n    )), '{}'::text[]), u.status\n  from core.users u\n  join auth.users a on a.id = u.auth_user_id\n  left join core.user_roles ur on ur.user_id = u.id\n  left join core.roles r on r.id = ur.role_id\n  where u.auth_user_id = auth.uid() and u.deleted_at is null\n  group by u.id, u.tenant_id, u.status;\n$function$\n",
+    "CREATE OR REPLACE FUNCTION core.get_user_primary_role(target_user_id uuid)\n RETURNS text\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'core', 'pg_catalog'\nAS $function$\nDECLARE\n    primary_role_name TEXT;\nBEGIN\n    SELECT r.name INTO primary_role_name\n    FROM user_roles ur\n    JOIN roles r ON ur.role_id = r.id\n    WHERE ur.user_id = target_user_id OR ur.user_id = (SELECT id FROM users WHERE auth_user_id = target_user_id)\n    ORDER BY r.priority DESC, r.name ASC\n    LIMIT 1;\n    \n    RETURN COALESCE(primary_role_name, 'public');\nEND;\n$function$\n",
+    "CREATE OR REPLACE FUNCTION core.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'core', 'auth', 'pg_catalog'\nAS $function$\nDECLARE\n    existing_user_id UUID;\n    public_role_id UUID;\n    existing_status TEXT;\n    existing_deleted_at TIMESTAMPTZ;\nBEGIN\n    -- Get the ID of the public role\n    SELECT id INTO public_role_id FROM roles WHERE name = 'public';\n\n    -- Check if user exists (including soft-deleted)\n    SELECT id, status, deleted_at INTO existing_user_id, existing_status, existing_deleted_at\n    FROM users\n    WHERE email = NEW.email;\n\n    -- If user is soft-deleted, block linkage\n    IF existing_user_id IS NOT NULL AND existing_deleted_at IS NOT NULL THEN\n        RAISE EXCEPTION 'This user account has been soft-deleted and cannot be registered.';\n    END IF;\n\n    IF existing_user_id IS NOT NULL THEN\n        -- Link existing user to auth.users.id\n        UPDATE users\n        SET \n            auth_user_id = NEW.id,\n            full_name = coalesce(nullif(full_name, ''), coalesce(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '')),\n            avatar_url = coalesce(nullif(avatar_url, ''), coalesce(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture', '')),\n            status = 'active',\n            updated_at = now()\n        WHERE id = existing_user_id;\n\n        -- Update any active invitations for this user to 'accepted'\n        UPDATE user_invitations\n        SET \n            status = 'accepted',\n            accepted_at = now(),\n            updated_at = now()\n        WHERE user_id = existing_user_id AND status IN ('created', 'sent', 'pending');\n    ELSE\n        -- Insert a new user record\n        INSERT INTO users (\n            id,\n            auth_user_id,\n            full_name,\n            email,\n            phone,\n            avatar_url,\n            tenant_id,\n            status,\n            onboarding_source\n        ) VALUES (\n            NEW.id,\n            NEW.id,\n            coalesce(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),\n            NEW.email,\n            NEW.phone,\n            coalesce(NEW.raw_user_meta_data->>'avatar_url', NEW.raw_user_meta_data->>'picture', ''),\n            nullif(NEW.raw_user_meta_data->>'tenant_id', '')::UUID,\n            'active',\n            'public_signup'\n        )\n        RETURNING id INTO existing_user_id;\n\n        -- Assign default 'public' role\n        INSERT INTO user_roles (user_id, role_id)\n        VALUES (existing_user_id, public_role_id)\n        ON CONFLICT DO NOTHING;\n    END IF;\n\n    -- Attach trigger to set auth role claim automatically\n    PERFORM set_user_role_claim(NEW.id);\n\n    RETURN NEW;\nEND;\n$function$\n",
+    "CREATE OR REPLACE FUNCTION core.set_user_role_claim(target_user_id uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'core', 'auth', 'pg_catalog'\nAS $function$\nDECLARE\n    roles_array JSONB;\n    primary_role_name TEXT;\nBEGIN\n    -- HARDENING CHECK: Only allow the caller to set claims for their own account, unless they are a superadmin\n    IF target_user_id != auth.uid() AND NOT EXISTS (\n        SELECT 1 FROM users u\n        JOIN user_roles ur ON u.id = ur.user_id\n        JOIN roles r ON ur.role_id = r.id\n        WHERE u.auth_user_id = auth.uid() AND r.name = 'super_admin'\n    ) THEN\n        RAISE EXCEPTION 'Access Denied: You can only set claims for your own account.';\n    END IF;\n\n    -- Fetch all roles for this user and compile them into a JSON array\n    SELECT jsonb_agg(r.name) INTO roles_array\n    FROM user_roles ur\n    JOIN roles r ON ur.role_id = r.id\n    WHERE ur.user_id = target_user_id OR ur.user_id = (SELECT id FROM users WHERE auth_user_id = target_user_id);\n\n    -- Fetch primary role\n    SELECT r.name INTO primary_role_name\n    FROM user_roles ur\n    JOIN roles r ON ur.role_id = r.id\n    WHERE ur.user_id = target_user_id OR ur.user_id = (SELECT id FROM users WHERE auth_user_id = target_user_id)\n    ORDER BY r.priority DESC, r.name ASC\n    LIMIT 1;\n\n    -- Fallback to 'public' if no roles were found\n    IF roles_array IS NULL OR jsonb_array_length(roles_array) = 0 THEN\n        roles_array := jsonb_build_array('public');\n        primary_role_name := 'public';\n    END IF;\n\n    UPDATE auth.users \n    SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) \n        || jsonb_build_object('role', primary_role_name) -- Single role for backward compatibility\n        || jsonb_build_object('roles', roles_array) -- All roles for multi-role support\n    WHERE id = target_user_id;\nEND;\n$function$\n"
+  ]
+}

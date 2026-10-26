@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/services/auth";
-import { signOutAction } from "@/app/actions/auth-actions";
+import SignOutButton from "@/components/sign-out-button";
 import { redirect } from "next/navigation";
-import { Terminal, LogOut, Info, ShieldAlert } from "lucide-react";
+import { Terminal, Info, ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -29,15 +29,7 @@ export default async function PublicPage() {
             <span className="font-bold text-sm tracking-tight">Hynox Campus Portal</span>
           </div>
 
-          <form action={signOutAction}>
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 bg-[#F0555D]/10 text-[#F0555D] border border-[#F0555D]/20 px-3 py-1.5 rounded-lg hover:bg-[#F0555D] hover:text-white transition-all text-xs font-semibold"
-            >
-              <LogOut size={13} />
-              Sign Out
-            </button>
-          </form>
+          <SignOutButton />
         </div>
       </header>
 

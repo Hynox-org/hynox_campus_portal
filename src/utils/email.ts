@@ -4,7 +4,9 @@ const apiKey = process.env.BREVO_API_KEY || "";
 const senderEmail = process.env.BREVO_SENDER_EMAIL || "noreply-campus@hynox.in";
 const senderName = process.env.BREVO_SENDER_NAME || "Hynox Campus";
 
-const brevo = new BrevoClient({ apiKey });
+const brevo = new BrevoClient({ apiKey, timeoutInSeconds: 20, maxRetries: 0 });
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[character]!));
 
 
 export async function sendOnboardingEmail(
@@ -12,7 +14,8 @@ export async function sendOnboardingEmail(
   inviteLink: string,
   fullName: string,
   roleLabel: string,
-  institutionName: string
+  institutionName: string,
+  idempotencyKey?: string
 ) {
   const htmlContent = `
     <!DOCTYPE html>
@@ -144,34 +147,34 @@ export async function sendOnboardingEmail(
             <h1>Hynox Campus Portal</h1>
           </div>
           <div class="content">
-            <p class="welcome">Hello ${fullName},</p>
+            <p class="welcome">Hello ${escapeHtml(fullName)},</p>
             <p class="text">
-              You have been invited to join the <strong>${institutionName}</strong> campus tenant space on the Hynox Campus Portal. Below are your account details and your secure activation link.
+              You have been invited to join the <strong>${escapeHtml(institutionName)}</strong> campus tenant space on the Hynox Campus Portal. Below are your account details and your secure activation link.
             </p>
             
             <div class="details-card">
               <div class="detail-item">
                 <span class="detail-label">Institution</span>
-                <span class="detail-value">${institutionName}</span>
+                <span class="detail-value">${escapeHtml(institutionName)}</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Assigned Role</span>
-                <span class="detail-value">${roleLabel}</span>
+                <span class="detail-value">${escapeHtml(roleLabel)}</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Invited Email</span>
-                <span class="detail-value">${toEmail}</span>
+                <span class="detail-value">${escapeHtml(toEmail)}</span>
               </div>
             </div>
 
             <div class="btn-container">
-              <a href="${inviteLink}" class="btn" target="_blank">Activate My Account</a>
+              <a href="${escapeHtml(inviteLink)}" class="btn" target="_blank">Activate My Account</a>
             </div>
 
             <p class="text" style="margin-bottom: 0;">
               If the button doesn't work, copy and paste the link below into your web browser:
             </p>
-            <div class="link-fallback">${inviteLink}</div>
+            <div class="link-fallback">${escapeHtml(inviteLink)}</div>
           </div>
           <div class="footer">
             <p>&copy; ${new Date().getFullYear()} Hynox Campus. All rights reserved.</p>
@@ -182,10 +185,11 @@ export async function sendOnboardingEmail(
     </html>
   `;
 
-  await brevo.transactionalEmails.sendTransacEmail({
+  return brevo.transactionalEmails.sendTransacEmail({
     sender: { name: senderName, email: senderEmail },
     to: [{ email: toEmail, name: fullName }],
     subject: `[Hynox Campus] Onboarding Activation for ${institutionName}`,
     htmlContent: htmlContent,
+    headers: idempotencyKey ? { idempotencyKey } : undefined,
   });
 }

@@ -1,0 +1,342 @@
+[
+  {
+    "name": "rls_enabled_no_policy",
+    "level": "INFO",
+    "count": 6,
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+    "findings": [
+      {
+        "name": "newsletter_batches",
+        "type": "table",
+        "schema": "learning"
+      },
+      {
+        "name": "newsletter_courses",
+        "type": "table",
+        "schema": "learning"
+      },
+      {
+        "name": "newsletter_deliveries",
+        "type": "table",
+        "schema": "learning"
+      },
+      {
+        "name": "newsletter_editions",
+        "type": "table",
+        "schema": "learning"
+      },
+      {
+        "name": "newsletter_preferences",
+        "type": "table",
+        "schema": "learning"
+      },
+      {
+        "name": "newsletter_settings",
+        "type": "table",
+        "schema": "learning"
+      }
+    ]
+  },
+  {
+    "name": "function_search_path_mutable",
+    "level": "WARN",
+    "count": 7,
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable",
+    "findings": [
+      {
+        "name": "trg_audit_institution_created",
+        "type": "function",
+        "schema": "institution"
+      },
+      {
+        "name": "get_status_id_by_code",
+        "type": "function",
+        "schema": "academic"
+      },
+      {
+        "name": "get_visibility_type_id_by_code",
+        "type": "function",
+        "schema": "academic"
+      },
+      {
+        "name": "trg_audit_academic_program",
+        "type": "function",
+        "schema": "academic"
+      },
+      {
+        "name": "trg_audit_academic_course",
+        "type": "function",
+        "schema": "academic"
+      },
+      {
+        "name": "is_super_admin",
+        "type": "function",
+        "schema": "library"
+      },
+      {
+        "name": "duplicate_course_template",
+        "type": "function",
+        "schema": "library"
+      }
+    ]
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "level": "ERROR",
+    "count": 11,
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "findings": [
+      {
+        "name": "cohort_statuses",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "enrollment_statuses",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "progress_statuses",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "lesson_progress",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "course_assignments",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "course_progress",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "enrollments",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "cohorts",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "attendance_sessions",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "cohort_teachers",
+        "type": "table",
+        "schema": "delivery"
+      },
+      {
+        "name": "attendance_records",
+        "type": "table",
+        "schema": "delivery"
+      }
+    ]
+  },
+  {
+    "name": "anon_security_definer_function_executable",
+    "level": "WARN",
+    "count": 5,
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable",
+    "findings": [
+      {
+        "name": "trg_audit_academic_course",
+        "schema": "academic",
+        "language": "plpgsql",
+        "arguments": "",
+        "security_definer": true
+      },
+      {
+        "name": "trg_audit_academic_program",
+        "schema": "academic",
+        "language": "plpgsql",
+        "arguments": "",
+        "security_definer": true
+      },
+      {
+        "name": "log_audit",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "p_tenant_id uuid, p_event_type text, p_actor_user_id uuid, p_target_user_id uuid, p_metadata jsonb",
+        "security_definer": true
+      },
+      {
+        "name": "duplicate_course_template",
+        "schema": "library",
+        "language": "plpgsql",
+        "arguments": "p_template_id uuid, p_program_id uuid, p_tenant_id uuid, p_institution_id uuid, p_user_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "is_super_admin",
+        "schema": "library",
+        "language": "plpgsql",
+        "arguments": "",
+        "security_definer": true
+      }
+    ]
+  },
+  {
+    "name": "authenticated_security_definer_function_executable",
+    "level": "WARN",
+    "count": 19,
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable",
+    "findings": [
+      {
+        "name": "get_all_teachers",
+        "schema": "academic",
+        "language": "plpgsql",
+        "arguments": "",
+        "security_definer": true
+      },
+      {
+        "name": "get_tenant_teachers",
+        "schema": "academic",
+        "language": "plpgsql",
+        "arguments": "p_tenant_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "trg_audit_academic_course",
+        "schema": "academic",
+        "language": "plpgsql",
+        "arguments": "",
+        "security_definer": true
+      },
+      {
+        "name": "trg_audit_academic_program",
+        "schema": "academic",
+        "language": "plpgsql",
+        "arguments": "",
+        "security_definer": true
+      },
+      {
+        "name": "assign_onboarding_admin",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "institution_id_value uuid, email_value text",
+        "security_definer": true
+      },
+      {
+        "name": "complete_login",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "",
+        "security_definer": true
+      },
+      {
+        "name": "delete_managed_user",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "target_user_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "get_current_user",
+        "schema": "core",
+        "language": "sql",
+        "arguments": "",
+        "security_definer": true
+      },
+      {
+        "name": "get_user_primary_role",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "target_user_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "get_user_tenant_id",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "p_user_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "log_audit",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "p_tenant_id uuid, p_event_type text, p_actor_user_id uuid, p_target_user_id uuid, p_metadata jsonb",
+        "security_definer": true
+      },
+      {
+        "name": "provision_onboarding",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "rows jsonb, dedicated_super boolean",
+        "security_definer": true
+      },
+      {
+        "name": "regenerate_onboarding",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "invitation_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "set_user_role_claim",
+        "schema": "core",
+        "language": "plpgsql",
+        "arguments": "target_user_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "delete_managed_institution",
+        "schema": "institution",
+        "language": "plpgsql",
+        "arguments": "institution_id_value uuid",
+        "security_definer": true
+      },
+      {
+        "name": "duplicate_course_template",
+        "schema": "library",
+        "language": "plpgsql",
+        "arguments": "p_template_id uuid, p_program_id uuid, p_tenant_id uuid, p_institution_id uuid, p_user_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "is_super_admin",
+        "schema": "library",
+        "language": "plpgsql",
+        "arguments": "",
+        "security_definer": true
+      },
+      {
+        "name": "get_teacher_institutions_and_programs",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_teacher_id uuid",
+        "security_definer": true
+      },
+      {
+        "name": "get_teacher_programs",
+        "schema": "public",
+        "language": "plpgsql",
+        "arguments": "p_teacher_id uuid",
+        "security_definer": true
+      }
+    ]
+  },
+  {
+    "name": "auth_leaked_password_protection",
+    "level": "WARN",
+    "count": 1,
+    "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+    "findings": [
+      {
+        "type": "auth",
+        "entity": "Auth"
+      }
+    ]
+  }
+]

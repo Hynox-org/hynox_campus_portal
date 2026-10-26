@@ -1,4 +1,14 @@
 import { createClient } from "@/utils/supabase/server";
+import { validateInstitution, validateInstitutionId, institutionStatuses } from "@/lib/institution-validation";
+
+export interface InstitutionUser {
+  id: string;
+  full_name: string | null;
+  email: string;
+  status: string;
+  created_at: string;
+  roles: string[];
+}
 
 export async function createInstitution(data: {
   name: string;
@@ -11,23 +21,10 @@ export async function createInstitution(data: {
   logo_url?: string;
   created_by?: string;
 }) {
+  const validated = validateInstitution(data);
   const supabase = await createClient();
-
-  const { data: institution, error } = await supabase
-    .schema("institution")
-    .from("institutions")
-    .insert({
-      name: data.name,
-      institution_code: data.institution_code,
-      institution_type: data.institution_type,
-      email: data.email || null,
-      phone: data.phone || null,
-      address: data.address || null,
-      website: data.website || null,
-      logo_url: data.logo_url || null,
-      status: "onboarding",
-      created_by: data.created_by || null,
-    })
+  const { data: institution, error } = await supabase.schema("institution").from("institutions")
+    .insert({ ...validated, status: "onboarding", created_by: data.created_by || null })
     .select("*")
     .single();
 
@@ -56,71 +53,14 @@ export async function listInstitutions() {
 
 export async function assignInstitutionAdmin(
   institutionId: string,
-  userEmail: string,
-  assignedByUserId: string
+  userEmail: string
 ) {
   const supabase = await createClient();
-
-  // 1. Resolve business user by email
-  const { data: user, error: userError } = await supabase
-    .schema("core")
-    .from("users")
-    .select("id")
-    .eq("email", userEmail)
-    .maybeSingle();
-
-  if (userError || !user) {
-    throw new Error(
-      userError?.message || `User with email ${userEmail} does not exist in core.users. Please onboard them first.`
-    );
-  }
-
-  // 2. Link in institution_admins
-  const { error: adminError } = await supabase
-    .schema("institution")
-    .from("institution_admins")
-    .insert({
-      institution_id: institutionId,
-      user_id: user.id,
-      assigned_by: assignedByUserId,
-      role_scope: "primary",
-    });
-
-  if (adminError) {
-    throw adminError;
-  }
-
-  // 3. Link user to tenant_id
-  const { error: updateError } = await supabase
-    .schema("core")
-    .from("users")
-    .update({ tenant_id: institutionId })
-    .eq("id", user.id);
-
-  if (updateError) {
-    throw updateError;
-  }
-
-  // 4. Map user to 'institution_admin' role
-  const { data: role } = await supabase
-    .schema("core")
-    .from("roles")
-    .select("id")
-    .eq("name", "institution_admin")
-    .single();
-
-  if (role) {
-    await supabase
-      .schema("core")
-      .from("user_roles")
-      .insert({
-        user_id: user.id,
-        role_id: role.id,
-      })
-      .maybeSingle();
-  }
-
-  return user;
+  const { data, error } = await supabase.schema("core").rpc("assign_onboarding_admin", {
+    institution_id_value: institutionId, email_value: userEmail,
+  });
+  if (error || !data) throw new Error("Unable to assign administrator. Check the account and institution.");
+  return { id: data };
 }
 
 export async function getInstitutionDetails(institutionId: string) {
@@ -141,42 +81,25 @@ export async function getInstitutionDetails(institutionId: string) {
 }
 
 export async function listInstitutionUsers(institutionId: string) {
+  validateInstitutionId(institutionId);
   const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .schema("core")
-    .from("users")
-    .select(`
-      id,
-      full_name,
-      email,
-      status,
-      created_at,
-      user_roles (
-        role:role_id (
-          name
-        )
-      )
-    `)
-    .eq("tenant_id", institutionId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
+  const results: InstitutionUser[] = [];
+  let cursor: {id:string;created_at:string}|undefined;
+  for (;;) {
+    let query = supabase.schema("core").from("users")
+      .select("id,full_name,email,status,created_at,user_roles(role:role_id(name))")
+      .eq("tenant_id",institutionId).is("deleted_at",null)
+      .order("created_at",{ascending:false}).order("id",{ascending:false}).limit(500);
+    if (cursor) query=query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
+    const {data,error}=await query;
+    if (error) throw new Error("Unable to load institution users.");
+    const users=(data || []) as unknown as Array<{id:string;full_name:string|null;email:string;status:string;created_at:string;user_roles:Array<{role:{name:string}|null}>|null}>;
+    results.push(...users.map(user=>({id:user.id,full_name:user.full_name,email:user.email,status:user.status,created_at:user.created_at,
+      roles:user.user_roles?.flatMap(link=>link.role?.name?[link.role.name]:[]) || []})));
+    if (users.length<500) break;
+    const last=users[users.length-1];cursor={id:last.id,created_at:last.created_at};
   }
-
-  return (data || []).map((u: any) => {
-    const roles = u.user_roles?.map((ur: any) => ur.role?.name) || [];
-    return {
-      id: u.id,
-      full_name: u.full_name,
-      email: u.email,
-      status: u.status,
-      created_at: u.created_at,
-      roles,
-    };
-  });
+  return results;
 }
 
 export async function listTeacherInstitutions(userId: string, isSuperAdmin: boolean) {
@@ -186,38 +109,30 @@ export async function listTeacherInstitutions(userId: string, isSuperAdmin: bool
     return listInstitutions();
   }
 
-  // 1. Get primary tenant_id
-  const { data: primaryUser, error: userError } = await supabase
+  const [primary, assigned, mapped] = await Promise.all([
+    supabase
     .schema("core")
     .from("users")
     .select("tenant_id")
     .eq("id", userId)
-    .maybeSingle();
-
-  const primaryTenantId = primaryUser?.tenant_id;
-
-  // 2. Get from course_instructors
-  const { data: assignments, error: assignError } = await supabase
+    .maybeSingle(),
+    supabase
     .schema("academic")
     .from("course_instructors")
     .select("tenant_id")
-    .eq("user_id", userId);
-
-  if (assignError) throw assignError;
-
-  // 3. Get from tenant_teachers
-  const { data: tenantMappings, error: mapError } = await supabase
+    .eq("user_id", userId),
+    supabase
     .schema("academic")
     .from("tenant_teachers")
     .select("tenant_id")
-    .eq("user_id", userId);
-
-  if (mapError) throw mapError;
+    .eq("user_id", userId),
+  ]);
+  if (primary.error || assigned.error || mapped.error) throw new Error("Unable to load teacher institutions.");
 
   const tIds = new Set<string>();
-  if (primaryTenantId) tIds.add(primaryTenantId);
-  assignments?.forEach(a => { if (a.tenant_id) tIds.add(a.tenant_id); });
-  tenantMappings?.forEach(m => { if (m.tenant_id) tIds.add(m.tenant_id); });
+  if (primary.data?.tenant_id) tIds.add(primary.data.tenant_id);
+  assigned.data?.forEach(a => { if (a.tenant_id) tIds.add(a.tenant_id); });
+  mapped.data?.forEach(m => { if (m.tenant_id) tIds.add(m.tenant_id); });
 
   const tenantIds = Array.from(tIds);
   if (tenantIds.length === 0) return [];
@@ -240,7 +155,7 @@ export async function listAllTeachers() {
 
   if (error) throw error;
 
-  return (data || []).map((t: any) => ({
+  return (data || []).map((t: { id: string; full_name: string; email: string; tenant_id: string | null; mapped_tenant_ids: string[] | null }) => ({
     id: t.id,
     full_name: t.full_name,
     email: t.email,
@@ -272,13 +187,12 @@ export async function unmapTeacherFromTenant(userId: string, tenantId: string) {
 }
 
 export async function updateInstitutionStatus(institutionId: string, status: string) {
+  validateInstitutionId(institutionId);
+  if (!institutionStatuses.includes(status)) throw new Error("Invalid institution status.");
   const supabase = await createClient();
-  const { error } = await supabase
-    .schema("institution")
-    .from("institutions")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", institutionId);
-  if (error) throw error;
+  const { data, error } = await supabase.schema("institution").from("institutions")
+    .update({ status, updated_at: new Date().toISOString() }).eq("id", institutionId).select("id").maybeSingle();
+  if (error || !data) throw new Error("Institution could not be updated or access was denied.");
   return true;
 }
 
@@ -296,24 +210,11 @@ export async function updateInstitution(
     status: string;
   }
 ) {
+  validateInstitutionId(institutionId);
+  const validated = validateInstitution(data);
   const supabase = await createClient();
-
-  const { data: institution, error } = await supabase
-    .schema("institution")
-    .from("institutions")
-    .update({
-      name: data.name,
-      institution_code: data.institution_code,
-      institution_type: data.institution_type,
-      email: data.email || null,
-      phone: data.phone || null,
-      address: data.address || null,
-      website: data.website || null,
-      logo_url: data.logo_url || null,
-      status: data.status,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", institutionId)
+  const { data: institution, error } = await supabase.schema("institution").from("institutions")
+    .update({ ...validated, updated_at: new Date().toISOString() }).eq("id", institutionId)
     .select("*")
     .single();
 
@@ -325,58 +226,21 @@ export async function updateInstitution(
 }
 
 export async function getInstitutionRelationsCount(institutionId: string) {
+  validateInstitutionId(institutionId);
   const supabase = await createClient();
-
-  // Count cohorts
-  const { count: cohortsCount, error: cohortsError } = await supabase
-    .schema("delivery")
-    .from("cohorts")
-    .select("*", { count: "exact", head: true })
-    .eq("institution_id", institutionId);
-
-  if (cohortsError) throw cohortsError;
-
-  // Count programs
-  const { count: programsCount, error: programsError } = await supabase
-    .schema("academic")
-    .from("programs")
-    .select("*", { count: "exact", head: true })
-    .eq("institution_id", institutionId);
-
-  if (programsError) throw programsError;
-
-  // Count users linked to this tenant
-  const { count: usersCount, error: usersError } = await supabase
-    .schema("core")
-    .from("users")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", institutionId);
-
-  if (usersError) throw usersError;
-
-  return {
-    cohorts: cohortsCount || 0,
-    programs: programsCount || 0,
-    users: usersCount || 0,
-  };
+  const [cohorts, programs, users] = await Promise.all([
+    supabase.schema("delivery").from("cohorts").select("id",{count:"exact",head:true}).or(`institution_id.eq.${institutionId},tenant_id.eq.${institutionId}`),
+    supabase.schema("academic").from("programs").select("id",{count:"exact",head:true}).or(`institution_id.eq.${institutionId},tenant_id.eq.${institutionId}`),
+    supabase.schema("core").from("users").select("id",{count:"exact",head:true}).eq("tenant_id",institutionId),
+  ]);
+  if (cohorts.error || programs.error || users.error) throw new Error("Unable to check institution dependencies.");
+  return {cohorts:cohorts.count || 0,programs:programs.count || 0,users:users.count || 0};
 }
 
 export async function deleteInstitution(institutionId: string) {
+  validateInstitutionId(institutionId);
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .schema("institution")
-    .from("institutions")
-    .delete()
-    .eq("id", institutionId);
-
-  if (error) {
-    throw error;
-  }
-
+  const { data, error } = await supabase.schema("institution").rpc("delete_managed_institution", { institution_id_value: institutionId });
+  if (error || !data) throw new Error("Institution could not be deleted. Remove its linked users, staff and learning records first.");
   return true;
 }
-
-
-
-

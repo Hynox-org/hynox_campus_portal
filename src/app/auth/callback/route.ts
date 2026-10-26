@@ -1,148 +1,55 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { isSharedLogin } from "@/lib/shared-login";
+import { safeNextPath } from "@/lib/auth-redirect";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-  const host = request.headers.get("x-forwarded-host");
-  let proto = request.headers.get("x-forwarded-proto") || "https";
-  if (host && (host.includes("localhost") || host.includes("127.0.0.1"))) {
-    proto = "http";
-  }
-  const publicOrigin = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || origin);
+  // Forwarded headers are request input, not a trusted redirect destination.
+  const publicOrigin = new URL(process.env.NEXT_PUBLIC_APP_URL || origin).origin;
+  const redirectTo = (path: string) => {
+    const response = NextResponse.redirect(new URL(path, publicOrigin));
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  };
   const code = searchParams.get("code");
-  const requestedNext = searchParams.get("next") || "/";
-  const next = requestedNext.startsWith("/") && !requestedNext.startsWith("//") && !requestedNext.includes("\\")
-    ? requestedNext : "/";
+  const next = safeNextPath(searchParams.get("next"));
+  if (!code) return redirectTo("/login?error=OAuthExchangeFailed");
 
-  if (code) {
-    const supabase = await createClient();
-    const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (!error && sessionData?.user) {
-      const user = sessionData.user;
-      if (isSharedLogin(user)) {
-        return NextResponse.redirect(`${publicOrigin}/super-admin-login/dashboards`);
-      }
-
-      // 1. Resolve business user from core.users (by auth_user_id or email)
-      let { data: dbUser } = await supabase
-        .schema("core")
-        .from("users")
-        .select("id, email, auth_user_id")
-        .eq("auth_user_id", user.id)
-        .is("deleted_at", null)
-        .maybeSingle();
-
-      if (!dbUser && user.email) {
-        const { data: emailUser } = await supabase
-          .schema("core")
-          .from("users")
-          .select("id, email, auth_user_id")
-          .eq("email", user.email)
-          .is("deleted_at", null)
-          .maybeSingle();
-        
-        if (emailUser) {
-          dbUser = emailUser;
-        }
-      }
-
-      // If user is pre-provisioned but not linked yet, run the link flow
-      if (dbUser) {
-        if (dbUser.auth_user_id && dbUser.auth_user_id !== user.id) {
-          return NextResponse.redirect(`${publicOrigin}/login?error=AccountMismatch`);
-        }
-        if (!dbUser.auth_user_id) {
-          // Link Google Auth ID to pre-provisioned core.users
-          await supabase
-            .schema("core")
-            .from("users")
-            .update({
-              auth_user_id: user.id,
-              status: "active"
-            })
-            .eq("id", dbUser.id);
-          
-          // Refresh JWT claims
-          await supabase
-            .schema("core")
-            .rpc("set_user_role_claim", { target_user_id: user.id });
-        }
-        // Returning accounts can also receive a fresh onboarding invitation.
-        const acceptedAt = new Date().toISOString();
-        await supabase
-          .schema("core")
-          .from("user_invitations")
-          .update({ status: "accepted", accepted_at: acceptedAt })
-          .eq("user_id", dbUser.id)
-          .in("status", ["created", "sent", "pending"])
-          .gte("expires_at", acceptedAt);
-      } else {
-        // If user is not found, double check if trigger created them
-        const { data: triggerUser } = await supabase
-          .schema("core")
-          .from("users")
-          .select("id, email, auth_user_id")
-          .eq("auth_user_id", user.id)
-          .is("deleted_at", null)
-          .maybeSingle();
-        
-        if (triggerUser) {
-          dbUser = triggerUser;
-        }
-      }
-
-      // 2. Resolve primary role
-      let role = "public";
-      
-      if (dbUser) {
-        const { data: userRoles } = await supabase
-          .schema("core")
-          .from("user_roles")
-          .select(`
-            role_id,
-            roles:role_id (
-              name,
-              priority
-            )
-          `)
-          .eq("user_id", dbUser.id);
-
-        if (userRoles && userRoles.length > 0) {
-          let maxPriority = -1;
-          userRoles.forEach((ur: any) => {
-            const r = ur.roles as any;
-            if (r && r.priority > maxPriority) {
-              maxPriority = r.priority;
-              role = r.name;
-            }
-          });
-        }
-      }
-
-      // 3. Determine redirect dashboard destination
-      const dashboardRoutes: Record<string, string> = {
-        super_admin: "/admin",
-        institution_admin: "/institution",
-        teacher: "/teacher",
-        trainer: "/teacher",
-        student: "/student",
-      };
-
-      const defaultDest = dashboardRoutes[role] || "/public";
-
-      // If next is root or points to onboarding, bypass onboarding verify screen
-      let finalDest = defaultDest;
-      if (next && next !== "/" && !next.includes("/onboarding/verify")) {
-        finalDest = next;
-      }
-
-      const forwardUrl = finalDest.startsWith("/") ? `${publicOrigin}${finalDest}` : finalDest;
-      return NextResponse.redirect(forwardUrl);
+  const supabase = await createClient();
+  const reject = async (reason: string) => {
+    await supabase.auth.signOut().catch(() => {});
+    return redirectTo(`/login?error=${reason}`);
+  };
+  try {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error || !data?.user) return reject("OAuthExchangeFailed");
+    const user = data.user;
+    const db = supabase.schema("core");
+    const completion = await db.rpc("complete_login");
+    if (completion.error) {
+      const reason = ["AccountUnavailable", "AccountMismatch"].includes(completion.error.message)
+        ? completion.error.message : "OAuthExchangeFailed";
+      return reject(reason);
     }
+    const dbUser = completion.data as { id: string; status: string } | null;
+    if (isSharedLogin(user)) {
+      if (!dbUser || dbUser.status !== "active") return reject("AccountUnavailable");
+      return redirectTo("/super-admin-login/dashboards");
+    }
+    let role = "public";
+    if (dbUser) {
+      const roles = await db.from("user_roles").select("roles:role_id(name,priority)").eq("user_id", dbUser.id);
+      if (roles.error) return reject("OAuthExchangeFailed");
+      let maxPriority = -1;
+      for (const entry of roles.data || []) {
+        const assigned = entry.roles as unknown as { name: string; priority: number } | null;
+        if (assigned && assigned.priority > maxPriority) { role = assigned.name; maxPriority = assigned.priority; }
+      }
+    }
+    const destinations: Record<string, string> = { super_admin: "/admin", institution_admin: "/institution", teacher: "/teacher", trainer: "/teacher", student: "/student" };
+    return redirectTo(next !== "/" && !next.includes("/onboarding/verify") ? next : destinations[role] || "/public");
+  } catch {
+    return reject("OAuthExchangeFailed");
   }
-
-  // Fallback if exchange fails
-  return NextResponse.redirect(`${publicOrigin}/login?error=OAuthExchangeFailed`);
 }

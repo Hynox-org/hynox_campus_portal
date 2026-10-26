@@ -1,764 +1,179 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { sendOnboardingEmail } from "@/utils/email";
 import { read, utils } from "xlsx";
+import { onboardingLink } from "@/lib/onboarding-link";
 
 export interface OnboardingResult {
   email: string;
   status: "success" | "error";
   link?: string;
   error?: string;
+  queued?: boolean;
 }
+export interface OnboardingRow { name: string; email: string; role: string; institution_id?: string }
+export const MAX_ONBOARDING_ROWS = 2500;
+const MAX_CSV_BYTES = 750_000;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const emailPattern = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const roles = ["student", "teacher", "trainer", "institution_admin", "mentor", "super_admin"];
 
-export function parseCsv(csvContent: string) {
+export function parseCsv(csvContent: string): OnboardingRow[] {
+  if (typeof csvContent !== "string" || Buffer.byteLength(csvContent, "utf8") > MAX_CSV_BYTES) {
+    throw new Error("CSV must be text no larger than 750 KB.");
+  }
   const workbook = read(csvContent, { type: "string", raw: true });
+  if (!workbook.SheetNames.length) throw new Error("CSV is empty.");
   const lines = utils.sheet_to_json<string[]>(workbook.Sheets[workbook.SheetNames[0]], {
     header: 1, defval: "", blankrows: false, raw: true,
   });
-  const result: Array<{ name: string; email: string; role: string; institution_id?: string }> = [];
-
-  if (lines.length === 0) return result;
-
-  const cleanVal = (val: string) => val.trim();
-
-  // Read headers to map columns
-  const headers = lines[0].map((h) => cleanVal(String(h)).toLowerCase());
-  const nameIdx = headers.findIndex(h => h.includes("name"));
-  const emailIdx = headers.findIndex(h => h.includes("email") || h.includes("mail"));
-  const roleIdx = headers.findIndex(h => h.includes("role"));
-  const instIdx = headers.findIndex(h => h.includes("institution_id") || h.includes("institution"));
-
-  if (nameIdx === -1 || emailIdx === -1) {
-    throw new Error("CSV must contain 'Name' and 'Email' headers.");
-  }
-
-  for (let i = 1; i < lines.length; i++) {
-    const columns = lines[i].map((c) => cleanVal(String(c)));
-    if (columns.length < 2) continue;
-
-    result.push({
-      name: columns[nameIdx],
-      email: columns[emailIdx],
-      role: roleIdx !== -1 && columns[roleIdx] ? columns[roleIdx] : "student",
-      institution_id: instIdx !== -1 && columns[instIdx] ? columns[instIdx] : undefined,
-    });
-  }
-
-  return result;
+  if (lines.length < 2) throw new Error("CSV must contain at least one user.");
+  if (lines.length - 1 > MAX_ONBOARDING_ROWS) throw new Error("Upload at most 2500 users at a time.");
+  const headers = lines[0].map(value => String(value).replace(/^\uFEFF/, "").trim().toLowerCase());
+  const find = (aliases: string[]) => headers.findIndex(header => aliases.includes(header));
+  const nameIndex = find(["name", "full name", "full_name"]);
+  const emailIndex = find(["email", "email address", "email_address", "mail"]);
+  const roleIndex = find(["role"]);
+  const institutionIndex = find(["institution_id", "institution", "institution id"]);
+  if (new Set(headers).size !== headers.length) throw new Error("CSV contains duplicate headers.");
+  if (nameIndex < 0 || emailIndex < 0) throw new Error("CSV must contain 'Name' and 'Email' headers.");
+  return lines.slice(1).map(line => ({
+    name: String(line[nameIndex] ?? "").trim(),
+    email: String(line[emailIndex] ?? "").trim().toLowerCase(),
+    role: roleIndex < 0 ? "student" : String(line[roleIndex] || "student").trim().toLowerCase(),
+    institution_id: institutionIndex < 0 ? undefined : String(line[institutionIndex] || "").trim() || undefined,
+  }));
 }
 
-export async function processCsvOnboarding(
-  csvContent: string,
-  selectedInstitutionId: string,
-  invitedByUserId: string
-): Promise<OnboardingResult[]> {
+function normalizeRow(row: OnboardingRow, institutionId?: string): OnboardingRow {
+  if (typeof row.name !== "string" || typeof row.email !== "string" || typeof row.role !== "string") throw new Error("Invalid onboarding fields.");
+  const name = row.name.trim();
+  const email = row.email.trim().toLowerCase();
+  const role = row.role.trim().toLowerCase();
+  if (!name || name.length > 200 || /[\u0000-\u001f\u007f]/.test(name)) throw new Error("Name must contain 1 to 200 characters without control characters.");
+  if (email.length > 254 || !emailPattern.test(email)) throw new Error("Invalid email address.");
+  if (!roles.includes(role)) throw new Error("Unsupported onboarding role.");
+  const institution = ["teacher", "trainer", "super_admin"].includes(role) ? undefined : row.institution_id || institutionId;
+  if (!["teacher", "trainer", "super_admin"].includes(role) && (!institution || !uuid.test(institution))) throw new Error("A valid institution ID is required.");
+  return { name, email, role, institution_id: institution };
+}
+
+interface ProvisionedRow extends OnboardingResult { token?: string }
+async function provisionRows(rows: OnboardingRow[], dedicatedSuper = false): Promise<OnboardingResult[]> {
   const supabase = await createClient();
-  const parsedRows = parseCsv(csvContent);
   const results: OnboardingResult[] = [];
-
-  // Fetch all roles to map names to IDs
-  const { data: rolesList } = await supabase
-    .schema("core")
-    .from("roles")
-    .select("id, name");
-
-  const rolesMap = new Map(rolesList?.map((r) => [r.name.toLowerCase(), r.id]));
-
-  // Fetch institutions to map name
-  const { data: insts } = await supabase
-    .schema("institution")
-    .from("institutions")
-    .select("id, name");
-  const instMap = new Map(insts?.map((i) => [i.id, i.name]));
-
-  for (const row of parsedRows) {
+  for (let offset = 0; offset < rows.length; offset += 100) {
+    const batch = rows.slice(offset, offset + 100);
+    let data: unknown;
+    let failed = false;
     try {
-      const email = row.email;
-      const name = row.name;
-      const roleName = (row.role || "student").toLowerCase();
-      const isTeacher = roleName === "teacher" || roleName === "trainer";
-      const finalTenantId = isTeacher ? null : (row.institution_id || selectedInstitutionId);
-
-      if (!email || !name || !roleName || (!isTeacher && !finalTenantId)) {
-        throw new Error("Missing required fields (name, email, or institution_id)");
-      }
-
-      const roleId = rolesMap.get(roleName);
-      if (!roleId) {
-        throw new Error(
-          `Invalid role: '${row.role}'. Allowed: super_admin, institution_admin, teacher, trainer, mentor, student, public.`
-        );
-      }
-
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .schema("core")
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .maybeSingle();
-
-      let userId = existingUser?.id;
-
-      if (!userId) {
-        // Create pre-provisioned user in core.users
-        const { data: newUser, error: userError } = await supabase
-          .schema("core")
-          .from("users")
-          .insert({
-            full_name: name,
-            email: email,
-            tenant_id: finalTenantId,
-            status: "invited",
-            onboarding_source: "excel_import",
-          })
-          .select("id")
-          .single();
-
-        if (userError) throw userError;
-        userId = newUser.id;
-
-        // Assign core.user_roles role map
-        const { error: roleLinkError } = await supabase
-          .schema("core")
-          .from("user_roles")
-          .insert({
-            user_id: userId,
-            role_id: roleId,
-          });
-
-        if (roleLinkError) throw roleLinkError;
-      } else {
-        // Preserve existing roles while ensuring the invitation's role is assigned.
-        const { error: existingRoleError } = await supabase
-          .schema("core")
-          .from("user_roles")
-          .upsert({ user_id: userId, role_id: roleId }, { onConflict: "user_id,role_id", ignoreDuplicates: true });
-        if (existingRoleError) throw existingRoleError;
-
-        const { error: tenantUpdateError } = await supabase
-          .schema("core")
-          .from("users")
-          .update({ tenant_id: finalTenantId })
-          .eq("id", userId);
-        if (tenantUpdateError) throw tenantUpdateError;
-      }
-
-      // Determine invitation type
-      let invitationType = "student_onboarding";
-      if (roleName === "institution_admin") {
-        invitationType = "institution_admin_invite";
-      } else if (roleName === "teacher" || roleName === "trainer") {
-        invitationType = "trainer_onboarding";
-      } else if (roleName === "mentor") {
-        invitationType = "mentor_invite";
-      }
-
-      // Create onboarding invitation token record
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days expiry
-      const token = crypto.randomUUID();
-
-      const { error: inviteError } = await supabase
-        .schema("core")
-        .from("user_invitations")
-        .insert({
-          user_id: userId,
-          tenant_id: finalTenantId,
-          token: token,
-          invited_by: invitedByUserId,
-          expires_at: expiresAt,
-          status: "created",
-          invitation_type: invitationType,
-        });
-
-      if (inviteError) throw inviteError;
-
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-      const link = `${appUrl}/onboarding/verify?token=${token}&email=${encodeURIComponent(email)}`;
-
-      // Send automated email notification
-      const roleNameMap: Record<string, string> = {
-        student_onboarding: "Student",
-        trainer_onboarding: "Teacher / Trainer",
-        institution_admin_invite: "Institution Admin",
-        mentor_invite: "Mentor",
-      };
-      const roleLabel = roleNameMap[invitationType] || "Member";
-      const institutionName = finalTenantId ? (instMap.get(finalTenantId) || "Hynox Campus") : "Hynox Campus";
-
-      let mailStatus = "sent";
-      try {
-        await sendOnboardingEmail(email, link, name, roleLabel, institutionName);
-      } catch (mailErr: any) {
-        console.error("Onboarding email dispatch failed:", mailErr);
-        mailStatus = "failed";
-      }
-
-      // Update dispatch status in database
-      await supabase
-        .schema("core")
-        .from("user_invitations")
-        .update({ status: mailStatus })
-        .eq("token", token);
-
-      if (mailStatus === "failed") throw new Error("User provisioned, but the invitation email failed. Regenerate the invitation to retry.");
-      results.push({ email, status: "success", link });
-    } catch (err: any) {
-      results.push({
-        email: row.email || "unknown",
-        status: "error",
-        error: err.message,
-      });
+      const response = await supabase.schema("core").rpc("provision_onboarding", { rows: batch, dedicated_super: dedicatedSuper });
+      data = response.data;
+      failed = Boolean(response.error);
+    } catch { failed = true; }
+    if (failed || !Array.isArray(data) || data.length !== batch.length) {
+      // Earlier batches are durable; re-import safely reuses their pending invitations.
+      results.push(...rows.slice(offset).map(row => ({ email: row.email, status: "error" as const, error: "Batch could not be confirmed. Retry the import; existing invitations will be reused." })));
+      break;
     }
+    results.push(...(data as ProvisionedRow[]).map(row => ({
+      email: row.email, status: row.status, error: row.error,
+      queued: row.queued, link: row.status === "success" && row.token ? onboardingLink(row.token, row.email) : undefined,
+    })));
   }
-
   return results;
 }
 
+export async function processCsvOnboarding(csvContent: string, selectedInstitutionId: string): Promise<OnboardingResult[]> {
+  const rows = parseCsv(csvContent).map((row, index) => {
+    try { return normalizeRow(row, selectedInstitutionId); }
+    catch (error) { throw new Error(`CSV row ${index + 2}: ${error instanceof Error ? error.message : "Invalid fields."}`); }
+  });
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (row.role === "super_admin") throw new Error("Use the dedicated super administrator invitation flow.");
+    if (seen.has(row.email)) throw new Error("CSV contains duplicate email addresses.");
+    seen.add(row.email);
+  }
+  return provisionRows(rows);
+}
+
+export async function onboardSingleUser(params: { email: string; name: string; role: string; institutionId?: string; invitedByUserId: string }): Promise<OnboardingResult> {
+  try {
+    const row = normalizeRow(params, params.institutionId);
+    if (row.role === "super_admin") throw new Error("Use the dedicated super administrator invitation flow.");
+    return (await provisionRows([row]))[0];
+  } catch (error) {
+    return { email: typeof params?.email === "string" ? params.email : "", status: "error", error: error instanceof Error ? error.message : "Unable to onboard user." };
+  }
+}
+
+export async function onboardSuperAdmin(params: { email: string; name: string; invitedByUserId: string }): Promise<OnboardingResult> {
+  try { return (await provisionRows([normalizeRow({ ...params, role: "super_admin" })], true))[0]; }
+  catch (error) { return { email: params.email, status: "error", error: error instanceof Error ? error.message : "Unable to onboard administrator." }; }
+}
+
+export async function regenerateInvitation(invitationId: string) {
+  if (!uuid.test(invitationId)) throw new Error("Invalid invitation ID.");
+  const supabase = await createClient();
+  const { data, error } = await supabase.schema("core").rpc("regenerate_onboarding", { invitation_id: invitationId });
+  if (error || !data) throw new Error("Invitation could not be regenerated. It may be active, unavailable or currently being sent.");
+  return { ...data, link: onboardingLink(data.token, data.email) };
+}
+
+interface InvitationUser { id: string; full_name: string; email: string; tenant_id: string | null; status: string; auth_user_id: string | null; deleted_at: string | null }
 export async function verifyInvitation(token: string, email: string) {
-  // Token and email checks below bound this server-only lookup. Anonymous
-  // visitors must never need permission to list every pending invitation.
-  const supabase = createAdminClient();
-
-  const { data: invitation, error } = await supabase
-    .schema("core")
-    .from("user_invitations")
-    .select(`
-      id,
-      token,
-      expires_at,
-      status,
-      invitation_type,
-      user:user_id (
-        id,
-        full_name,
-        email,
-        tenant_id
-      )
-    `)
-    .eq("token", token)
-    .maybeSingle();
-
-  if (error || !invitation) {
+  if (typeof token !== "string" || !uuid.test(token) || typeof email !== "string" || email.length > 254 || !emailPattern.test(email.trim())) {
     return { valid: false, error: "Invitation not found or invalid token." };
   }
-
-  const user = invitation.user as any;
-  if (!user || user.email.toLowerCase() !== email.toLowerCase()) {
-    return { valid: false, error: "Invitation email mismatch." };
-  }
-
-  if (
-    invitation.status !== "pending" &&
-    invitation.status !== "created" &&
-    invitation.status !== "sent"
-  ) {
-    return { valid: false, error: `Invitation has already been ${invitation.status}.` };
-  }
-
-  if (new Date(invitation.expires_at) < new Date()) {
-    // Update invitation status to expired
-    await supabase
-      .schema("core")
-      .from("user_invitations")
-      .update({ status: "expired" })
-      .eq("id", invitation.id);
-
-    return { valid: false, error: "Invitation token has expired." };
-  }
-
-  // Fetch institution name
+  const supabase = createAdminClient();
+  const { data: invitation, error } = await supabase.schema("core").from("user_invitations")
+    .select("id,token,expires_at,status,invitation_type,user:user_id(id,full_name,email,tenant_id,status,auth_user_id,deleted_at)")
+    .eq("token", token).maybeSingle();
+  const user = invitation?.user as unknown as InvitationUser | null;
+  if (error || !invitation || !user || user.email.toLowerCase() !== email.trim().toLowerCase()) return { valid: false, error: "Invitation not found or invalid token." };
+  if (user.deleted_at || user.status !== "invited" || user.auth_user_id) return { valid: false, error: "Account is already activated or unavailable." };
+  if (!["created", "pending", "sent"].includes(invitation.status)) return { valid: false, error: "Invitation is no longer available." };
+  const expiresAt = Date.parse(invitation.expires_at);
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return { valid: false, error: "Invitation token has expired." };
   let institutionName = "Hynox Campus";
   if (user.tenant_id) {
-    // Only reveal this institution after verifying the invitation token and email.
-    const { data: inst } = await supabase
-      .schema("institution")
-      .from("institutions")
-      .select("name")
-      .eq("id", user.tenant_id)
-      .maybeSingle();
-
-    if (inst) {
-      institutionName = inst.name;
-    }
+    const { data: institution, error: institutionError } = await supabase.schema("institution").from("institutions").select("name").eq("id", user.tenant_id).maybeSingle();
+    if (institutionError || !institution) return { valid: false, error: "Invitation institution is unavailable." };
+    institutionName = institution.name;
   }
-
-  return {
-    valid: true,
-    invitation: {
-      id: invitation.id,
-      token: invitation.token,
-      invitationType: invitation.invitation_type,
-      fullName: user.full_name,
-      email: user.email,
-      institutionName,
-    },
-  };
+  return { valid: true, invitation: { id: invitation.id, token: invitation.token, invitationType: invitation.invitation_type, fullName: user.full_name, email: user.email, institutionName } };
 }
 
 export async function listOnboardingInvitations() {
   const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .schema("core")
-    .from("user_invitations")
-    .select(`
-      id,
-      token,
-      expires_at,
-      accepted_at,
-      status,
-      invitation_type,
-      created_at,
-      tenant_id,
-      user:user_id (
-        id,
-        full_name,
-        email,
-        status
-      )
-    `)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
+  const results = [];
+  let cursor: { created_at: string; id: string } | undefined;
+  for (;;) {
+    let query = supabase.schema("core").from("user_invitations")
+      .select("id,token,expires_at,accepted_at,status,invitation_type,created_at,tenant_id,mail_state,mail_attempts,user:user_id(id,full_name,email,status)")
+      .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(500);
+    if (cursor) query = query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
+    const { data, error } = await query;
+    if (error) throw new Error("Unable to load onboarding invitations.");
+    // PostgREST cannot embed this relationship across the core/institution schemas.
+    const tenantIds = [...new Set((data || []).map(invitation => invitation.tenant_id).filter(Boolean))];
+    const institutions = new Map<string, string>();
+    if (tenantIds.length) {
+      const { data: tenants, error: tenantError } = await supabase.schema("institution")
+        .from("institutions").select("id,name").in("id", tenantIds);
+      if (tenantError) throw new Error("Unable to load invitation institutions.");
+      for (const tenant of tenants || []) institutions.set(tenant.id, tenant.name);
+    }
+    results.push(...(data || []).map(invitation => ({
+      ...invitation,
+      status: ["created", "pending", "sent"].includes(invitation.status) && Date.parse(invitation.expires_at) <= Date.now() ? "expired" : invitation.status,
+      institution_name: invitation.tenant_id ? institutions.get(invitation.tenant_id) || "Unknown Institution" : "Global / Platform",
+    })));
+    if (!data || data.length < 500) break;
+    const last = data[data.length - 1];
+    cursor = { created_at: last.created_at, id: last.id };
   }
-
-  // Fetch institutions to map tenant_id to name
-  const { data: insts } = await supabase
-    .schema("institution")
-    .from("institutions")
-    .select("id, name");
-  
-  const instMap = new Map(insts?.map((i) => [i.id, i.name]));
-
-  return (data || []).map((inv: any) => ({
-    ...inv,
-    institution_name: inv.tenant_id ? (instMap.get(inv.tenant_id) || "Unknown Institution") : "Global / Platform",
-  }));
-}
-
-export async function regenerateInvitation(invitationId: string, invitedByUserId: string) {
-  const supabase = await createClient();
-
-  // 1. Fetch current invitation to check it exists and get email/tenant_id
-  const { data: invitation, error: fetchError } = await supabase
-    .schema("core")
-    .from("user_invitations")
-    .select(`
-      id,
-      tenant_id,
-      invitation_type,
-      user:user_id (
-        id,
-        full_name,
-        email
-      )
-    `)
-    .eq("id", invitationId)
-    .maybeSingle();
-
-  if (fetchError || !invitation) {
-    throw new Error(fetchError?.message || "Invitation not found.");
-  }
-
-  const user = invitation.user as any;
-  if (!user) {
-    throw new Error("Associated user not found for this invitation.");
-  }
-
-  // 2. Generate new token, expires_at (7 days) and reset status to 'created'
-  const newToken = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data: updated, error: updateError } = await supabase
-    .schema("core")
-    .from("user_invitations")
-    .update({
-      token: newToken,
-      expires_at: expiresAt,
-      status: "created",
-      invited_by: invitedByUserId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", invitationId)
-    .select("*")
-    .single();
-
-  if (updateError) {
-    throw updateError;
-  }
-
-  // Also update user status in core.users back to 'invited'
-  await supabase
-    .schema("core")
-    .from("users")
-    .update({ status: "invited" })
-    .eq("id", user.id)
-    .is("auth_user_id", null);
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const link = `${appUrl}/onboarding/verify?token=${newToken}&email=${encodeURIComponent(user.email)}`;
-
-  // Resolve roles and name
-  const roleNameMap: Record<string, string> = {
-    student_onboarding: "Student",
-    trainer_onboarding: "Teacher / Trainer",
-    institution_admin_invite: "Institution Admin",
-    mentor_invite: "Mentor",
-    super_admin_invite: "Super Administrator",
-  };
-  const roleLabel = roleNameMap[invitation.invitation_type] || "Member";
-
-  // Fetch institution name
-  let institutionName = "Hynox Campus";
-  if (invitation.tenant_id) {
-    const { data: inst } = await supabase
-      .schema("institution")
-      .from("institutions")
-      .select("name")
-      .eq("id", invitation.tenant_id)
-      .maybeSingle();
-    if (inst) {
-      institutionName = inst.name;
-    }
-  }
-
-  let mailStatus = "sent";
-  try {
-    await sendOnboardingEmail(user.email, link, user.full_name || "Member", roleLabel, institutionName);
-  } catch (mailErr: any) {
-    console.error("Regenerate email dispatch failed:", mailErr);
-    mailStatus = "failed";
-  }
-
-  // Update status in database
-  const { data: finalUpdated } = await supabase
-    .schema("core")
-    .from("user_invitations")
-    .update({ status: mailStatus })
-    .eq("id", invitationId)
-    .select("*")
-    .single();
-
-  if (mailStatus === "failed") throw new Error("The invitation email failed. Regenerate the invitation to retry.");
-  return {
-    ...(finalUpdated || updated),
-    link,
-    email: user.email,
-  };
-}
-
-export async function onboardSingleUser(params: {
-  email: string;
-  name: string;
-  role: string;
-  institutionId?: string;
-  invitedByUserId: string;
-}): Promise<OnboardingResult> {
-  const supabase = await createClient();
-  const { email, name, role, institutionId, invitedByUserId } = params;
-
-  try {
-    const roleName = role.toLowerCase();
-    const isTeacher = roleName === "teacher" || roleName === "trainer";
-
-    if (!email || !name || !role || (!isTeacher && !institutionId)) {
-      throw new Error("Missing required fields (name, email, role, or institutionId)");
-    }
-
-    // Fetch all roles to map names to IDs
-    const { data: rolesList } = await supabase
-      .schema("core")
-      .from("roles")
-      .select("id, name");
-
-    const rolesMap = new Map(rolesList?.map((r) => [r.name.toLowerCase(), r.id]));
-    const roleId = rolesMap.get(roleName);
-    if (!roleId) {
-      throw new Error(
-        `Invalid role: '${role}'. Allowed: super_admin, institution_admin, teacher, trainer, mentor, student, public.`
-      );
-    }
-
-    const finalTenantId = isTeacher ? null : institutionId;
-
-    // Fetch institution name
-    let inst = null;
-    if (finalTenantId) {
-      const { data: instData } = await supabase
-        .schema("institution")
-        .from("institutions")
-        .select("name")
-        .eq("id", finalTenantId)
-        .maybeSingle();
-      inst = instData;
-    }
-
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-      .schema("core")
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-
-    let userId = existingUser?.id;
-
-    if (!userId) {
-      // Create pre-provisioned user in core.users
-      const { data: newUser, error: userError } = await supabase
-        .schema("core")
-        .from("users")
-        .insert({
-          full_name: name,
-          email: email,
-          tenant_id: finalTenantId,
-          status: "invited",
-          onboarding_source: "excel_import",
-        })
-        .select("id")
-        .single();
-
-      if (userError) throw userError;
-      userId = newUser.id;
-
-      // Assign core.user_roles role map
-      const { error: roleLinkError } = await supabase
-        .schema("core")
-        .from("user_roles")
-        .insert({
-          user_id: userId,
-          role_id: roleId,
-        });
-
-      if (roleLinkError) throw roleLinkError;
-    } else {
-      // Preserve existing roles while ensuring the invitation's role is assigned.
-      const { error: existingRoleError } = await supabase
-        .schema("core")
-        .from("user_roles")
-        .upsert({ user_id: userId, role_id: roleId }, { onConflict: "user_id,role_id", ignoreDuplicates: true });
-      if (existingRoleError) throw existingRoleError;
-
-      const { error: tenantUpdateError } = await supabase
-        .schema("core")
-        .from("users")
-        .update({ tenant_id: finalTenantId })
-        .eq("id", userId);
-      if (tenantUpdateError) throw tenantUpdateError;
-    }
-
-    // Determine invitation type
-    let invitationType = "student_onboarding";
-    if (roleName === "institution_admin") {
-      invitationType = "institution_admin_invite";
-    } else if (roleName === "teacher" || roleName === "trainer") {
-      invitationType = "trainer_onboarding";
-    } else if (roleName === "mentor") {
-      invitationType = "mentor_invite";
-    }
-
-    // Create onboarding invitation token record
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days expiry
-    const token = crypto.randomUUID();
-
-    const { error: inviteError } = await supabase
-      .schema("core")
-      .from("user_invitations")
-      .insert({
-        user_id: userId,
-        tenant_id: finalTenantId,
-        token: token,
-        invited_by: invitedByUserId,
-        expires_at: expiresAt,
-        status: "created",
-        invitation_type: invitationType,
-      });
-
-    if (inviteError) throw inviteError;
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const link = `${appUrl}/onboarding/verify?token=${token}&email=${encodeURIComponent(email)}`;
-
-    // Send automated email notification
-    const roleNameMap: Record<string, string> = {
-      student_onboarding: "Student",
-      trainer_onboarding: "Teacher / Trainer",
-      institution_admin_invite: "Institution Admin",
-      mentor_invite: "Mentor",
-    };
-    const roleLabel = roleNameMap[invitationType] || "Member";
-    const institutionName = inst?.name || "Hynox Campus";
-
-    let mailStatus = "sent";
-    try {
-      await sendOnboardingEmail(email, link, name, roleLabel, institutionName);
-    } catch (mailErr: any) {
-      console.error("Onboarding email dispatch failed:", mailErr);
-      mailStatus = "failed";
-    }
-
-    // Update dispatch status in database
-    await supabase
-      .schema("core")
-      .from("user_invitations")
-      .update({ status: mailStatus })
-      .eq("token", token);
-
-    if (mailStatus === "failed") throw new Error("User provisioned, but the invitation email failed. Regenerate the invitation to retry.");
-    return { email, status: "success", link };
-  } catch (err: any) {
-    return {
-      email: email || "unknown",
-      status: "error",
-      error: err.message,
-    };
-  }
-}
-
-export async function onboardSuperAdmin(params: {
-  email: string;
-  name: string;
-  invitedByUserId: string;
-}): Promise<OnboardingResult> {
-  const supabase = await createClient();
-  const { email, name, invitedByUserId } = params;
-
-  try {
-    if (!email || !name) {
-      throw new Error("Missing required fields (name, email)");
-    }
-
-    // Fetch all roles to map name to ID
-    const { data: rolesList } = await supabase
-      .schema("core")
-      .from("roles")
-      .select("id, name");
-
-    const rolesMap = new Map(rolesList?.map((r) => [r.name.toLowerCase(), r.id]));
-    const roleId = rolesMap.get("super_admin");
-    if (!roleId) {
-      throw new Error("Super Admin role not found in database.");
-    }
-
-    // Check if user already exists
-    const { data: existingUser } = await supabase
-      .schema("core")
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-
-    let userId = existingUser?.id;
-
-    if (!userId) {
-      // Create pre-provisioned user in core.users
-      const { data: newUser, error: userError } = await supabase
-        .schema("core")
-        .from("users")
-        .insert({
-          full_name: name,
-          email: email,
-          tenant_id: null,
-          status: "invited",
-          onboarding_source: "admin_created",
-        })
-        .select("id")
-        .single();
-
-      if (userError) throw userError;
-      userId = newUser.id;
-
-      // Assign core.user_roles role map
-      const { error: roleLinkError } = await supabase
-        .schema("core")
-        .from("user_roles")
-        .insert({
-          user_id: userId,
-          role_id: roleId,
-        });
-
-      if (roleLinkError) throw roleLinkError;
-    } else {
-      // Check if user already has the super_admin role
-      const { data: existingRoleLink } = await supabase
-        .schema("core")
-        .from("user_roles")
-        .select("user_id")
-        .eq("user_id", userId)
-        .eq("role_id", roleId)
-        .maybeSingle();
-
-      if (!existingRoleLink) {
-        const { error: roleLinkError } = await supabase
-          .schema("core")
-          .from("user_roles")
-          .insert({
-            user_id: userId,
-            role_id: roleId,
-          });
-        if (roleLinkError) throw roleLinkError;
-      }
-
-      // We also set tenant_id to null since they are super_admin now
-      await supabase
-        .schema("core")
-        .from("users")
-        .update({ tenant_id: null })
-        .eq("id", userId);
-    }
-
-    // Determine invitation type
-    const invitationType = "super_admin_invite";
-
-    // Create onboarding invitation token record
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days expiry
-    const token = crypto.randomUUID();
-
-    const { error: inviteError } = await supabase
-      .schema("core")
-      .from("user_invitations")
-      .insert({
-        user_id: userId,
-        tenant_id: null,
-        token: token,
-        invited_by: invitedByUserId,
-        expires_at: expiresAt,
-        status: "created",
-        invitation_type: invitationType,
-      });
-
-    if (inviteError) throw inviteError;
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const link = `${appUrl}/onboarding/verify?token=${token}&email=${encodeURIComponent(email)}`;
-
-    // Send automated email notification
-    let mailStatus = "sent";
-    try {
-      await sendOnboardingEmail(email, link, name, "Super Administrator", "Hynox Campus");
-    } catch (mailErr: any) {
-      console.error("Onboarding email dispatch failed:", mailErr);
-      mailStatus = "failed";
-    }
-
-    // Update dispatch status in database
-    await supabase
-      .schema("core")
-      .from("user_invitations")
-      .update({ status: mailStatus })
-      .eq("token", token);
-
-    if (mailStatus === "failed") throw new Error("User provisioned, but the invitation email failed. Regenerate the invitation to retry.");
-    return { email, status: "success", link };
-  } catch (err: any) {
-    return {
-      email: email || "unknown",
-      status: "error",
-      error: err.message,
-    };
-  }
+  return results;
 }
 
 

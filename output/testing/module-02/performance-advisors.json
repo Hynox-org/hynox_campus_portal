@@ -1,0 +1,1359 @@
+{
+  "result": {
+    "lints": [
+      {
+        "name": "unindexed_foreign_keys",
+        "title": "Unindexed foreign keys",
+        "level": "INFO",
+        "facing": "EXTERNAL",
+        "categories": [
+          "PERFORMANCE"
+        ],
+        "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+        "count": 61,
+        "findings": [
+          {
+            "detail": "Table \\`academic.course_instructors\\` has a foreign key \\`course_instructors_institution_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "course_instructors",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "course_instructors_institution_id_fkey",
+              "fkey_columns": [
+                5
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.course_instructors\\` has a foreign key \\`course_instructors_tenant_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "course_instructors",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "course_instructors_tenant_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.courses\\` has a foreign key \\`courses_course_type_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "courses_course_type_id_fkey",
+              "fkey_columns": [
+                8
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.courses\\` has a foreign key \\`courses_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "courses_created_by_fkey",
+              "fkey_columns": [
+                14
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.courses\\` has a foreign key \\`courses_institution_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "courses_institution_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.courses\\` has a foreign key \\`courses_program_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "courses_program_id_fkey",
+              "fkey_columns": [
+                2
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.courses\\` has a foreign key \\`courses_status_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "courses_status_id_fkey",
+              "fkey_columns": [
+                9
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.courses\\` has a foreign key \\`courses_updated_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "courses_updated_by_fkey",
+              "fkey_columns": [
+                15
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.courses\\` has a foreign key \\`courses_visibility_type_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "courses_visibility_type_id_fkey",
+              "fkey_columns": [
+                10
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lesson_resources\\` has a foreign key \\`lesson_resources_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lesson_resources",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lesson_resources_created_by_fkey",
+              "fkey_columns": [
+                10
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lesson_resources\\` has a foreign key \\`lesson_resources_institution_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lesson_resources",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lesson_resources_institution_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lesson_resources\\` has a foreign key \\`lesson_resources_tenant_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lesson_resources",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lesson_resources_tenant_id_fkey",
+              "fkey_columns": [
+                3
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lessons\\` has a foreign key \\`lessons_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lessons",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lessons_created_by_fkey",
+              "fkey_columns": [
+                13
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lessons\\` has a foreign key \\`lessons_institution_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lessons",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lessons_institution_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lessons\\` has a foreign key \\`lessons_lesson_type_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lessons",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lessons_lesson_type_id_fkey",
+              "fkey_columns": [
+                6
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lessons\\` has a foreign key \\`lessons_status_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lessons",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lessons_status_id_fkey",
+              "fkey_columns": [
+                12
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lessons\\` has a foreign key \\`lessons_tenant_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lessons",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lessons_tenant_id_fkey",
+              "fkey_columns": [
+                3
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lessons\\` has a foreign key \\`lessons_updated_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lessons",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "lessons_updated_by_fkey",
+              "fkey_columns": [
+                14
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.modules\\` has a foreign key \\`modules_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "modules",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "modules_created_by_fkey",
+              "fkey_columns": [
+                9
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.modules\\` has a foreign key \\`modules_institution_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "modules",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "modules_institution_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.modules\\` has a foreign key \\`modules_status_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "modules",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "modules_status_id_fkey",
+              "fkey_columns": [
+                8
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.modules\\` has a foreign key \\`modules_tenant_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "modules",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "modules_tenant_id_fkey",
+              "fkey_columns": [
+                3
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.modules\\` has a foreign key \\`modules_updated_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "modules",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "modules_updated_by_fkey",
+              "fkey_columns": [
+                10
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.programs\\` has a foreign key \\`programs_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "programs",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "programs_created_by_fkey",
+              "fkey_columns": [
+                9
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.programs\\` has a foreign key \\`programs_institution_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "programs",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "programs_institution_id_fkey",
+              "fkey_columns": [
+                3
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.programs\\` has a foreign key \\`programs_status_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "programs",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "programs_status_id_fkey",
+              "fkey_columns": [
+                7
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.programs\\` has a foreign key \\`programs_updated_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "programs",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "programs_updated_by_fkey",
+              "fkey_columns": [
+                10
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.programs\\` has a foreign key \\`programs_visibility_type_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "programs",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "programs_visibility_type_id_fkey",
+              "fkey_columns": [
+                8
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.tenant_teachers\\` has a foreign key \\`tenant_teachers_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "tenant_teachers",
+              "type": "table",
+              "schema": "academic",
+              "fkey_name": "tenant_teachers_user_id_fkey",
+              "fkey_columns": [
+                2
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`core.audit_logs\\` has a foreign key \\`audit_logs_actor_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "audit_logs",
+              "type": "table",
+              "schema": "core",
+              "fkey_name": "audit_logs_actor_user_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`core.audit_logs\\` has a foreign key \\`audit_logs_target_user_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "audit_logs",
+              "type": "table",
+              "schema": "core",
+              "fkey_name": "audit_logs_target_user_id_fkey",
+              "fkey_columns": [
+                5
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`core.role_permissions\\` has a foreign key \\`role_permissions_permission_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "role_permissions",
+              "type": "table",
+              "schema": "core",
+              "fkey_name": "role_permissions_permission_id_fkey",
+              "fkey_columns": [
+                2
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`core.user_invitations\\` has a foreign key \\`user_invitations_invitation_type_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "user_invitations",
+              "type": "table",
+              "schema": "core",
+              "fkey_name": "user_invitations_invitation_type_fkey",
+              "fkey_columns": [
+                9
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`core.user_invitations\\` has a foreign key \\`user_invitations_invited_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "user_invitations",
+              "type": "table",
+              "schema": "core",
+              "fkey_name": "user_invitations_invited_by_fkey",
+              "fkey_columns": [
+                5
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`core.users\\` has a foreign key \\`users_deleted_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "users",
+              "type": "table",
+              "schema": "core",
+              "fkey_name": "users_deleted_by_fkey",
+              "fkey_columns": [
+                11
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`core.users\\` has a foreign key \\`users_onboarding_source_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "users",
+              "type": "table",
+              "schema": "core",
+              "fkey_name": "users_onboarding_source_fkey",
+              "fkey_columns": [
+                9
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`delivery.attendance_records\\` has a foreign key \\`attendance_records_marked_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "attendance_records",
+              "type": "table",
+              "schema": "delivery",
+              "fkey_name": "attendance_records_marked_by_fkey",
+              "fkey_columns": [
+                5
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`delivery.attendance_sessions\\` has a foreign key \\`attendance_sessions_marked_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "attendance_sessions",
+              "type": "table",
+              "schema": "delivery",
+              "fkey_name": "attendance_sessions_marked_by_fkey",
+              "fkey_columns": [
+                6
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`delivery.cohorts\\` has a foreign key \\`cohorts_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "cohorts",
+              "type": "table",
+              "schema": "delivery",
+              "fkey_name": "cohorts_created_by_fkey",
+              "fkey_columns": [
+                10
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`delivery.course_assignments\\` has a foreign key \\`course_assignments_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "course_assignments",
+              "type": "table",
+              "schema": "delivery",
+              "fkey_name": "course_assignments_created_by_fkey",
+              "fkey_columns": [
+                7
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`delivery.enrollments\\` has a foreign key \\`enrollments_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "enrollments",
+              "type": "table",
+              "schema": "delivery",
+              "fkey_name": "enrollments_created_by_fkey",
+              "fkey_columns": [
+                6
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`institution.institution_admins\\` has a foreign key \\`institution_admins_assigned_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "institution_admins",
+              "type": "table",
+              "schema": "institution",
+              "fkey_name": "institution_admins_assigned_by_fkey",
+              "fkey_columns": [
+                3
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`institution.institutions\\` has a foreign key \\`institutions_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "institutions",
+              "type": "table",
+              "schema": "institution",
+              "fkey_name": "institutions_created_by_fkey",
+              "fkey_columns": [
+                14
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`institution.institutions\\` has a foreign key \\`institutions_institution_type_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "institutions",
+              "type": "table",
+              "schema": "institution",
+              "fkey_name": "institutions_institution_type_fkey",
+              "fkey_columns": [
+                5
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.activities\\` has a foreign key \\`activities_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "activities",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "activities_created_by_fkey",
+              "fkey_columns": [
+                16
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.activity_assignments\\` has a foreign key \\`activity_assignments_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "activity_assignments",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "activity_assignments_created_by_fkey",
+              "fkey_columns": [
+                7
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.challenge_starter_templates\\` has a foreign key \\`challenge_starter_templates_language_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "challenge_starter_templates",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "challenge_starter_templates_language_fkey",
+              "fkey_columns": [
+                3
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.challenge_submissions\\` has a foreign key \\`challenge_submissions_student_activity_progress_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "challenge_submissions",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "challenge_submissions_student_activity_progress_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.challenge_submissions\\` has a foreign key \\`fk_challenge_submissions_language\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "challenge_submissions",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "fk_challenge_submissions_language",
+              "fkey_columns": [
+                5
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.challenge_test_case_results\\` has a foreign key \\`challenge_test_case_results_test_case_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "challenge_test_case_results",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "challenge_test_case_results_test_case_id_fkey",
+              "fkey_columns": [
+                3
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.quiz_answers\\` has a foreign key \\`quiz_answers_selected_option_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "quiz_answers",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "quiz_answers_selected_option_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.quiz_attempts\\` has a foreign key \\`quiz_attempts_student_activity_progress_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "quiz_attempts",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "quiz_attempts_student_activity_progress_id_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.student_activity_progress\\` has a foreign key \\`student_activity_progress_reviewed_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "student_activity_progress",
+              "type": "table",
+              "schema": "learning",
+              "fkey_name": "student_activity_progress_reviewed_by_fkey",
+              "fkey_columns": [
+                13
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.course_template_tags\\` has a foreign key \\`course_template_tags_tag_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "course_template_tags",
+              "type": "table",
+              "schema": "library",
+              "fkey_name": "course_template_tags_tag_id_fkey",
+              "fkey_columns": [
+                2
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.course_templates\\` has a foreign key \\`course_templates_category_code_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "course_templates",
+              "type": "table",
+              "schema": "library",
+              "fkey_name": "course_templates_category_code_fkey",
+              "fkey_columns": [
+                5
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.course_templates\\` has a foreign key \\`course_templates_course_type_code_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "course_templates",
+              "type": "table",
+              "schema": "library",
+              "fkey_name": "course_templates_course_type_code_fkey",
+              "fkey_columns": [
+                6
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.course_templates\\` has a foreign key \\`course_templates_parent_template_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "course_templates",
+              "type": "table",
+              "schema": "library",
+              "fkey_name": "course_templates_parent_template_id_fkey",
+              "fkey_columns": [
+                11
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.lesson_templates\\` has a foreign key \\`lesson_templates_lesson_type_code_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lesson_templates",
+              "type": "table",
+              "schema": "library",
+              "fkey_name": "lesson_templates_lesson_type_code_fkey",
+              "fkey_columns": [
+                4
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.lesson_templates\\` has a foreign key \\`lesson_templates_module_template_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "lesson_templates",
+              "type": "table",
+              "schema": "library",
+              "fkey_name": "lesson_templates_module_template_id_fkey",
+              "fkey_columns": [
+                2
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.module_templates\\` has a foreign key \\`module_templates_course_template_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "module_templates",
+              "type": "table",
+              "schema": "library",
+              "fkey_name": "module_templates_course_template_id_fkey",
+              "fkey_columns": [
+                2
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.resource_templates\\` has a foreign key \\`resource_templates_lesson_template_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+            "metadata": {
+              "name": "resource_templates",
+              "type": "table",
+              "schema": "library",
+              "fkey_name": "resource_templates_lesson_template_id_fkey",
+              "fkey_columns": [
+                2
+              ]
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          }
+        ]
+      },
+      {
+        "name": "auth_rls_initplan",
+        "title": "Auth RLS Initialization Plan",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "PERFORMANCE"
+        ],
+        "description": "Detects if calls to \\`current_setting()\\` and \\`auth.<function>()\\` in RLS policies are being unnecessarily re-evaluated for each row",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0003_auth_rls_initplan",
+        "count": 7,
+        "findings": [
+          {
+            "detail": "Table \\`academic.course_instructors\\` has a row level security policy \\`course_instructors_policy\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info.",
+            "metadata": {
+              "name": "course_instructors",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.programs\\` has a row level security policy \\`programs_modify_policy\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info.",
+            "metadata": {
+              "name": "programs",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.courses\\` has a row level security policy \\`courses_modify_policy\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info.",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.modules\\` has a row level security policy \\`modules_modify_policy\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info.",
+            "metadata": {
+              "name": "modules",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lessons\\` has a row level security policy \\`lessons_modify_policy\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info.",
+            "metadata": {
+              "name": "lessons",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lesson_resources\\` has a row level security policy \\`lesson_resources_modify_policy\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info.",
+            "metadata": {
+              "name": "lesson_resources",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.activities\\` has a row level security policy \\`activities_modify_policy\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info.",
+            "metadata": {
+              "name": "activities",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          }
+        ]
+      },
+      {
+        "name": "unused_index",
+        "title": "Unused Index",
+        "level": "INFO",
+        "facing": "EXTERNAL",
+        "categories": [
+          "PERFORMANCE"
+        ],
+        "description": "Detects if an index has never been used and may be a candidate for removal.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+        "count": 34,
+        "findings": [
+          {
+            "detail": "Index \\`idx_student_activity_progress_status_code\\` on table \\`learning.student_activity_progress\\` has not been used",
+            "metadata": {
+              "name": "student_activity_progress",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_student_activity_progress_completed_at\\` on table \\`learning.student_activity_progress\\` has not been used",
+            "metadata": {
+              "name": "student_activity_progress",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_student_activity_progress_deleted_at\\` on table \\`learning.student_activity_progress\\` has not been used",
+            "metadata": {
+              "name": "student_activity_progress",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_activity_assignments_available_from\\` on table \\`learning.activity_assignments\\` has not been used",
+            "metadata": {
+              "name": "activity_assignments",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_activity_assignments_available_until\\` on table \\`learning.activity_assignments\\` has not been used",
+            "metadata": {
+              "name": "activity_assignments",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_activities_type_code\\` on table \\`learning.activities\\` has not been used",
+            "metadata": {
+              "name": "activities",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_activities_status_code\\` on table \\`learning.activities\\` has not been used",
+            "metadata": {
+              "name": "activities",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_lesson_progress_user_id\\` on table \\`delivery.lesson_progress\\` has not been used",
+            "metadata": {
+              "name": "lesson_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_lesson_progress_lesson_id\\` on table \\`delivery.lesson_progress\\` has not been used",
+            "metadata": {
+              "name": "lesson_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_course_progress_user_id\\` on table \\`delivery.course_progress\\` has not been used",
+            "metadata": {
+              "name": "course_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_course_progress_course_id\\` on table \\`delivery.course_progress\\` has not been used",
+            "metadata": {
+              "name": "course_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_course_progress_status_code\\` on table \\`delivery.course_progress\\` has not been used",
+            "metadata": {
+              "name": "course_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_course_assignments_created_at\\` on table \\`delivery.course_assignments\\` has not been used",
+            "metadata": {
+              "name": "course_assignments",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_enrollments_created_at\\` on table \\`delivery.enrollments\\` has not been used",
+            "metadata": {
+              "name": "enrollments",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_cohorts_code\\` on table \\`delivery.cohorts\\` has not been used",
+            "metadata": {
+              "name": "cohorts",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_cohorts_status_code\\` on table \\`delivery.cohorts\\` has not been used",
+            "metadata": {
+              "name": "cohorts",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_lesson_resources_deleted_at\\` on table \\`academic.lesson_resources\\` has not been used",
+            "metadata": {
+              "name": "lesson_resources",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_lesson_resources_type_code\\` on table \\`academic.lesson_resources\\` has not been used",
+            "metadata": {
+              "name": "lesson_resources",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_lesson_resources_position\\` on table \\`academic.lesson_resources\\` has not been used",
+            "metadata": {
+              "name": "lesson_resources",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_institutions_code\\` on table \\`institution.institutions\\` has not been used",
+            "metadata": {
+              "name": "institutions",
+              "type": "table",
+              "schema": "institution"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_quiz_options_position\\` on table \\`learning.quiz_options\\` has not been used",
+            "metadata": {
+              "name": "quiz_options",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_quiz_questions_position\\` on table \\`learning.quiz_questions\\` has not been used",
+            "metadata": {
+              "name": "quiz_questions",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_user_invitations_expires_at\\` on table \\`core.user_invitations\\` has not been used",
+            "metadata": {
+              "name": "user_invitations",
+              "type": "table",
+              "schema": "core"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_audit_logs_event_type\\` on table \\`core.audit_logs\\` has not been used",
+            "metadata": {
+              "name": "audit_logs",
+              "type": "table",
+              "schema": "core"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_audit_logs_created_at\\` on table \\`core.audit_logs\\` has not been used",
+            "metadata": {
+              "name": "audit_logs",
+              "type": "table",
+              "schema": "core"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_lesson_progress_status_code\\` on table \\`delivery.lesson_progress\\` has not been used",
+            "metadata": {
+              "name": "lesson_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_lesson_progress_last_accessed\\` on table \\`delivery.lesson_progress\\` has not been used",
+            "metadata": {
+              "name": "lesson_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_course_progress_last_accessed\\` on table \\`delivery.course_progress\\` has not been used",
+            "metadata": {
+              "name": "course_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_challenge_execution_queue_status\\` on table \\`learning.challenge_execution_queue\\` has not been used",
+            "metadata": {
+              "name": "challenge_execution_queue",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_challenge_execution_queue_created_at\\` on table \\`learning.challenge_execution_queue\\` has not been used",
+            "metadata": {
+              "name": "challenge_execution_queue",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_user_roles_role_id\\` on table \\`core.user_roles\\` has not been used",
+            "metadata": {
+              "name": "user_roles",
+              "type": "table",
+              "schema": "core"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_attendance_records_session\\` on table \\`delivery.attendance_records\\` has not been used",
+            "metadata": {
+              "name": "attendance_records",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`idx_attendance_records_student\\` on table \\`delivery.attendance_records\\` has not been used",
+            "metadata": {
+              "name": "attendance_records",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Index \\`resume_scans_tenant\\` on table \\`learning.resume_scans\\` has not been used",
+            "metadata": {
+              "name": "resume_scans",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          }
+        ]
+      },
+      {
+        "name": "multiple_permissive_policies",
+        "title": "Multiple Permissive Policies",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "PERFORMANCE"
+        ],
+        "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+        "count": 15,
+        "findings": [
+          {
+            "detail": "Table \\`academic.courses\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{courses_modify_policy,courses_select_policy}\\`",
+            "metadata": {
+              "name": "courses",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lesson_resources\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{lesson_resources_modify_policy,lesson_resources_select_policy}\\`",
+            "metadata": {
+              "name": "lesson_resources",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.lessons\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{lessons_modify_policy,lessons_select_policy}\\`",
+            "metadata": {
+              "name": "lessons",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.modules\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{modules_modify_policy,modules_select_policy}\\`",
+            "metadata": {
+              "name": "modules",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`academic.programs\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{programs_modify_policy,programs_select_policy}\\`",
+            "metadata": {
+              "name": "programs",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`core.users\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{assigned_teacher_student_roster_select,users_select}\\`",
+            "metadata": {
+              "name": "users",
+              "type": "table",
+              "schema": "core"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.activities\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{activities_modify_policy,activities_select_policy}\\`",
+            "metadata": {
+              "name": "activities",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`learning.challenge_starter_templates\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{starter_templates_scoped_read,starter_templates_staff_manage}\\`",
+            "metadata": {
+              "name": "challenge_starter_templates",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.course_template_tags\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{all_course_template_tags,select_course_template_tags}\\`",
+            "metadata": {
+              "name": "course_template_tags",
+              "type": "table",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.course_templates\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{all_course_templates,select_course_templates}\\`",
+            "metadata": {
+              "name": "course_templates",
+              "type": "table",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.lesson_templates\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{all_lesson_templates,select_lesson_templates}\\`",
+            "metadata": {
+              "name": "lesson_templates",
+              "type": "table",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.module_templates\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{all_module_templates,select_module_templates}\\`",
+            "metadata": {
+              "name": "module_templates",
+              "type": "table",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.resource_templates\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{all_resource_templates,select_resource_templates}\\`",
+            "metadata": {
+              "name": "resource_templates",
+              "type": "table",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.template_categories\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{all_template_categories,select_template_categories}\\`",
+            "metadata": {
+              "name": "template_categories",
+              "type": "table",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          },
+          {
+            "detail": "Table \\`library.template_tags\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{all_template_tags,select_template_tags}\\`",
+            "metadata": {
+              "name": "template_tags",
+              "type": "table",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T10:33:24.732Z"
+          }
+        ]
+      }
+    ]
+  }
+}

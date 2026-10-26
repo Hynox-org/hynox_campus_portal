@@ -1,0 +1,74 @@
+{
+  "checkedAt": "2026-10-26T07:37:20.423Z",
+  "smoke": [
+    {
+      "path": "/login",
+      "status": 200,
+      "location": null,
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/super-admin-login",
+      "status": 200,
+      "location": null,
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/admin",
+      "status": 307,
+      "location": "/login",
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/institution",
+      "status": 307,
+      "location": "/login",
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/teacher",
+      "status": 307,
+      "location": "/login",
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/student",
+      "status": 307,
+      "location": "/login",
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/academic",
+      "status": 307,
+      "location": "/login",
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/public",
+      "status": 307,
+      "location": "/login",
+      "cacheControl": "private, no-store"
+    },
+    {
+      "path": "/auth/callback",
+      "status": 307,
+      "location": "http://localhost:3000/login?error=OAuthExchangeFailed",
+      "cacheControl": "private, no-store"
+    }
+  ],
+  "localAnonymousLoginBurst": {
+    "requests": 10,
+    "p50Ms": 21,
+    "p95Ms": 22,
+    "note": "Local anonymous GET only, after warm-up. No authenticated capacity, OAuth throughput or Supabase load claim."
+  },
+  "publicBuildSecretCheck": {
+    "publicFiles": 41,
+    "configuredSecretNamesChecked": [
+      "BREVO_API_KEY",
+      "SANDBOX_ENGINE_API_KEY",
+      "SUPABASE_SERVICE_ROLE_KEY"
+    ],
+    "exposures": []
+  }
+}

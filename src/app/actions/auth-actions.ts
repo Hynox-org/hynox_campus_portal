@@ -1,7 +1,8 @@
 "use server";
 
+import { safeNextPath } from "@/lib/auth-redirect";
+import { loginCredentials } from "@/lib/login-credentials";
 import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { isSharedLogin, SHARED_ROLE_COOKIE } from "@/lib/shared-login";
 
@@ -12,7 +13,7 @@ export async function signInWithGoogle(redirectTo?: string) {
   // Construct callback URL with optional next path parameters
   let callbackUrl = `${appUrl}/auth/callback`;
   if (redirectTo) {
-    callbackUrl += `?next=${encodeURIComponent(redirectTo)}`;
+    callbackUrl += `?next=${encodeURIComponent(safeNextPath(redirectTo))}`;
   }
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -24,7 +25,7 @@ export async function signInWithGoogle(redirectTo?: string) {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: "Unable to start Google sign-in. Please try again." };
   }
 
   return { url: data?.url };
@@ -33,9 +34,10 @@ export async function signInWithGoogle(redirectTo?: string) {
 export async function signOutAction() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) throw new Error("Unable to sign out. Please try again.");
   (await cookies()).delete(SHARED_ROLE_COOKIE);
-  redirect(isSharedLogin(user) ? "/super-admin-login" : "/login");
+  return { redirectTo: isSharedLogin(user) ? "/super-admin-login" as const : "/login" as const };
 }
 
 export async function signUpPublicUserAction(formData: FormData) {
@@ -67,22 +69,10 @@ export async function signUpPublicUserAction(formData: FormData) {
 }
 
 export async function signInWithPasswordAction(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-
-  if (!email || !password) {
-    return { error: "Email and password are required." };
-  }
-
+  const credentials = loginCredentials(formData);
+  if (!credentials) return { error: "Enter a valid email and password." };
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
+  const { error } = await supabase.auth.signInWithPassword(credentials);
+  if (error) return { error: "Unable to sign in. Check your email and password." };
   return { success: true };
 }

@@ -6,12 +6,13 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "worker": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" -r tsconfig-paths/register src/services/worker.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "onboarding:worker": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" -r tsconfig-paths/register scripts/onboarding-worker.ts"
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.2",

@@ -25,7 +25,7 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
   }
 
   // Resolve business user from core.users (bypassing public views)
-  let { data: user, error: userError } = await supabase
+  const { data: user, error: userError } = await supabase
     .schema("core")
     .from("users")
     .select("*")
@@ -33,57 +33,8 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
     .is("deleted_at", null)
     .maybeSingle();
 
-  if (!user && authUser.email) {
-    // Fallback: Resolve by email if auth_user_id link is not established yet
-    const { data: emailUser } = await supabase
-      .schema("core")
-      .from("users")
-      .select("*")
-      .eq("email", authUser.email)
-      .is("deleted_at", null)
-      .maybeSingle();
-
-    if (emailUser) {
-      // Establish the link
-      await supabase
-        .schema("core")
-        .from("users")
-        .update({
-          auth_user_id: authUser.id,
-          status: "active",
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", emailUser.id);
-
-      // Mark pending invitations as accepted
-      await supabase
-        .schema("core")
-        .from("user_invitations")
-        .update({
-          status: "accepted",
-          accepted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq("user_id", emailUser.id)
-        .in("status", ["created", "sent", "pending"]);
-
-      // Set user claims in Supabase
-      try {
-        await supabase
-          .schema("core")
-          .rpc("set_user_role_claim", { target_user_id: authUser.id });
-      } catch (rpcErr) {
-        console.error("Failed to run set_user_role_claim rpc:", rpcErr);
-      }
-
-      // Update local reference
-      emailUser.auth_user_id = authUser.id;
-      emailUser.status = "active";
-      user = emailUser;
-    }
-  }
-
-  if (userError || !user) {
+  if (userError) return null;
+  if (!user) {
     // If auth user exists but is not pre-provisioned in core.users, fallback to public role
     return {
       authUser,
@@ -94,8 +45,11 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
     };
   }
 
+  if (user.auth_user_id !== authUser.id || user.status !== "active") return null;
+
   // Resolve all roles mapped to user to select the one with highest priority
-  const { data: userRoles, error: rolesError } = await supabase
+  const [roleResult, institutionResult] = await Promise.all([
+    supabase
     .schema("core")
     .from("user_roles")
     .select(`
@@ -105,13 +59,20 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
         priority
       )
     `)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id),
+    user.tenant_id
+      ? supabase.schema("institution").from("institutions").select("*").eq("id", user.tenant_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  const { data: userRoles, error: rolesError } = roleResult;
+
+  if (rolesError || !userRoles?.length) return null;
 
   let primaryRole = "public";
-  if (!rolesError && userRoles && userRoles.length > 0) {
+  if (userRoles && userRoles.length > 0) {
     let maxPriority = -1;
-    userRoles.forEach((ur: any) => {
-      const role = ur.roles;
+    userRoles.forEach(ur => {
+      const role = ur.roles as unknown as { name: string; priority: number } | null;
       if (role && role.priority > maxPriority) {
         maxPriority = role.priority;
         primaryRole = role.name;
@@ -120,24 +81,17 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
   }
 
   // Fetch tenant/institution details if tenant_id is linked
-  const availableRoles = (userRoles || []).flatMap((ur: any) => ur.roles?.name ? [ur.roles.name] : []);
+  const availableRoles = (userRoles || []).flatMap(ur => {
+    const role = ur.roles as unknown as { name: string } | null;
+    return role?.name ? [role.name] : [];
+  });
   const sharedLogin = isSharedLogin(authUser);
   if (sharedLogin) {
-    if (user.status !== "active") return null;
     primaryRole = selectedSharedRole((await cookies()).get(SHARED_ROLE_COOKIE)?.value, authUser.id, availableRoles) || "public";
   }
 
-  let institution = null;
-  if (user.tenant_id) {
-    const { data: instData } = await supabase
-      .schema("institution")
-      .from("institutions")
-      .select("*")
-      .eq("id", user.tenant_id)
-      .maybeSingle();
-
-    institution = instData;
-  }
+  const institution = institutionResult.data;
+  if (user.tenant_id && primaryRole !== "super_admin" && (institutionResult.error || !institution || ["inactive", "suspended"].includes(institution.status))) return null;
 
   return {
     authUser,

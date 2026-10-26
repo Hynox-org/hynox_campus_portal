@@ -1,16 +1,16 @@
 "use server";
 
+import { loginCredentials } from "@/lib/login-credentials";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getCurrentUser } from "@/services/auth";
 import { isSharedLogin, SHARED_DASHBOARDS, SHARED_ROLE_COOKIE } from "@/lib/shared-login";
 
 export async function sharedSignIn(formData: FormData) {
-  const email = String(formData.get("email") || "").trim();
-  const password = String(formData.get("password") || "");
-  if (!email || !password) return { error: "Enter your email and password." };
+  const credentials = loginCredentials(formData);
+  if (!credentials) return { error: "Enter a valid email and password." };
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword(credentials);
   if (error) return { error: "Unable to sign in. Check your email and password." };
   const cookieStore = await cookies();
   cookieStore.delete(SHARED_ROLE_COOKIE);

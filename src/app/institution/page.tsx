@@ -52,3 +52,6 @@ export default async function InstitutionAdminPage() {
     />
   );
 }
+
+// Bulk provisioning is bounded to 2500 users; email delivery runs outside this request.
+export const maxDuration = 120;

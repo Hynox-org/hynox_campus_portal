@@ -24,7 +24,7 @@ import {
 } from "@/services/onboarding";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { validateInstitutionId } from "@/lib/institution-validation";
 
 export async function createNewInstitutionAction(formData: FormData) {
   const name = formData.get("name") as string;
@@ -74,7 +74,7 @@ export async function assignAdminAction(institutionId: string, email: string) {
       return { error: "Access denied." };
     }
 
-    await assignInstitutionAdmin(institutionId, email, userDetails.user.id);
+    await assignInstitutionAdmin(institutionId, email);
     revalidatePath("/admin");
     return { success: true };
   } catch (error: any) {
@@ -107,11 +107,9 @@ export async function uploadCsvOnboardingAction(institutionId: string, csvConten
       if (isInstAdmin && (role !== "student" || (row.institution_id && row.institution_id !== institutionId))) {
         return { error: "Institution administrators can only onboard students into their own institution." };
       }
-      const conflict = await checkEmailRoleConflict(row.email, role);
-      if (conflict) return { error: conflict };
     }
 
-    const results = await processCsvOnboarding(csvContent, institutionId, userDetails.user.id);
+    const results = await processCsvOnboarding(csvContent, institutionId);
     revalidatePath("/admin");
     revalidatePath("/institution");
     return { success: true, results };
@@ -159,16 +157,8 @@ export async function regenerateInvitationAction(invitationId: string) {
       return { error: "Access denied." };
     }
 
-    // If institution_admin, we must verify the invitation belongs to their institution
-    if (isInstAdmin) {
-      const allInvites = await listOnboardingInvitations();
-      const invite = allInvites.find((i: any) => i.id === invitationId);
-      if (!invite || invite.tenant_id !== userDetails.tenantId) {
-        return { error: "Access denied. Scoped invitation not found." };
-      }
-    }
-
-    const res = await regenerateInvitation(invitationId, userDetails.user.id);
+    // The transaction authorizes the selected invitation and locks its account.
+    const res = await regenerateInvitation(invitationId);
     revalidatePath("/admin");
     revalidatePath("/institution");
     return { success: true, invitation: res };
@@ -200,40 +190,16 @@ export async function listInstitutionUsersAction(institutionId: string) {
   }
 }
 
-async function checkEmailRoleConflict(email: string, targetRole: string): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: existingUser } = await supabase
-    .schema("core")
-    .from("users")
-    .select(`
-      id,
-      user_roles (
-        role:role_id (
-          name
-        )
-      )
-    `)
-    .eq("email", email)
-    .maybeSingle();
-
-  if (existingUser && existingUser.user_roles && existingUser.user_roles.length > 0) {
-    const existingRoles = existingUser.user_roles.map((ur: any) => ur.role?.name.toLowerCase());
-    const hasDifferentRole = existingRoles.some(r => r !== targetRole.toLowerCase());
-    
-    if (hasDifferentRole) {
-      const rolesStr = existingRoles.map(r => r.toUpperCase()).join(", ");
-      return `Conflict Warning: The email '${email}' is already registered with role(s): ${rolesStr}. It cannot be onboarded for a different role: ${targetRole.toUpperCase()}.`;
-    }
-  }
-  return null;
-}
-
 export async function onboardSingleUserAction(params: {
   email: string;
   name: string;
   role: string;
   institutionId?: string;
 }) {
+  if (!params || typeof params.email !== "string" || typeof params.name !== "string" || typeof params.role !== "string"
+    || (params.institutionId !== undefined && typeof params.institutionId !== "string")) {
+    return { error: "Invalid onboarding fields." };
+  }
   const { email, name, role, institutionId } = params;
   const isTeacher = role === "teacher" || role === "trainer";
   if (!email || !name || !role || (!isTeacher && !institutionId)) {
@@ -253,11 +219,6 @@ export async function onboardSingleUserAction(params: {
 
     if (!["student", "institution_admin", "teacher", "trainer", "mentor"].includes(role)) {
       return { error: "Unsupported onboarding role." };
-    }
-
-    const conflictMsg = await checkEmailRoleConflict(email, role);
-    if (conflictMsg) {
-      return { error: conflictMsg };
     }
 
     const result = await onboardSingleUser({
@@ -281,6 +242,9 @@ export async function listTeacherInstitutionsAction(userId: string) {
     if (!userDetails) return { error: "Unauthorized." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
+    if (!isSuperAdmin && (!(userDetails.primaryRole === "teacher" || userDetails.primaryRole === "trainer") || userDetails.user?.id !== userId)) {
+      return { error: "Access denied." };
+    }
     const data = await listTeacherInstitutions(userId, isSuperAdmin);
     return { success: true, institutions: data };
   } catch (error: any) {
@@ -369,6 +333,9 @@ export async function onboardSuperAdminAction(params: {
   email: string;
   name: string;
 }) {
+  if (!params || typeof params.email !== "string" || typeof params.name !== "string") {
+    return { error: "Invalid onboarding fields." };
+  }
   const { email, name } = params;
   if (!email || !name) {
     return { error: "Full Name and Email are required." };
@@ -378,11 +345,6 @@ export async function onboardSuperAdminAction(params: {
     const userDetails = await getCurrentUser();
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
-    }
-
-    const conflictMsg = await checkEmailRoleConflict(email, "super_admin");
-    if (conflictMsg) {
-      return { error: conflictMsg };
     }
 
     const result = await onboardSuperAdmin({
@@ -459,55 +421,11 @@ export async function deleteUserAction(userId: string) {
       return { error: "Access denied." };
     }
 
+    validateInstitutionId(userId);
+    if (userId === userDetails.user.id) return { error: "You cannot delete your own account." };
     const supabase = await createClient();
-
-    // 1. Fetch user to check if they exist
-    const { data: user } = await supabase
-      .schema("core")
-      .from("users")
-      .select("id, email, auth_user_id")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (!user) {
-      return { error: "User not found." };
-    }
-
-    // 2. Delete invitation records first
-    await supabase
-      .schema("core")
-      .from("user_invitations")
-      .delete()
-      .eq("user_id", userId);
-
-    // 3. Delete user roles
-    await supabase
-      .schema("core")
-      .from("user_roles")
-      .delete()
-      .eq("user_id", userId);
-
-    // 4. Delete user record from core.users
-    const { error: deleteUserErr } = await supabase
-      .schema("core")
-      .from("users")
-      .delete()
-      .eq("id", userId);
-
-    if (deleteUserErr) throw deleteUserErr;
-
-    // 5. Delete the underlying auth provider identity so the person can't
-    // sign back in and silently reclaim their old roles/history.
-    if (user.auth_user_id) {
-      const adminClient = createAdminClient();
-      const { error: deleteAuthErr } = await adminClient.auth.admin.deleteUser(
-        user.auth_user_id
-      );
-
-      if (deleteAuthErr && deleteAuthErr.status !== 404) {
-        throw deleteAuthErr;
-      }
-    }
+    const { data, error } = await supabase.schema("core").rpc("delete_managed_user", { target_user_id: userId });
+    if (error || !data) return { error: "User could not be deleted. Self/last-admin protection or account-owned files may require attention." };
 
     revalidatePath("/admin");
     revalidatePath("/institution");

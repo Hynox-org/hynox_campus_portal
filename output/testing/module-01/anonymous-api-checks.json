@@ -1,0 +1,17 @@
+[
+  {
+    "resource": "users",
+    "status": 401,
+    "code": "42501"
+  },
+  {
+    "resource": "user_invitations",
+    "status": 401,
+    "code": "42501"
+  },
+  {
+    "resource": "complete_login",
+    "status": 401,
+    "code": "42501"
+  }
+]

@@ -1,0 +1,691 @@
+{
+  "result": {
+    "lints": [
+      {
+        "name": "rls_enabled_no_policy",
+        "title": "RLS Enabled No Policy",
+        "level": "INFO",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects cases where row level security (RLS) has been enabled on a table but no RLS policies have been created.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+        "count": 6,
+        "findings": [
+          {
+            "detail": "Table \\`learning.newsletter_batches\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "newsletter_batches",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`learning.newsletter_courses\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "newsletter_courses",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`learning.newsletter_deliveries\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "newsletter_deliveries",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`learning.newsletter_editions\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "newsletter_editions",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`learning.newsletter_preferences\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "newsletter_preferences",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`learning.newsletter_settings\\` has RLS enabled, but no policies exist",
+            "metadata": {
+              "name": "newsletter_settings",
+              "type": "table",
+              "schema": "learning"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          }
+        ]
+      },
+      {
+        "name": "function_search_path_mutable",
+        "title": "Function Search Path Mutable",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects functions where the search_path parameter is not set.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable",
+        "count": 13,
+        "findings": [
+          {
+            "detail": "Function \\`institution.trg_audit_institution_created\\` has a role mutable search_path",
+            "metadata": {
+              "name": "trg_audit_institution_created",
+              "type": "function",
+              "schema": "institution"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`academic.get_status_id_by_code\\` has a role mutable search_path",
+            "metadata": {
+              "name": "get_status_id_by_code",
+              "type": "function",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`academic.get_visibility_type_id_by_code\\` has a role mutable search_path",
+            "metadata": {
+              "name": "get_visibility_type_id_by_code",
+              "type": "function",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`academic.trg_audit_academic_program\\` has a role mutable search_path",
+            "metadata": {
+              "name": "trg_audit_academic_program",
+              "type": "function",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`academic.trg_audit_academic_course\\` has a role mutable search_path",
+            "metadata": {
+              "name": "trg_audit_academic_course",
+              "type": "function",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`library.is_super_admin\\` has a role mutable search_path",
+            "metadata": {
+              "name": "is_super_admin",
+              "type": "function",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`library.duplicate_course_template\\` has a role mutable search_path",
+            "metadata": {
+              "name": "duplicate_course_template",
+              "type": "function",
+              "schema": "library"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`academic.get_tenant_teachers\\` has a role mutable search_path",
+            "metadata": {
+              "name": "get_tenant_teachers",
+              "type": "function",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`academic.get_all_teachers\\` has a role mutable search_path",
+            "metadata": {
+              "name": "get_all_teachers",
+              "type": "function",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`public.get_all_teachers\\` has a role mutable search_path",
+            "metadata": {
+              "name": "get_all_teachers",
+              "type": "function",
+              "schema": "public"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`public.get_tenant_teachers\\` has a role mutable search_path",
+            "metadata": {
+              "name": "get_tenant_teachers",
+              "type": "function",
+              "schema": "public"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`public.get_teacher_programs\\` has a role mutable search_path",
+            "metadata": {
+              "name": "get_teacher_programs",
+              "type": "function",
+              "schema": "public"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function \\`public.get_teacher_institutions_and_programs\\` has a role mutable search_path",
+            "metadata": {
+              "name": "get_teacher_institutions_and_programs",
+              "type": "function",
+              "schema": "public"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          }
+        ]
+      },
+      {
+        "name": "rls_disabled_in_public",
+        "title": "RLS Disabled in Public",
+        "level": "ERROR",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+        "count": 14,
+        "findings": [
+          {
+            "detail": "Table \\`delivery.cohort_statuses\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "cohort_statuses",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.enrollment_statuses\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "enrollment_statuses",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.progress_statuses\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "progress_statuses",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.lesson_progress\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "lesson_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.course_assignments\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "course_assignments",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.course_progress\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "course_progress",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.enrollments\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "enrollments",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.cohorts\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "cohorts",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`institution.institution_types\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "institution_types",
+              "type": "table",
+              "schema": "institution"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`institution.institution_statuses\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "institution_statuses",
+              "type": "table",
+              "schema": "institution"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`academic.tenant_teachers\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "tenant_teachers",
+              "type": "table",
+              "schema": "academic"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.attendance_sessions\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "attendance_sessions",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.cohort_teachers\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "cohort_teachers",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Table \\`delivery.attendance_records\\` is public, but RLS has not been enabled.",
+            "metadata": {
+              "name": "attendance_records",
+              "type": "table",
+              "schema": "delivery"
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          }
+        ]
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "title": "Public Can Execute SECURITY DEFINER Function",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects `SECURITY DEFINER` functions that are callable without signing in. Revoke `EXECUTE`, switch the function to `SECURITY INVOKER`, or move it out of your exposed API schema if it is not meant to be public.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable",
+        "count": 11,
+        "findings": [
+          {
+            "detail": "Function `academic.get_all_teachers()` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_all_teachers`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_all_teachers",
+              "schema": "academic",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `academic.get_tenant_teachers(p_tenant_id uuid)` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_tenant_teachers`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_tenant_teachers",
+              "schema": "academic",
+              "language": "plpgsql",
+              "arguments": "p_tenant_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `academic.trg_audit_academic_course()` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/trg_audit_academic_course`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "trg_audit_academic_course",
+              "schema": "academic",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `academic.trg_audit_academic_program()` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/trg_audit_academic_program`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "trg_audit_academic_program",
+              "schema": "academic",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `core.log_audit(p_tenant_id uuid, p_event_type text, p_actor_user_id uuid, p_target_user_id uuid, p_metadata jsonb)` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/log_audit`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "log_audit",
+              "schema": "core",
+              "language": "plpgsql",
+              "arguments": "p_tenant_id uuid, p_event_type text, p_actor_user_id uuid, p_target_user_id uuid, p_metadata jsonb",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `library.duplicate_course_template(p_template_id uuid, p_program_id uuid, p_tenant_id uuid, p_institution_id uuid, p_user_id uuid)` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/duplicate_course_template`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "duplicate_course_template",
+              "schema": "library",
+              "language": "plpgsql",
+              "arguments": "p_template_id uuid, p_program_id uuid, p_tenant_id uuid, p_institution_id uuid, p_user_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `library.is_super_admin()` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/is_super_admin`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "is_super_admin",
+              "schema": "library",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `public.get_all_teachers()` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_all_teachers`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_all_teachers",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `public.get_teacher_institutions_and_programs(p_teacher_id uuid)` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_teacher_institutions_and_programs`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_teacher_institutions_and_programs",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_teacher_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `public.get_teacher_programs(p_teacher_id uuid)` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_teacher_programs`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_teacher_programs",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_teacher_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `public.get_tenant_teachers(p_tenant_id uuid)` can be executed by the `anon` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_tenant_teachers`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_tenant_teachers",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_tenant_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          }
+        ]
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "title": "Signed-In Users Can Execute SECURITY DEFINER Function",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Detects `SECURITY DEFINER` functions that are callable by signed-in users. Revoke `EXECUTE`, switch the function to `SECURITY INVOKER`, or move it out of your exposed API schema if signed-in users should not call it.",
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable",
+        "count": 16,
+        "findings": [
+          {
+            "detail": "Function `academic.get_all_teachers()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_all_teachers`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_all_teachers",
+              "schema": "academic",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `academic.get_tenant_teachers(p_tenant_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_tenant_teachers`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_tenant_teachers",
+              "schema": "academic",
+              "language": "plpgsql",
+              "arguments": "p_tenant_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `academic.trg_audit_academic_course()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/trg_audit_academic_course`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "trg_audit_academic_course",
+              "schema": "academic",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `academic.trg_audit_academic_program()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/trg_audit_academic_program`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "trg_audit_academic_program",
+              "schema": "academic",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `core.complete_login()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/complete_login`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "complete_login",
+              "schema": "core",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `core.get_current_user()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_current_user`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_current_user",
+              "schema": "core",
+              "language": "sql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `core.get_user_primary_role(target_user_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_user_primary_role`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_user_primary_role",
+              "schema": "core",
+              "language": "plpgsql",
+              "arguments": "target_user_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `core.get_user_tenant_id(p_user_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_user_tenant_id`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_user_tenant_id",
+              "schema": "core",
+              "language": "plpgsql",
+              "arguments": "p_user_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `core.log_audit(p_tenant_id uuid, p_event_type text, p_actor_user_id uuid, p_target_user_id uuid, p_metadata jsonb)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/log_audit`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "log_audit",
+              "schema": "core",
+              "language": "plpgsql",
+              "arguments": "p_tenant_id uuid, p_event_type text, p_actor_user_id uuid, p_target_user_id uuid, p_metadata jsonb",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `core.set_user_role_claim(target_user_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/set_user_role_claim`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "set_user_role_claim",
+              "schema": "core",
+              "language": "plpgsql",
+              "arguments": "target_user_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `library.duplicate_course_template(p_template_id uuid, p_program_id uuid, p_tenant_id uuid, p_institution_id uuid, p_user_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/duplicate_course_template`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "duplicate_course_template",
+              "schema": "library",
+              "language": "plpgsql",
+              "arguments": "p_template_id uuid, p_program_id uuid, p_tenant_id uuid, p_institution_id uuid, p_user_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `library.is_super_admin()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/is_super_admin`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "is_super_admin",
+              "schema": "library",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `public.get_all_teachers()` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_all_teachers`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_all_teachers",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `public.get_teacher_institutions_and_programs(p_teacher_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_teacher_institutions_and_programs`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_teacher_institutions_and_programs",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_teacher_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `public.get_teacher_programs(p_teacher_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_teacher_programs`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_teacher_programs",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_teacher_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          },
+          {
+            "detail": "Function `public.get_tenant_teachers(p_tenant_id uuid)` can be executed by the `authenticated` role as a `SECURITY DEFINER` function via `/rest/v1/rpc/get_tenant_teachers`. Revoke `EXECUTE` or switch it to `SECURITY INVOKER` if that is not intentional.",
+            "metadata": {
+              "name": "get_tenant_teachers",
+              "schema": "public",
+              "language": "plpgsql",
+              "arguments": "p_tenant_id uuid",
+              "security_definer": true
+            },
+            "observed_at": "2026-10-26T09:27:51.873Z"
+          }
+        ]
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "title": "Leaked Password Protection Disabled",
+        "level": "WARN",
+        "facing": "EXTERNAL",
+        "categories": [
+          "SECURITY"
+        ],
+        "description": "Leaked password protection is currently disabled.",
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+        "count": 1,
+        "findings": [
+          {
+            "detail": "Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security.",
+            "metadata": {
+              "type": "auth",
+              "entity": "Auth"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

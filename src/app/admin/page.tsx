@@ -1,6 +1,4 @@
 import { getCurrentUser } from "@/services/auth";
-import { listInstitutions } from "@/services/institution";
-import { listOnboardingInvitations } from "@/services/onboarding";
 import { redirect } from "next/navigation";
 import AdminPanel from "./admin-panel";
 
@@ -21,3 +19,6 @@ export default async function AdminPage() {
   );
 }
 
+
+// Bulk provisioning is bounded to 2500 users; email delivery runs outside this request.
+export const maxDuration = 120;

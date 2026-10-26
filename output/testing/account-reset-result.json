@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-26",
+  "preserved": [
+    "devtest.8031@gmail.com",
+    "superadmin.campusportal@gmail.com"
+  ],
+  "removed_sessions": 2,
+  "removed_auth_users": 8,
+  "removed_core_users": 9,
+  "removed_invitations": 3,
+  "remaining_auth_users": 2,
+  "remaining_core_users": 2,
+  "shared_content_counts": {
+    "core.roles": 7,
+    "academic.courses": 3,
+    "academic.lessons": 2,
+    "academic.modules": 2,
+    "core.permissions": 0,
+    "delivery.cohorts": 1,
+    "learning.quizzes": 1,
+    "academic.programs": 1,
+    "learning.projects": 1,
+    "learning.activities": 3,
+    "core.role_permissions": 0,
+    "institution.institutions": 1,
+    "library.course_templates": 1,
+    "library.lesson_templates": 1,
+    "library.module_templates": 1,
+    "academic.lesson_resources": 2,
+    "delivery.course_assignments": 2,
+    "learning.activity_assignments": 3,
+    "learning.programming_challenges": 1
+  },
+  "removed_role_assignments": 10
+}

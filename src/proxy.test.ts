@@ -49,4 +49,32 @@ describe("shared dashboard route protection", () => {
     user = { id: "auth-1", app_metadata: {} };
     expect((await proxy(request("/login", "auth-1:student"))).headers.get("location")).toBe("http://localhost:3000/admin");
   });
+  it("rejects linked users whose roles are no longer visible", async () => {
+    user = { id: "auth-1", app_metadata: {} }; assignedRoles = [];
+    expect((await proxy(request("/admin"))).headers.get("location")).toBe("http://localhost:3000/login?error=AccountUnavailable");
+    expect((await proxy(request("/login"))).headers.get("location")).toBeNull();
+  });
+  it.each(["invited", "inactive", "suspended"])("denies %s ordinary accounts", async accountStatus => {
+    user = { id: "auth-1", app_metadata: {} }; status = accountStatus;
+    expect((await proxy(request("/admin"))).headers.get("location")).toBe("http://localhost:3000/login?error=AccountUnavailable");
+  });
+  it("allows Admin to open the Teacher workspace as its page permits", async () => {
+    user = { id: "auth-1", app_metadata: {} };
+    expect((await proxy(request("/teacher"))).headers.get("location")).toBeNull();
+  });
+
+  it.each([["super_admin", "/admin"], ["institution_admin", "/institution"], ["teacher", "/teacher"], ["trainer", "/teacher"], ["student", "/student"], ["public", "/public"], ["mentor", "/public"]])("enforces the %s dashboard boundary", async (name, dashboard) => {
+    user = { id: "auth-1", app_metadata: {} }; assignedRoles = [name];
+    expect((await proxy(request(dashboard))).headers.get("location")).toBeNull();
+    if (name !== "super_admin") expect((await proxy(request("/admin?tab=institutions"))).headers.get("location")).toBe(`http://localhost:3000${dashboard}`);
+  });
+  it("forwards refreshed cookies and disables shared caching on protected responses", async () => {
+    const result = await proxy(request("/student", "auth-1:student"));
+    expect(result.cookies.get("refreshed-session")?.value).toBe("present");
+    expect(result.headers.get("cache-control")).toBe("private, no-store");
+  });
+  it("does not query roles before the OAuth callback handles account linking", async () => {
+    expect((await proxy(request("/auth/callback?code=valid"))).headers.get("location")).toBeNull();
+  });
+
 });

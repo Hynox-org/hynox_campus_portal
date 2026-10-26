@@ -1,0 +1,8 @@
+{
+  "users": 2500,
+  "batches": 25,
+  "emails_sent": 0,
+  "database_elapsed_ms": 15113.2,
+  "fixtures_rolled_back": true,
+  "scope": "Sequential database batches in one synthetic rollback run; excludes HTTP/browser/provider latency and concurrent-import load."
+}

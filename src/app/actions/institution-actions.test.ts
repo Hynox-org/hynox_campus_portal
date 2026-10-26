@@ -48,4 +48,14 @@ describe("onboarding authorization", () => {
     expect((await uploadCsvOnboardingAction("campus-1", "name,email,role\nMember,member@example.com,super_admin")).error).toBeTruthy();
     expect(processCsvOnboarding).not.toHaveBeenCalled();
   });
+  it.each([null, { email: ["student@example.com"], name: "Student", role: "student" }, { email: "student@example.com", name: {}, role: "student" }])("rejects malformed server-action input %o", async input => {
+    expect((await onboardSingleUserAction(input as never)).error).toMatch(/Invalid/);
+    expect(onboardSingleUser).not.toHaveBeenCalled();
+  });
+  it("rejects protected writes when the shared browser session has ended",async()=>{
+    vi.mocked(getCurrentUser).mockResolvedValue(null);
+    expect((await uploadCsvOnboardingAction("campus-1","name,email\nStudent,student@example.com")).error).toBe("Access denied.");
+    expect((await onboardSingleUserAction({name:"Student",email:"student@example.com",role:"student",institutionId:"campus-1"})).error).toBe("Access denied.");
+    expect(processCsvOnboarding).not.toHaveBeenCalled();expect(onboardSingleUser).not.toHaveBeenCalled();
+  });
 });

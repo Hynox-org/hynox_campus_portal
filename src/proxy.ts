@@ -5,14 +5,18 @@ import { isSharedLogin, selectedSharedRole, SHARED_ROLE_COOKIE } from "@/lib/sha
 export async function proxy(request: NextRequest) {
   const { supabase, supabaseResponse, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
+  supabaseResponse.headers.set("Cache-Control", "private, no-store");
+  if (pathname === "/auth/callback") return supabaseResponse;
 
   // Paths that can be accessed without logging in
   const publicPaths = ["/login", "/super-admin-login", "/auth/callback", "/onboarding/verify"];
   const redirectTo = (path: string) => {
     const url = request.nextUrl.clone();
-    url.pathname = path;
-    url.search = "";
+    const destination = new URL(path, url.origin);
+    url.pathname = destination.pathname;
+    url.search = destination.search;
     const response = NextResponse.redirect(url);
+    response.headers.set("Cache-Control", "private, no-store");
     supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
     return response;
   };
@@ -34,7 +38,7 @@ export async function proxy(request: NextRequest) {
   let assignedRoles: string[] = [];
   
   // Resolve user from core.users and core.user_roles dynamically
-  let { data: dbUser } = await supabase
+  const { data: dbUser, error: userError } = await supabase
     .schema("core")
     .from("users")
     .select("id, status")
@@ -42,23 +46,14 @@ export async function proxy(request: NextRequest) {
     .is("deleted_at", null)
     .maybeSingle();
 
-  if (!dbUser && user.email) {
-    // Fallback to query by email in case the auth link isn't established yet
-    const { data: emailUser } = await supabase
-      .schema("core")
-      .from("users")
-      .select("id, status")
-      .eq("email", user.email)
-      .is("deleted_at", null)
-      .maybeSingle();
 
-    if (emailUser) {
-      dbUser = emailUser;
-    }
+  if (userError || (dbUser && dbUser.status !== "active")) {
+    await supabase.auth.signOut();
+    return redirectTo(isSharedLogin(user) ? "/super-admin-login" : "/login?error=AccountUnavailable");
   }
 
   if (dbUser) {
-    const { data: userRoles } = await supabase
+    const { data: userRoles, error: rolesError } = await supabase
       .schema("core")
       .from("user_roles")
       .select(`
@@ -69,6 +64,8 @@ export async function proxy(request: NextRequest) {
         )
       `)
       .eq("user_id", dbUser.id);
+
+    if (rolesError || !userRoles?.length) return pathname === "/login" ? supabaseResponse : redirectTo("/login?error=AccountUnavailable");
 
     if (userRoles && userRoles.length > 0) {
       const roles = userRoles.map(ur => ur.roles as unknown as { name: string; priority: number } | null);
@@ -125,7 +122,7 @@ export async function proxy(request: NextRequest) {
     return redirectTo(myDashboard);
   }
 
-  if (pathname.startsWith("/teacher") && role !== "teacher" && role !== "trainer") {
+  if (pathname.startsWith("/teacher") && role !== "teacher" && role !== "trainer" && role !== "super_admin") {
     return redirectTo(myDashboard);
   }
 
