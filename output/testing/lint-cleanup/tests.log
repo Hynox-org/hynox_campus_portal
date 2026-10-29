@@ -1,0 +1,97 @@
+
+> hynox-campus@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/app/actions/library-actions.test.ts (9 tests | 3 failed) 35ms
+     × invalidates shared template caches when publishing 8ms
+     × returns errors without invalidating caches or claiming success 7ms
+     × preserves structured Supabase errors 2ms
+ ❯ src/hooks/use-inputs-changed.test.tsx (1 test | 1 failed) 9ms
+     × adjusts local state once per changed input and preserves it otherwise 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/hooks/use-inputs-changed.test.tsx > selection snapshot changes > adjusts local state once per changed input and preserves it otherwise
+ReferenceError: document is not defined
+ ❯ render node_modules/@testing-library/react/dist/pure.js:256:5
+ ❯ renderHook node_modules/@testing-library/react/dist/pure.js:339:7
+ ❯ src/hooks/use-inputs-changed.test.tsx:8:34
+      6| describe("selection snapshot changes", () => {
+      7|   it("adjusts local state once per changed input and preserves it othe…
+      8|     const { result, rerender } = renderHook(({ input }) => {
+       |                                  ^
+      9|       const [selection, setSelection] = useState(input);
+     10|       if (useInputsChanged([input])) setSelection(input);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/app/actions/library-actions.test.ts > blueprint server actions > invalidates shared template caches when publishing
+AssertionError: expected { error: 'Unauthorized.' } to have property "success" with value true
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ src/app/actions/library-actions.test.ts:35:84
+     33|     vi.mocked(getCurrentUser).mockResolvedValue({ primaryRole: "super_…
+     34|     vi.mocked(service.updateCourseTemplate).mockResolvedValue({ id: "i…
+     35|     expect(await actions.updateCourseTemplateAction("id", { is_publish…
+       |                                                                                    ^
+     36|     expect(revalidateTag).toHaveBeenCalledWith("course-templates", "ma…
+     37|     expect(revalidatePath).toHaveBeenCalledWith("/admin");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/app/actions/library-actions.test.ts > blueprint server actions > returns errors without invalidating caches or claiming success
+AssertionError: expected { error: 'Unauthorized.' } to deeply equal { error: 'Already copied' }
+
+- Expected
++ Received
+
+  {
+-   "error": "Already copied",
++   "error": "Unauthorized.",
+  }
+
+ ❯ src/app/actions/library-actions.test.ts:42:79
+     40|     vi.mocked(getCurrentUser).mockResolvedValue({ primaryRole: "super_…
+     41|     vi.mocked(service.instantiateCourseTemplate).mockRejectedValue(new…
+     42|     expect(await actions.instantiateCourseTemplateAction("a", "b", "c"…
+       |                                                                               ^
+     43|     expect(revalidatePath).not.toHaveBeenCalled();
+     44|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/app/actions/library-actions.test.ts > blueprint server actions > preserves structured Supabase errors
+AssertionError: expected { error: 'Unauthorized.' } to deeply equal { error: 'Duplicate live slug' }
+
+- Expected
++ Received
+
+  {
+-   "error": "Duplicate live slug",
++   "error": "Unauthorized.",
+  }
+
+ ❯ src/app/actions/library-actions.test.ts:48:87
+     46|     vi.mocked(getCurrentUser).mockResolvedValue({ primaryRole: "super_…
+     47|     vi.mocked(service.createCourseTemplate).mockRejectedValue({ code: …
+     48|     expect(await actions.createCourseTemplateAction({ title: "Test", s…
+       |                                                                                       ^
+     49|   });
+     50| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 59 passed (61)
+      Tests  4 failed | 466 passed (470)
+   Start at  22:04:11
+   Duration  30.20s (transform 10.77s, setup 0ms, import 41.82s, tests 36.77s, environment 78.57s)
+

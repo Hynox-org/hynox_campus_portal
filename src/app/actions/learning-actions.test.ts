@@ -6,6 +6,14 @@ import {
   listQuizAttemptsAction
 } from "./learning-actions";
 
+vi.mock("@/services/quiz-engine", () => ({ quizContent: vi.fn(async () => ({
+  quiz: { id: "quiz-1", activity_id: "act-1", shuffle_questions: true },
+  questions: [{ id: "q-1", options: [{ id: "opt-1", option_text: "Option A", is_correct: true }] }],
+})) }));
+
+vi.mock("@/services/learning-editor", () => ({ requireActivityEditor: vi.fn() }));
+vi.mock("@/services/institution-access", () => ({ requireInstitutionAccess: vi.fn() }));
+
 // Mock the services module
 vi.mock("@/services/learning", () => ({
   listAllActivities: vi.fn(),
@@ -131,22 +139,24 @@ describe("learning-actions", () => {
 
   describe("getActivityDetailsNoStudentAction", () => {
     it("should fetch quiz details correctly without checking student attempts", async () => {
-      const result = await getActivityDetailsNoStudentAction("act-1", "quiz") as any;
+      const result = await getActivityDetailsNoStudentAction("act-1", "quiz");
 
       expect(result).toHaveProperty("quiz");
       expect(result).toHaveProperty("questions");
+      if (!("questions" in result) || !result.questions) throw new Error("Expected quiz questions");
       expect(result.questions[0].options).toHaveLength(1);
       expect(result.questions[0].options[0].option_text).toBe("Option A");
     });
 
     it("should fetch project details correctly", async () => {
-      const result = await getActivityDetailsNoStudentAction("act-2", "project") as any;
+      const result = await getActivityDetailsNoStudentAction("act-2", "project");
       expect(result).toHaveProperty("project");
+      if (!("project" in result) || !result.project) throw new Error("Expected project");
       expect(result.project.overview).toBe("React Project");
     });
 
     it("should fetch programming challenge details correctly", async () => {
-      const result = await getActivityDetailsNoStudentAction("act-3", "programming") as any;
+      const result = await getActivityDetailsNoStudentAction("act-3", "programming");
       expect(result).toHaveProperty("challenge");
       expect(result).toHaveProperty("examples");
       expect(result).toHaveProperty("testCases");
@@ -155,8 +165,9 @@ describe("learning-actions", () => {
 
   describe("listActivityProgressAction", () => {
     it("should fetch and compile progress with user details correctly", async () => {
-      const result = await listActivityProgressAction("act-1") as any;
+      const result = await listActivityProgressAction("act-1");
       expect(result).toHaveProperty("progress");
+      if (!("progress" in result) || !result.progress) throw new Error("Expected activity progress");
       expect(result.progress).toHaveLength(1);
       expect(result.progress[0].student.full_name).toBe("Jane Doe");
     });
@@ -164,7 +175,7 @@ describe("learning-actions", () => {
 
   describe("listQuizAttemptsAction", () => {
     it("should return empty attempts when database is mocked to return nothing", async () => {
-      const result = await listQuizAttemptsAction("tenant-123") as any;
+      const result = await listQuizAttemptsAction("tenant-123");
       expect(result).toHaveProperty("attempts");
     });
   });

@@ -1,18 +1,21 @@
 "use client";
+import { averageLearningProgress } from "@/lib/learning-progress";
+import type { ProjectSubmission, QuizAttempt } from "@/types/campus";
 
+import type { Cohort, Enrollment, Activity, ChallengeSubmission, CohortReport } from "@/types/campus";
 import React, { useMemo, useState } from "react";
 import { BarChart3, Trophy, AlertTriangle, Target, Award, Users } from "lucide-react";
 import { HBarChart, VBarChart, DonutChart, StatTile, HBarDatum, VBarDatum, DonutDatum } from "@/components/analytics-charts";
 import { CustomSelect } from "@/components/custom-select";
 
 interface AnalyticsTabProps {
-  cohorts: any[];
-  enrollments: any[];
-  activities: any[];
-  quizAttempts: any[];
-  projectSubmissions: any[];
-  challengeSubmissions: any[];
-  cohortReports: Record<string, any>;
+  cohorts: Cohort[];
+  enrollments: Enrollment[];
+  activities: Activity[];
+  quizAttempts: QuizAttempt[];
+  projectSubmissions: ProjectSubmission[];
+  challengeSubmissions: ChallengeSubmission[];
+  cohortReports: Record<string, CohortReport>;
 }
 
 const SCORE_BUCKETS = [
@@ -29,7 +32,6 @@ export default function AnalyticsTab({
   quizAttempts,
   projectSubmissions,
   challengeSubmissions,
-  cohortReports,
 }: AnalyticsTabProps) {
   const [selectedCohortFilter, setSelectedCohortFilter] = useState<string>("all");
 
@@ -37,6 +39,20 @@ export default function AnalyticsTab({
     () => (selectedCohortFilter === "all" ? enrollments : enrollments.filter((e) => e.cohort_id === selectedCohortFilter)),
     [enrollments, selectedCohortFilter]
   );
+
+  // One person may have enrollments in several programs. Give each person one
+  // ranking row and equal weight, averaging their cohort progress first.
+  const scopedStudents = useMemo(() => {
+    type StudentRow = Enrollment;
+    const students = new Map<string, { row: StudentRow; progress: number; count: number }>();
+    for (const enrollment of scopedEnrollments) {
+      const entry = students.get(enrollment.user_id) || { row: enrollment, progress: 0, count: 0 };
+      entry.progress += enrollment.progress_percentage || 0;
+      entry.count += 1;
+      students.set(enrollment.user_id, entry);
+    }
+    return [...students.values()].map(entry => ({ ...entry.row, progress_percentage: entry.progress / entry.count }));
+  }, [scopedEnrollments]);
 
   const scopedStudentIds = useMemo(
     () => new Set(scopedEnrollments.map((e) => e.user_id)),
@@ -61,10 +77,10 @@ export default function AnalyticsTab({
   const challenges = activities.filter((a) => a.activity_type_code === "programming");
 
   // KPIs -----------------------------------------------------------------
-  const totalStudents = scopedEnrollments.length;
+  const totalStudents = scopedStudents.length;
 
   const avgProgress = totalStudents > 0
-    ? Math.round(scopedEnrollments.reduce((acc, e) => acc + (e.progress_percentage || 0), 0) / totalStudents)
+    ? averageLearningProgress(scopedStudents.map(e => e.progress_percentage || 0))
     : 0;
 
   const passedAttempts = scopedQuizAttempts.filter((a) => a.passed).length;
@@ -73,7 +89,7 @@ export default function AnalyticsTab({
   const avgQuizScorePct = useMemo(() => {
     const scored = scopedQuizAttempts.filter((a) => a.max_score);
     if (scored.length === 0) return 0;
-    const sum = scored.reduce((acc, a) => acc + (a.score / a.max_score) * 100, 0);
+    const sum = scored.reduce((acc, a) => acc + ((a.score ?? 0) / (a.max_score || 1)) * 100, 0);
     return Math.round(sum / scored.length);
   }, [scopedQuizAttempts]);
 
@@ -92,7 +108,7 @@ export default function AnalyticsTab({
       .map((c) => {
         const cEnrollments = enrollments.filter((e) => e.cohort_id === c.id);
         const avg = cEnrollments.length > 0
-          ? Math.round(cEnrollments.reduce((acc, e) => acc + (e.progress_percentage || 0), 0) / cEnrollments.length)
+          ? averageLearningProgress(cEnrollments.map(e => e.progress_percentage || 0))
           : 0;
         return {
           id: c.id,
@@ -110,7 +126,7 @@ export default function AnalyticsTab({
     return SCORE_BUCKETS.map((bucket) => {
       const count = scopedQuizAttempts.filter((a) => {
         if (!a.max_score) return false;
-        const pct = (a.score / a.max_score) * 100;
+        const pct = ((a.score ?? 0) / a.max_score) * 100;
         return pct >= bucket.min && pct < bucket.max;
       }).length;
       return { id: bucket.id, label: bucket.label, value: count, color: bucket.color };
@@ -162,17 +178,17 @@ export default function AnalyticsTab({
 
   // Per-student composite ranking -------------------------------------------
   const studentRankings = useMemo(() => {
-    return scopedEnrollments
+    return scopedStudents
       .map((enr) => {
         const sid = enr.user_id;
         const sQuiz = scopedQuizAttempts.filter((a) => a.student_id === sid);
         const quizAvg = sQuiz.length > 0
-          ? sQuiz.reduce((acc, a) => acc + (a.max_score ? (a.score / a.max_score) * 100 : 0), 0) / sQuiz.length
+          ? sQuiz.reduce((acc, a) => acc + (a.max_score ? ((a.score ?? 0) / a.max_score) * 100 : 0), 0) / sQuiz.length
           : null;
         const progress = enr.progress_percentage || 0;
         const composite = quizAvg !== null ? Math.round((progress + quizAvg) / 2) : progress;
         return {
-          id: enr.id,
+          id: enr.user_id,
           name: enr.student?.full_name || enr.student?.email || "Enrolled Student",
           progress,
           quizAvg: quizAvg !== null ? Math.round(quizAvg) : null,
@@ -180,7 +196,7 @@ export default function AnalyticsTab({
         };
       })
       .sort((a, b) => b.composite - a.composite);
-  }, [scopedEnrollments, scopedQuizAttempts]);
+  }, [scopedStudents, scopedQuizAttempts]);
 
   const topPerformers = studentRankings.slice(0, 5);
   const needsAttention = [...studentRankings].reverse().slice(0, 5).filter((s) => s.composite < 70);

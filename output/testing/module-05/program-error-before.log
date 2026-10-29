@@ -1,0 +1,299 @@
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/app/admin/program-manager.test.tsx (6 tests | 1 failed) 998ms
+   × shows a failed program query with retry rather than pretending the catalog is empty 285ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/app/admin/program-manager.test.tsx > shows a failed program query with retry rather than pretending the catalog is empty
+TestingLibraryElementError: Unable to find an accessible element with the role "alert"
+
+Here are the accessible roles:
+
+  heading:
+
+  Name "Live Program Scope":
+  <h3
+    class="text-xs font-bold uppercase tracking-wider mb-2 text-[#C2C6D1] flex items-center gap-1.5"
+  />
+
+  Name "QA Program":
+  <h3
+    class="font-bold text-[#EDEFF5] text-sm mt-0.5"
+  />
+
+  Name "Pathway Details":
+  <h4
+    class="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]"
+  />
+
+  Name "Clone Course Blueprint":
+  <h4
+    class="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1"
+  />
+
+  Name "Instantiated Courses":
+  <h4
+    class="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]"
+  />
+
+  Name "Syllabus Curriculum Modules":
+  <h4
+    class="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p
+    class="text-xs text-[#C2C6D1] mb-4"
+  />
+
+  Name "":
+  <p
+    class="text-xs text-[#EDEFF5] leading-relaxed font-medium"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "-- Select Institution Campus --":
+  <button
+    class="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-left focus:outline-none focus:border-[#6E79F4] focus:ring-1 focus:ring-[#6E79F4]/20 shadow-sm flex items-center justify-between gap-2 transition-all duration-200 cursor-pointer hover:bg-[#16171D]/50 disabled:opacity-50 disabled:pointer-events-none"
+    type="button"
+  />
+
+  Name "← Back to Pathways List":
+  <button
+    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#23252C] hover:bg-[#16171D] text-[#EDEFF5] font-semibold text-xs transition-colors cursor-pointer"
+  />
+
+  Name "DRAFT":
+  <button
+    class="w-full px-3 py-2 rounded-lg text-xs font-bold border flex items-center justify-between cursor-pointer shadow-xs transition-all bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
+  />
+
+  Name "-- Choose Library Template --":
+  <button
+    class="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-left focus:outline-none focus:border-[#6E79F4] focus:ring-1 focus:ring-[#6E79F4]/20 shadow-sm flex items-center justify-between gap-2 transition-all duration-200 cursor-pointer hover:bg-[#16171D]/50 disabled:opacity-50 disabled:pointer-events-none"
+    type="button"
+  />
+
+  Name "Instantiate to Program":
+  <button
+    class="w-full bg-[#6E79F4] text-white py-2 rounded-lg text-xs font-bold hover:bg-[#6E79F4]/95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+    disabled=""
+  />
+
+  Name "New Course":
+  <button
+    class="flex items-center gap-1 text-[#6E79F4] hover:underline text-[11px] font-bold cursor-pointer"
+  />
+
+  Name "Edit Course":
+  <button
+    class="p-0.5 hover:bg-[#1A1C22] rounded text-[#C2C6D1] hover:text-[#6E79F4]"
+    title="Edit Course"
+  />
+
+  Name "Delete Course":
+  <button
+    class="p-0.5 hover:bg-red-50 rounded text-[#A3A9B6] hover:text-red-600"
+    title="Delete Course"
+  />
+
+  Name "New Module":
+  <button
+    class="flex items-center gap-1 text-[#6E79F4] hover:underline text-[11px] font-bold cursor-pointer shrink-0"
+  />
+
+  --------------------------------------------------
+  combobox:
+
+  Name "Program visibility":
+  <select
+    class="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs text-[#EDEFF5]"
+    id="program-visibility"
+  />
+
+  --------------------------------------------------
+  option:
+
+  Name "Select visibility":
+  <option
+    disabled=""
+    value=""
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body
+  style=""
+>
+  <div>
+    <div
+      class="space-y-6"
+    >
+      <div
+        class="bg-[#131418] border border-[#23252C] p-6 rounded-xl shadow-sm"
+      >
+        <h3
+          class="text-xs font-bold uppercase tracking-wider mb-2 text-[#C2C6D1] flex items-center gap-1.5"
+        >
+          <svg
+            aria-hidden="true"
+            class="lucide lucide-folder text-[#6E79F4]"
+            fill="none"
+            height="15"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="15"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+            />
+          </svg>
+           Live Program Scope
+        </h3>
+        <p
+          class="text-xs text-[#C2C6D1] mb-4"
+        >
+          Select an institution scope below to explore registered programs and instantiated syllabus courses.
+        </p>
+        <div
+          class="relative inline-block w-full text-xs text-[#EDEFF5] max-w-md"
+        >
+          <button
+            class="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-left focus:outline-none focus:border-[#6E79F4] focus:ring-1 focus:ring-[#6E79F4]/20 shadow-sm flex items-center justify-between gap-2 transition-all duration-200 cursor-pointer hover:bg-[#16171D]/50 disabled:opacity-50 disabled:pointer-events-none"
+            type="button"
+          >
+            <span
+              class="truncate text-[#C2C6D1]"
+            >
+              -- Select Institution Campus --
+            </span>
+            <svg
+              aria-hidden="true"
+              class="lucide lucide-chevron-down text-[#C2C6D1] transition-transform duration-200 shrink-0"
+              fill="none"
+              height="14"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="14"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m6 9 6 6 6-6"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div
+        class="space-y-4 animate-fadeIn"
+      >
+        <div
+          class="flex items-center gap-3 bg-[#131418] border border-[#23252C] px-6 py-4 rounded-xl shadow-sm"
+        >
+          <button
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#23252C] hover:bg-[#16171D] text-[#EDEFF5] font-semibold text-xs transition-colors cursor-pointer"
+          >
+            ← Back to Pathways List
+          </button>
+          <div
+            class="h-6 w-px bg-[#23252C]"
+          />
+          <div>
+            <span
+              class="text-[9px] uppercase tracking-wider font-bold text-[#C2C6D1]"
+            >
+              Examining Pathway
+            </span>
+            <h3
+              class="font-bold text-[#EDEFF5] text-sm mt-0.5"
+            >
+              QA Program
+            </h3>
+          </div>
+        </div>
+        <div
+          class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start"
+        >
+          <div
+            class="lg:col-span-4 bg-[#131418] border border-[#23252C] rounded-xl p-5 shadow-sm space-y-5"
+          >
+            <div
+              class="space-y-1"
+            >
+              <h4
+                class="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1]"
+              >
+                Pathway Details
+              </h4>
+              <p
+                class="text-xs text-[#EDEFF5] leading-relaxed font-medium"
+              >
+                No pathway description provided.
+              </p>
+              <div
+                class="pt-2 flex items-center justify-between text-[10px] text-[#C2C6D1]"
+              >
+                <span>
+                  Status:
+                </span>
+                <span
+                  class="capitalize font-bold"
+                >
+                  Draft
+                </span>
+              </div>
+            </div>
+            <div
+              class="relative inline-block text-left w-full border-t border-[#1F2128] pt-4"
+            >
+              <label
+                class="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-2"
+              >
+                Change Pathway Status
+              </label>
+              <button
+                class="w-full px-3 py-2 rounded-lg text-xs font-bold border flex items-center justify-between cursor-pointer shadow-xs transition-all bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
+              >
+                <span
+                  class="flex items-center gap-2"
+                >
+                  <span
+                    class="w-2 h-2 rounded-full bg-red-500"
+                  />
+                  DRAFT
+                [3...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/app/admin/program-manager.test.tsx:96:17
+     94|   data.programError = new Error("Unavailable");
+     95|   setup();
+     96|   expect(screen.getByRole("alert").textContent).toContain("Unable to l…
+       |                 ^
+     97|   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+     98|   expect(data.retryPrograms).toHaveBeenCalledOnce();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  20:41:10
+   Duration  3.86s (transform 308ms, setup 0ms, import 955ms, tests 998ms, environment 1.62s)
+

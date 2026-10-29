@@ -1,0 +1,88 @@
+
+> hynox-campus@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/features/newsletter/student-navigation.test.tsx (8 tests | 1 failed) 15506ms
+   × opens field updates in the existing shell and synchronizes its URL without a page navigation 8916ms
+ ❯ src/app/student/student-assets.test.tsx (3 tests | 2 failed) 16519ms
+   × loads attachments and preserves them on reopening (URL restore: false) 9125ms
+   × loads attachments and preserves them on reopening (URL restore: true) 6213ms
+ ❯ src/app/admin/program-manager.test.tsx (6 tests | 1 failed) 17494ms
+   × sends status and visibility when publishing a new course 11301ms
+ ❯ src/app/admin/admin-teacher-live.test.tsx (1 test | 1 failed) 6942ms
+   × refreshes an already open teacher mapping drawer when its query is invalidated 6937ms
+ ❯ src/components/career/resume-editor.test.tsx (2 tests | 1 failed) 9107ms
+   × adds a completed course with the accessible Add control and prevents duplicates 8296ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/app/admin/admin-teacher-live.test.tsx > refreshes an already open teacher mapping drawer when its query is invalidated
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/app/admin/admin-teacher-live.test.tsx:20:1
+     18| import AdminPanel from "./admin-panel";
+     19| afterEach(cleanup);
+     20| it("refreshes an already open teacher mapping drawer when its query is…
+       | ^
+     21|   window.history.replaceState(null, "", "/admin?parentTab=onboarding&t…
+     22|   const client = new QueryClient({ defaultOptions: { queries: { retry:…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/app/admin/program-manager.test.tsx > sends status and visibility when publishing a new course
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/app/admin/program-manager.test.tsx:39:1
+     37|     setSelectedInstId={() => {}} selectedProgram={data.program} setSel…
+     38| }
+     39| it("sends status and visibility when publishing a new course", async (…
+       | ^
+     40|   data.create.mockResolvedValue({ success: true, course: { id: "new" }…
+     41|   setup();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  src/app/student/student-assets.test.tsx > loads attachments and preserves them on reopening (URL restore: false)
+ FAIL  src/app/student/student-assets.test.tsx > loads attachments and preserves them on reopening (URL restore: true)
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/app/student/student-assets.test.tsx:32:22
+     30| beforeEach(() => { vi.clearAllMocks(); data.programs[0].courses[0].pro…
+     31| afterEach(cleanup);
+     32| it.each([false, true])("loads attachments and preserves them on reopen…
+       |                      ^
+     33|   if (restored) window.history.replaceState(null, "", "/student?tab=ac…
+     34|   const client = new QueryClient({ defaultOptions: { queries: { retry:…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  src/components/career/resume-editor.test.tsx > adds a completed course with the accessible Add control and prevents duplicates
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/components/career/resume-editor.test.tsx:10:1
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  src/features/newsletter/student-navigation.test.tsx > opens field updates in the existing shell and synchronizes its URL without a page navigation
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/features/newsletter/student-navigation.test.tsx:41:1
+     39| }
+     40|
+     41| it("opens field updates in the existing shell and synchronizes its URL…
+       | ^
+     42|   dashboard();
+     43|   fireEvent.click(screen.getByRole("button", { name: "Daily Field Upda…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+
+ Test Files  5 failed | 65 passed (70)
+      Tests  6 failed | 513 passed (519)
+   Start at  16:17:30
+   Duration  80.21s (transform 36.03s, setup 0ms, import 118.05s, tests 131.32s, environment 206.01s)
+

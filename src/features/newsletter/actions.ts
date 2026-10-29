@@ -12,7 +12,7 @@ function uuid(value: string) {
 }
 
 async function context(role: "student" | "super_admin") {
-  const session = await getCurrentUser();
+  const session = await getCurrentUser(true);
   if (!session?.user || session.user.status !== "active" || session.primaryRole !== role) throw new Error("Sign in with an active account to continue.");
   return { session, client: createAdminClient() };
 }

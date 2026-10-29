@@ -1,0 +1,21 @@
+{
+  "purpose": "User-authorized synthetic UI testing of Modules 5 and 6",
+  "campus_id": "5b887eaa-8f3e-4c7a-aa12-06c07138e916",
+  "program_id": "f46fc2ee-393d-4595-a4dd-bdf743870b01",
+  "program_title": "QA Module 5-6 Hierarchy",
+  "course_id": "b9c3161b-1ef7-4303-b809-73140aeeb42a",
+  "course_title": "QA M56 Manual Course",
+  "created_through_admin_ui": true,
+  "retained_for_review": true,
+  "existing_module04_lesson_edit_restored": "71d7b823-8bb8-4d75-a004-a9cedeead760",
+  "module_id": "fe48e038-a69b-423e-bf38-b9a46661a988",
+  "lesson_id": "0e3bd13c-fc20-41c3-8013-a9202dc3f4a4",
+  "cohort_id": "2d5a7ac0-67c2-4c7d-8255-494b718be3ff",
+  "cohort_code": "QA-M56-20261027",
+  "enrollment_id": "1dc24525-98fa-4433-b6e8-a0817f011295",
+  "student_id": "1c3bd6fe-94e3-4140-a582-e3745450f86d",
+  "assignment_id": "1222be11-fc4c-4a1b-90ea-de1cc57baf01",
+  "teacher_mapping_id": "c27dc8e6-b1fe-422e-9835-c7d05af79959",
+  "teacher_id": "4a28c457-fe7c-4306-b5ec-71664d46217d",
+  "teacher_mapping_setup": "SQL insert; open Admin drawer refreshed via protected realtime revisions"
+}

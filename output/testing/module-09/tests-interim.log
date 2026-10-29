@@ -1,0 +1,30 @@
+
+> hynox-campus@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/app/actions/learning-actions.test.ts (7 tests | 1 failed) 52ms
+       × should fetch quiz details correctly without checking student attempts 39ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/app/actions/learning-actions.test.ts > learning-actions > getActivityDetailsNoStudentAction > should fetch quiz details correctly without checking student attempts
+AssertionError: expected { Object (error) } to have property "quiz"
+ ❯ src/app/actions/learning-actions.test.ts:136:22
+    134|       const result = await getActivityDetailsNoStudentAction("act-1", …
+    135|
+    136|       expect(result).toHaveProperty("quiz");
+       |                      ^
+    137|       expect(result).toHaveProperty("questions");
+    138|       expect(result.questions[0].options).toHaveLength(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 63 passed (64)
+      Tests  1 failed | 495 passed (496)
+   Start at  11:36:55
+   Duration  27.24s (transform 7.95s, setup 0ms, import 50.20s, tests 29.29s, environment 76.46s)
+

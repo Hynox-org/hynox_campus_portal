@@ -23,9 +23,9 @@ afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 it("settles autosave after server normalization instead of saving forever", async () => {
   render(<StudentTabs />);
-  await waitFor(() => expect(screen.getByRole("button", { name: "New resume", exact: true }).hasAttribute("disabled")).toBe(false));
+  await waitFor(() => expect(screen.getByRole("button", { name: "New resume" }).hasAttribute("disabled")).toBe(false));
   vi.useFakeTimers();
-  fireEvent.click(screen.getByRole("button", { name: "New resume", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "New resume" }));
   fireEvent.change(screen.getByLabelText("Resume name"), { target: { value: "  Test Resume  " } });
   await act(async () => { await vi.advanceTimersByTimeAsync(1200); });
   expect(saveResumeAction).toHaveBeenCalledTimes(1);
@@ -40,9 +40,9 @@ it("preserves edits made while a save is in flight and saves the latest revision
   let firstInput: Parameters<typeof saveResumeAction>[0] | undefined;
   vi.mocked(saveResumeAction).mockImplementationOnce(input => { firstInput = input; return new Promise(resolve => { complete = resolve; }); });
   render(<StudentTabs />);
-  await waitFor(() => expect(screen.getByRole("button", { name: "New resume", exact: true }).hasAttribute("disabled")).toBe(false));
+  await waitFor(() => expect(screen.getByRole("button", { name: "New resume" }).hasAttribute("disabled")).toBe(false));
   vi.useFakeTimers();
-  fireEvent.click(screen.getByRole("button", { name: "New resume", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "New resume" }));
   await act(async () => { await vi.advanceTimersByTimeAsync(1200); });
   expect(firstInput).toBeDefined();
   fireEvent.change(screen.getByLabelText("Headline"), { target: { value: "Edited while saving" } });
@@ -56,12 +56,12 @@ it("preserves edits made while a save is in flight and saves the latest revision
 
 it("keeps the draft and loaded data when another hub tab hides the workspace", async () => {
   render(<StudentTabs />);
-  await waitFor(() => expect(screen.getByRole("button", { name: "New resume", exact: true }).hasAttribute("disabled")).toBe(false));
+  await waitFor(() => expect(screen.getByRole("button", { name: "New resume" }).hasAttribute("disabled")).toBe(false));
   vi.useFakeTimers();
-  fireEvent.click(screen.getByRole("button", { name: "New resume", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "New resume" }));
   fireEvent.change(screen.getByLabelText("Headline"), { target: { value: "Keep this draft" } });
   fireEvent.click(screen.getByRole("button", { name: "Toggle hub tab" }));
-  expect(screen.queryByRole("button", { name: "New resume", exact: true })).toBeNull();
+  expect(screen.queryByRole("button", { name: "New resume" })).toBeNull();
   await act(async () => { await vi.advanceTimersByTimeAsync(1200); });
   fireEvent.click(screen.getByRole("button", { name: "Toggle hub tab" }));
   expect((screen.getByLabelText("Headline") as HTMLInputElement).value).toBe("Keep this draft");

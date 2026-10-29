@@ -1,19 +1,20 @@
 "use client";
 
+import type { Program, Lookup } from "@/types/campus";
 import React, { useState } from "react";
-import { Folder, ArrowRight, Eye, Edit, Trash2, Plus, X, ShieldAlert } from "lucide-react";
+import { Folder, ArrowRight, Edit, Trash2, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { createProgramAction, updateProgramAction, deleteProgramAction } from "@/app/actions/academic-actions";
 import { useRouter } from "next/navigation";
 
 interface ClientProgramListProps {
-  initialPrograms: any[];
+  initialPrograms: Program[];
   primaryRole: string;
   lookups: {
-    courseTypes: any[];
-    lessonTypes: any[];
-    statuses: any[];
-    visibilityTypes: any[];
+    courseTypes: Lookup[];
+    lessonTypes: Lookup[];
+    statuses: Lookup[];
+    visibilityTypes: Lookup[];
   };
 }
 
@@ -28,7 +29,7 @@ export default function ClientProgramList({ initialPrograms, primaryRole, lookup
 
   // Form Modal toggles
   const [isOpen, setIsOpen] = useState(false);
-  const [editingProgram, setEditingProgram] = useState<any | null>(null);
+  const [editingProgram, setEditingProgram] = useState<Program | null>(null);
 
   // Form Fields
   const [title, setTitle] = useState("");
@@ -48,13 +49,13 @@ export default function ClientProgramList({ initialPrograms, primaryRole, lookup
     setIsOpen(true);
   };
 
-  const handleOpenEdit = (program: any) => {
+  const handleOpenEdit = (program: Program) => {
     setEditingProgram(program);
     setTitle(program.title);
-    setSlug(program.slug);
+    setSlug((program.slug ?? ""));
     setDescription(program.description || "");
-    setStatusId(program.status_id);
-    setVisibilityId(program.visibility_type_id);
+    setStatusId((program.status_id ?? ""));
+    setVisibilityId((program.visibility_type_id ?? ""));
     setError("");
     setIsOpen(true);
   };

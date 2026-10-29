@@ -1,0 +1,324 @@
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/app/student/student-assets.test.tsx (1 test | 1 failed) 1296ms
+   × fetches prefetched lesson attachments and keeps them visible on reopening 1294ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/app/student/student-assets.test.tsx > fetches prefetched lesson attachments and keeps them visible on reopening
+TestingLibraryElementError: Unable to find an element with the text: QA PDF attachment. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="min-h-screen bg-[#0B0C0F] text-[#EDEFF5] font-sans"
+    >
+      <aside
+        class="hidden lg:block fixed inset-y-0 left-0 w-60 z-40"
+      >
+        <div
+          class="flex flex-col h-full bg-[#0E0F13] border-r border-[#1F2128]"
+        >
+          <div
+            class="flex items-center gap-2.5 px-5 h-16 border-b border-[#1F2128] shrink-0"
+          >
+            <div
+              class="bg-[#6E79F4]/10 text-[#6E79F4] p-2 rounded-xl border border-[#6E79F4]/25"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-terminal"
+                fill="none"
+                height="16"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 19h8"
+                />
+                <path
+                  d="m4 17 6-6-6-6"
+                />
+              </svg>
+            </div>
+            <div
+              class="flex flex-col min-w-0"
+            >
+              <span
+                class="font-bold text-[13px] tracking-tight text-[#EDEFF5] leading-tight"
+              >
+                Hynox Campus
+              </span>
+              <span
+                class="text-[9px] text-[#A3A9B6] font-bold tracking-[0.14em] uppercase"
+              >
+                Student Hub
+              </span>
+            </div>
+          </div>
+          <nav
+            aria-label="Primary"
+            class="flex flex-col gap-0.5 px-3 py-4 flex-1 overflow-y-auto"
+          >
+            <button
+              class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition-all duration-150 cursor-pointer group text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#1A1C22]"
+            >
+              <span
+                class="flex items-center gap-2.5 min-w-0"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-building shrink-0 transition-colors text-[#A3A9B6] group-hover:text-[#C2C6D1]"
+                  fill="none"
+                  height="15"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="15"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 10h.01"
+                  />
+                  <path
+                    d="M12 14h.01"
+                  />
+                  <path
+                    d="M12 6h.01"
+                  />
+                  <path
+                    d="M16 10h.01"
+                  />
+                  <path
+                    d="M16 14h.01"
+                  />
+                  <path
+                    d="M16 6h.01"
+                  />
+                  <path
+                    d="M8 10h.01"
+                  />
+                  <path
+                    d="M8 14h.01"
+                  />
+                  <path
+                    d="M8 6h.01"
+                  />
+                  <path
+                    d="M9 22v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"
+                  />
+                  <rect
+                    height="20"
+                    rx="2"
+                    width="16"
+                    x="4"
+                    y="2"
+                  />
+                </svg>
+                <span
+                  class="truncate"
+                >
+                  Overview
+                </span>
+              </span>
+            </button>
+            <button
+              aria-current="page"
+              class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition-all duration-150 cursor-pointer group bg-[#6E79F4]/12 text-[#EDEFF5]"
+            >
+              <span
+                class="flex items-center gap-2.5 min-w-0"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-book-open shrink-0 transition-colors text-[#6E79F4]"
+                  fill="none"
+                  height="15"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="15"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 7v14"
+                  />
+                  <path
+                    d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="min-h-screen bg-[#0B0C0F] text-[#EDEFF5] font-sans"
+    >
+      <aside
+        class="hidden lg:block fixed inset-y-0 left-0 w-60 z-40"
+      >
+        <div
+          class="flex flex-col h-full bg-[#0E0F13] border-r border-[#1F2128]"
+        >
+          <div
+            class="flex items-center gap-2.5 px-5 h-16 border-b border-[#1F2128] shrink-0"
+          >
+            <div
+              class="bg-[#6E79F4]/10 text-[#6E79F4] p-2 rounded-xl border border-[#6E79F4]/25"
+            >
+              <svg
+                aria-hidden="true"
+                class="lucide lucide-terminal"
+                fill="none"
+                height="16"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 19h8"
+                />
+                <path
+                  d="m4 17 6-6-6-6"
+                />
+              </svg>
+            </div>
+            <div
+              class="flex flex-col min-w-0"
+            >
+              <span
+                class="font-bold text-[13px] tracking-tight text-[#EDEFF5] leading-tight"
+              >
+                Hynox Campus
+              </span>
+              <span
+                class="text-[9px] text-[#A3A9B6] font-bold tracking-[0.14em] uppercase"
+              >
+                Student Hub
+              </span>
+            </div>
+          </div>
+          <nav
+            aria-label="Primary"
+            class="flex flex-col gap-0.5 px-3 py-4 flex-1 overflow-y-auto"
+          >
+            <button
+              class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition-all duration-150 cursor-pointer group text-[#C2C6D1] hover:text-[#EDEFF5] hover:bg-[#1A1C22]"
+            >
+              <span
+                class="flex items-center gap-2.5 min-w-0"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-building shrink-0 transition-colors text-[#A3A9B6] group-hover:text-[#C2C6D1]"
+                  fill="none"
+                  height="15"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="15"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 10h.01"
+                  />
+                  <path
+                    d="M12 14h.01"
+                  />
+                  <path
+                    d="M12 6h.01"
+                  />
+                  <path
+                    d="M16 10h.01"
+                  />
+                  <path
+                    d="M16 14h.01"
+                  />
+                  <path
+                    d="M16 6h.01"
+                  />
+                  <path
+                    d="M8 10h.01"
+                  />
+                  <path
+                    d="M8 14h.01"
+                  />
+                  <path
+                    d="M8 6h.01"
+                  />
+                  <path
+                    d="M9 22v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"
+                  />
+                  <rect
+                    height="20"
+                    rx="2"
+                    width="16"
+                    x="4"
+                    y="2"
+                  />
+                </svg>
+                <span
+                  class="truncate"
+                >
+                  Overview
+                </span>
+              </span>
+            </button>
+            <button
+              aria-current="page"
+              class="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold text-left transition-all duration-150 cursor-pointer group bg-[#6E79F4]/12 text-[#EDEFF5]"
+            >
+              <span
+                class="flex items-center gap-2.5 min-w-0"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="lucide lucide-book-open shrink-0 transition-colors text-[#6E79F4]"
+                  fill="none"
+                  height="15"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  width="15"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 7v14"
+                  />
+                  <path
+                    d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/app/student/student-assets.test.tsx:38:23
+     36|   fireEvent.click(await screen.findByRole("button", { name: "Open cour…
+     37|   fireEvent.click(await screen.findByRole("button", { name: /^Open les…
+     38|   expect(await screen.findByText("QA PDF attachment")).toBeTruthy();
+       |                       ^
+     39|   expect(screen.getByRole("link", { name: /Open\/Download/ }).getAttri…
+     40|   fireEvent.click(screen.getByRole("button", { name: /^Open lesson QA …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  14:57:09
+   Duration  4.68s (transform 535ms, setup 0ms, import 1.23s, tests 1.30s, environment 1.86s)
+

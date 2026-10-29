@@ -22,7 +22,7 @@ function serverTodayStr() {
 }
 
 async function requirePermission(cohortId: string, dateStr?: string) {
-  const userDetails = await getCurrentUser();
+  const userDetails = await getCurrentUser(true);
   if (!userDetails) {
     return { error: "Unauthenticated. Please log in." } as const;
   }

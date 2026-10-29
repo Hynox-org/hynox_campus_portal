@@ -1,27 +1,33 @@
-﻿"use client";
+"use client";
 
+import type { Institution, Program, Course, Cohort, Activity, ActivityDetails, QuizQuestion, QuizOption, ChallengeExample, CampusUser } from "@/types/campus";
+import type { Row } from "@/types/database-rows";
+import { errorMessage } from "@/lib/error-message";
+import { useInputsChanged } from "@/hooks/use-inputs-changed";
+type QuestionDraft = Pick<QuizQuestion, "id" | "question_text" | "question_type" | "points"> & {
+  options: Array<Pick<QuizOption, "id" | "option_text" | "is_correct"> & Partial<QuizOption>>;
+};
+type ManagedActivity = Activity & { cohort_ids?: string[] };
+type StudentProgress = Row<"learning.student_activity_progress"> & { student?: CampusUser | null };
+﻿
+import { quizOptions } from "@/lib/quiz-options";
+import { createPortal } from "react-dom";
 import React, { useState, useEffect } from "react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { DASHBOARD_GC_TIME, DASHBOARD_REFETCH_INTERVAL, DASHBOARD_STALE_TIME, seedAcademicListCaches, unwrapActionResult } from "@/lib/dashboard-query";
 import { getInstitutionPrefetchDataAction, getDeliveryPrefetchDataAction } from "@/app/actions/prefetch-actions";
 import { 
-  listProgramsAction,
-  listCoursesAction,
   listModulesAction,
-  listLessonsAction,
-  listTenantCoursesAction,
   listLessonsForCourseAction,
   createModuleAction,
   createLessonAction
 } from "@/app/actions/academic-actions";
-import { listCohortsAction } from "@/app/actions/delivery-actions";
 import {
   listAllActivitiesAction,
   createActivityAndSubclassAction,
   createQuizQuestionAndOptionsAction,
   createChallengeExampleAction,
   createChallengeTestCaseAction,
-  assignActivityToCohortAction,
   getActivityDetailsNoStudentAction,
   listActivityProgressAction,
   updateActivityAndSubclassAction,
@@ -32,10 +38,8 @@ import {
   updateQuizQuestionAndOptionsAction
 } from "@/app/actions/learning-actions";
 import { 
-  BookOpen, Plus, Folder, Calendar, Award, CheckCircle, 
-  HelpCircle, Trash2, Shield, Eye, Layers, Copy, List, 
-  AlertCircle, ChevronRight, X, Sparkles, FileText, CheckCircle2, Clock,
-  Edit, Save
+  Plus, Calendar, Award, HelpCircle, Trash2, Shield, Eye, Layers, List,
+  AlertCircle, CheckCircle2, Edit, Save, X
 } from "lucide-react";
 import { SecondaryLoader } from "@/components/secondary-loader";
 import ChallengeEditor from "@/app/teacher/challenge-editor";
@@ -56,7 +60,7 @@ function formatDatetimeLocal(isoString?: string) {
 }
 
 interface LearningManagerProps {
-  institutions: any[];
+  institutions: Institution[];
   mode?: "create" | "view";
   /** When true (teacher view), the institution is derived from the teacher's own cohort
    * assignments instead of being picked from a dropdown like a super admin would. */
@@ -68,29 +72,25 @@ interface LearningManagerProps {
 export default function LearningManager({ institutions, mode = "create", lockInstitution = false, scopeLabel }: LearningManagerProps) {
   const queryClient = useQueryClient();
   const [selectedInstId, setSelectedInstId] = useState("");
-  const [programs, setPrograms] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgId, setSelectedProgId] = useState("");
-  const [courses, setCourses] = useState<any[]>([]);
-  const [allTenantCourses, setAllTenantCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [allTenantCourses, setAllTenantCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState("");
-  const [modules, setModules] = useState<any[]>([]);
-  const [selectedModuleId, setSelectedModuleId] = useState("");
-  const [lessons, setLessons] = useState<any[]>([]);
-  const [allCourseLessons, setAllCourseLessons] = useState<any[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState("");
-  const [cohorts, setCohorts] = useState<any[]>([]);
+  const [cohorts, setCohorts] = useState<Cohort[]>([]);
   
   // Base Activity list
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<ManagedActivity[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [cohortFilter, setCohortFilter] = useState<string>("all");
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useToast();
 
   // Sidebar details drawer state for viewed activity
-  const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
-  const [activityDetails, setActivityDetails] = useState<any | null>(null);
-  const [studentProgressList, setStudentProgressList] = useState<any[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<ManagedActivity | null>(null);
+  const [activityDetails, setActivityDetails] = useState<ActivityDetails | null>(null);
+  const [studentProgressList, setStudentProgressList] = useState<StudentProgress[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<"config" | "performance">("config");
 
@@ -197,7 +197,6 @@ export default function LearningManager({ institutions, mode = "create", lockIns
   const [quizMaxAttempts, setQuizMaxAttempts] = useState(1);
   const [quizShuffleQ, setQuizShuffleQ] = useState(false);
   const [quizShuffleO, setQuizShuffleO] = useState(false);
-  const [quizShowResults, setQuizShowResults] = useState(true);
   const [quizStrictMode, setQuizStrictMode] = useState(false);
 
   // Subclass forms: Project
@@ -210,23 +209,22 @@ export default function LearningManager({ institutions, mode = "create", lockIns
   // Subclass forms: Challenge
   const [chalDifficulty, setChalDifficulty] = useState("easy");
   const [chalStatement, setChalStatement] = useState("");
-  const [chalInput, setChalInput] = useState("");
-  const [chalOutput, setChalOutput] = useState("");
-  const [chalConstraints, setChalConstraints] = useState("");
+  const chalInput = "";
+  const chalOutput = "";
+  const chalConstraints = "";
   const [chalTime, setChalTime] = useState(1000);
-  const [chalMemory, setChalMemory] = useState(256);
+  const chalMemory = 256;
   const [chalStrictMode, setChalStrictMode] = useState(false);
 
   // Newly created subclass reference
-  const [createdActivityId, setCreatedActivityId] = useState("");
   const [createdQuizId, setCreatedQuizId] = useState("");
   const [createdChallengeId, setCreatedChallengeId] = useState("");
   const [baseDetailsSaved, setBaseDetailsSaved] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
 
   // Child additions helper: Quiz Questions
-  const [quizQuestionsList, setQuizQuestionsList] = useState<any[]>([]);
-  const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
+  const [quizQuestionsList, setQuizQuestionsList] = useState<QuestionDraft[]>([]);
+  const [editingQuestion, setEditingQuestion] = useState<QuestionDraft | null>(null);
   const [newQuestionText, setNewQuestionText] = useState("");
   const [newQuestionType, setNewQuestionType] = useState("single_choice");
   const [newQuestionPoints, setNewQuestionPoints] = useState(10);
@@ -234,8 +232,8 @@ export default function LearningManager({ institutions, mode = "create", lockIns
   const [newQuestionCorrectIndices, setNewQuestionCorrectIndices] = useState<number[]>([0]);
 
   // Child additions helper: Challenge Examples / Test cases
-  const [examplesList, setExamplesList] = useState<any[]>([]);
-  const [testCasesList, setTestCasesList] = useState<any[]>([]);
+  const [examplesList, setExamplesList] = useState<ChallengeExample[]>([]);
+  const [testCasesList, setTestCasesList] = useState<Row<"learning.challenge_test_cases">[]>([]);
   
   const [newExInput, setNewExInput] = useState("");
   const [newExOutput, setNewExOutput] = useState("");
@@ -247,7 +245,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
 
   // Assignment form
   const [assignCohortId, setAssignCohortId] = useState("");
-  const [assignRequired, setAssignRequired] = useState(true);
+  const assignRequired = true;
   const [assignFrom, setAssignFrom] = useState("");
   const [assignUntil, setAssignUntil] = useState("");
 
@@ -259,7 +257,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
     staleTime: DASHBOARD_STALE_TIME,
     gcTime: DASHBOARD_GC_TIME,
     refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
   });
   const { data: instDeliveryData, isLoading: loadingDelivery } = useQuery({
     queryKey: ["delivery-prefetch", selectedInstId],
@@ -268,7 +266,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
     staleTime: DASHBOARD_STALE_TIME,
     gcTime: DASHBOARD_GC_TIME,
     refetchInterval: DASHBOARD_REFETCH_INTERVAL,
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: false,
   });
   const { data: instActivitiesData, isLoading: loadingActivities } = useQuery({
     queryKey: ["all-activities", selectedInstId],
@@ -282,51 +280,30 @@ export default function LearningManager({ institutions, mode = "create", lockIns
 
   const isDataLoading = loadingAcademic || loadingDelivery || loadingActivities;
 
-  // Teacher view: institution is derived from their own cohort assignments, not chosen manually.
-  useEffect(() => {
-    if (lockInstitution && !selectedInstId && institutions.length > 0) {
-      setSelectedInstId(institutions[0].id);
-    }
-  }, [lockInstitution, institutions, selectedInstId]);
-
-  // Sync state from React Query data
-  useEffect(() => {
+  if (useInputsChanged([lockInstitution, institutions, selectedInstId])) {
+    if (lockInstitution && !selectedInstId && institutions.length) setSelectedInstId(institutions[0].id);
+  }
+  if (useInputsChanged([instAcademicData])) {
     if (instAcademicData?.success) {
-      const allPrograms = instAcademicData.programs || [];
-      const allCourses = instAcademicData.courses || [];
-      setPrograms(allPrograms);
-      setCourses(allCourses);
-      setAllTenantCourses(allCourses);
-      // Only seed list keys with an identical data contract. The module query
-      // is deliberately deeper (modules + lessons + resources).
-      seedAcademicListCaches(queryClient, selectedInstId, instAcademicData);
+      setPrograms(instAcademicData.programs || []);
+      setAllTenantCourses(instAcademicData.courses || []);
     }
+  }
+  useEffect(() => {
+    if (instAcademicData?.success) seedAcademicListCaches(queryClient, selectedInstId, instAcademicData);
   }, [instAcademicData, queryClient, selectedInstId]);
-
-  useEffect(() => {
-    if (instDeliveryData?.success) {
-      setCohorts(instDeliveryData.cohorts || []);
-    }
-  }, [instDeliveryData]);
-
-  useEffect(() => {
-    if (instActivitiesData) {
-      setActivities(instActivitiesData);
-    }
-  }, [instActivitiesData]);
-
-  // Hierarchy updates - only for program/course level navigation
-  useEffect(() => {
-    if (!selectedProgId) {
-      setCourses(allTenantCourses);
-      return;
-    }
-    listCoursesAction(selectedProgId).then(res => setCourses(res.courses || []));
-  }, [selectedProgId, allTenantCourses]);
+  if (useInputsChanged([instDeliveryData])) {
+    if (instDeliveryData?.success) setCohorts(instDeliveryData.cohorts || []);
+  }
+  if (useInputsChanged([instActivitiesData])) {
+    if (instActivitiesData) setActivities(instActivitiesData);
+  }
+  if (useInputsChanged([selectedProgId, allTenantCourses])) {
+    setCourses(selectedProgId ? allTenantCourses.filter(course => course.program_id === selectedProgId) : allTenantCourses);
+  }
 
   const handleCourseSelection = async (courseId: string) => {
     setSelectedCourseId(courseId);
-    setSelectedModuleId("");
     setSelectedLessonId("");
     if (!courseId) return;
 
@@ -377,9 +354,9 @@ export default function LearningManager({ institutions, mode = "create", lockIns
           throw new Error("Could not find or create a module for this course.");
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error setting up default lesson:", err);
-      showError("Failed to initialize course module/lesson: " + err.message);
+      showError("Failed to initialize course module/lesson: " + errorMessage(err, "Unable to initialize curriculum"));
     } finally {
       setLoading(false);
     }
@@ -430,11 +407,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       return;
     }
 
-    const optionsPayload = newQuestionOptions.filter(o => o.trim()).map((o, idx) => ({
-      optionText: o,
-      isCorrect: newQuestionCorrectIndices.includes(idx),
-      position: idx + 1
-    }));
+    const optionsPayload = quizOptions(newQuestionOptions, newQuestionCorrectIndices);
 
     if (newQuestionType !== "short_answer" && optionsPayload.length < 2) {
       showError("Please provide at least 2 non-empty options.");
@@ -468,7 +441,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
             position: opt.position
           }))
         };
-        setQuizQuestionsList((prev: any[]) => prev.map(q => q.id === editingQuestion.id ? updatedQ : q));
+        setQuizQuestionsList((prev) => prev.map(q => q.id === editingQuestion.id ? updatedQ : q));
         showSuccess("Question updated locally!");
         setEditingQuestion(null);
       } else {
@@ -485,7 +458,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
             position: opt.position
           }))
         };
-        setQuizQuestionsList((prev: any[]) => [...prev, newQ]);
+        setQuizQuestionsList((prev) => [...prev, newQ]);
         showSuccess("Question added locally!");
       }
       setNewQuestionText("");
@@ -508,12 +481,12 @@ export default function LearningManager({ institutions, mode = "create", lockIns
         );
 
         if (res.question) {
-          setQuizQuestionsList((prev: any[]) => prev.map(q => q.id === editingQuestion.id ? res.question : q));
+          setQuizQuestionsList((prev) => prev.map(q => q.id === editingQuestion.id ? res.question : q));
           
           if (activityDetails && activityDetails.questions) {
-            setActivityDetails((prev: any) => ({
+            setActivityDetails((prev) => ({
               ...prev,
-              questions: prev.questions.map((q: any) => q.id === editingQuestion.id ? res.question : q)
+              questions: (prev?.questions || []).map((q) => q.id === editingQuestion.id ? res.question : q)
             }));
           }
 
@@ -541,12 +514,12 @@ export default function LearningManager({ institutions, mode = "create", lockIns
         );
 
         if (res.question) {
-          setQuizQuestionsList((prev: any[]) => [...prev, res.question]);
+          setQuizQuestionsList((prev) => [...prev, res.question]);
           
           if (activityDetails && activityDetails.questions) {
-            setActivityDetails((prev: any) => ({
+            setActivityDetails((prev) => ({
               ...prev,
-              questions: [...(prev.questions || []), res.question]
+              questions: [...(prev?.questions || []), res.question]
             }));
           }
 
@@ -571,7 +544,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
     if (!confirm("Are you sure you want to delete this question?")) return;
 
     if (createdQuizId === "temp-quiz") {
-      setQuizQuestionsList((prev: any[]) => prev.filter(q => q.id !== questionId));
+      setQuizQuestionsList((prev) => prev.filter(q => q.id !== questionId));
       showSuccess("Question deleted locally!");
       return;
     }
@@ -579,11 +552,11 @@ export default function LearningManager({ institutions, mode = "create", lockIns
     setLoading(true);
     const res = await deleteQuizQuestionAction(questionId);
     if (res.success) {
-      setQuizQuestionsList((prev: any[]) => prev.filter(q => q.id !== questionId));
+      setQuizQuestionsList((prev) => prev.filter(q => q.id !== questionId));
       if (activityDetails && activityDetails.questions) {
-        setActivityDetails((prev: any) => ({
+        setActivityDetails((prev) => ({
           ...prev,
-          questions: prev.questions.filter((q: any) => q.id !== questionId)
+          questions: (prev?.questions || []).filter((q) => q.id !== questionId)
         }));
       }
       showSuccess("Question deleted successfully!");
@@ -593,15 +566,15 @@ export default function LearningManager({ institutions, mode = "create", lockIns
     setLoading(false);
   };
 
-  const handleStartEditQuestion = (q: any) => {
+  const handleStartEditQuestion = (q: QuestionDraft) => {
     setEditingQuestion(q);
     setNewQuestionText(q.question_text);
     setNewQuestionType(q.question_type);
     setNewQuestionPoints(Number(q.points));
     if (q.options) {
-      setNewQuestionOptions(q.options.map((o: any) => o.option_text));
+      setNewQuestionOptions(q.options.map((o) => o.option_text));
       const indices: number[] = [];
-      q.options.forEach((o: any, idx: number) => {
+      q.options.forEach((o, idx: number) => {
         if (o.is_correct) indices.push(idx);
       });
       setNewQuestionCorrectIndices(indices);
@@ -653,7 +626,15 @@ export default function LearningManager({ institutions, mode = "create", lockIns
         chal_constraints: chalConstraints,
         chal_time_limit: chalTime,
         chal_memory_limit: chalMemory,
-        chal_strict_mode: chalStrictMode
+        chal_strict_mode: chalStrictMode,
+        questions: activityType === "quiz" ? quizQuestionsList.map((q, index) => ({
+          question_text: q.question_text, question_type: q.question_type, points: Number(q.points), position: index + 1,
+          options: q.options.map((opt: { option_text: string; is_correct?: boolean | null }, position: number) => ({
+            optionText: opt.option_text, isCorrect: !!opt.is_correct, position: position + 1,
+          })),
+        })) : undefined,
+        assignments: [{ cohort_id: assignCohortId, is_required: assignRequired,
+          available_from: assignFrom || null, available_until: assignUntil || null }],
       });
 
       if (res.error) {
@@ -663,48 +644,6 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       const createdActivity = res.activity;
       if (!createdActivity) {
         throw new Error("Failed to instantiate learning activity.");
-      }
-
-      if (activityType === "quiz") {
-        const details = await getActivityDetailsNoStudentAction(createdActivity.id, "quiz");
-        if (details.error || !details.quiz) {
-          throw new Error(details.error || "Quiz details record not found.");
-        }
-        
-        const dbQuizId = details.quiz.id;
-        for (let i = 0; i < quizQuestionsList.length; i++) {
-          const q = quizQuestionsList[i];
-          const optionsPayload = q.options.map((opt: any, idx: number) => ({
-            optionText: opt.option_text,
-            isCorrect: opt.is_correct,
-            position: idx + 1
-          }));
-
-          const qRes = await createQuizQuestionAndOptionsAction(
-            dbQuizId,
-            q.question_text,
-            q.question_type,
-            q.points,
-            i + 1,
-            optionsPayload
-          );
-
-          if (qRes.error) {
-            throw new Error(`Failed to insert question "${q.question_text}": ${qRes.error}`);
-          }
-        }
-      }
-
-      const assignRes = await assignActivityToCohortAction({
-        activity_id: createdActivity.id,
-        cohort_id: assignCohortId,
-        is_required: assignRequired,
-        available_from: assignFrom || null,
-        available_until: assignUntil || null
-      });
-
-      if (assignRes.error) {
-        throw new Error(`Failed assigning to group: ${assignRes.error}`);
       }
 
       showSuccess(`Learning activity "${title}" successfully published & assigned!`);
@@ -729,17 +668,16 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       setBaseDetailsSaved(false);
       setReviewMode(false);
       setCreatedQuizId("");
-      setCreatedActivityId("");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Unified publishing failed:", err);
-      showError(err.message || "Unified publishing failed.");
+      showError(errorMessage(err, "Unified publishing failed."));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteActivity = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this activity? This will remove all associated assignments and attempts!")) return;
+    if (!confirm("Are you sure you want to delete this activity? This will hide the activity and preserve its learning history.")) return;
     setLoading(true);
     const res = await deleteActivityAction(id);
     if (res.success) {
@@ -818,80 +756,6 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       showSuccess("Test Case deleted!");
     } else {
       showError(res.error || "Failed to delete test case");
-    }
-    setLoading(false);
-  };
-
-  const handleAssignSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!createdActivityId || !assignCohortId) {
-      showError("Please select a target Group for assignment.");
-      return;
-    }
-
-    setLoading(true);
-
-    // Client-side date check
-    const cohort = cohorts.find(c => c.id === assignCohortId);
-    if (cohort) {
-      const start = cohort.start_date ? new Date(cohort.start_date) : null;
-      const end = cohort.end_date ? new Date(cohort.end_date) : null;
-
-      if (assignFrom) {
-        const fromDate = new Date(assignFrom);
-        if (start && fromDate < start) {
-          showError(`Available From date (${fromDate.toLocaleDateString()}) cannot be before group start date (${start.toLocaleDateString()}).`);
-          setLoading(false);
-          return;
-        }
-        if (end && fromDate > end) {
-          showError(`Available From date (${fromDate.toLocaleDateString()}) cannot be after group end date (${end.toLocaleDateString()}).`);
-          setLoading(false);
-          return;
-        }
-      }
-      if (assignUntil) {
-        const untilDate = new Date(assignUntil);
-        if (start && untilDate < start) {
-          showError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be before group start date (${start.toLocaleDateString()}).`);
-          setLoading(false);
-          return;
-        }
-        if (end && untilDate > end) {
-          showError(`Available Until date (${untilDate.toLocaleDateString()}) cannot be after group end date (${end.toLocaleDateString()}).`);
-          setLoading(false);
-          return;
-        }
-      }
-      if (assignFrom && assignUntil) {
-        const fromDate = new Date(assignFrom);
-        const untilDate = new Date(assignUntil);
-        if (fromDate > untilDate) {
-          showError("Available From date cannot be after Available Until date.");
-          setLoading(false);
-          return;
-        }
-      }
-    }
-
-    const res = await assignActivityToCohortAction({
-      activity_id: createdActivityId,
-      cohort_id: assignCohortId,
-      is_required: assignRequired,
-      available_from: assignFrom,
-      available_until: assignUntil
-    });
-
-    if (res.assignment) {
-      showSuccess("Activity assigned to group successfully!");
-      setCreatedActivityId("");
-      setCreatedQuizId("");
-      setCreatedChallengeId("");
-      setQuizQuestionsList([]);
-      setExamplesList([]);
-      setTestCasesList([]);
-    } else if (res.error) {
-      showError(res.error);
     }
     setLoading(false);
   };
@@ -1040,7 +904,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
   };
 
   // Open sidebar details drawer for selected activity (View Mode)
-  const handleViewActivityClick = async (activity: any) => {
+  const handleViewActivityClick = async (activity: ManagedActivity) => {
     setSelectedActivity(activity);
     setActivityDetails(null);
     setStudentProgressList([]);
@@ -1089,7 +953,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       chal_strict_mode: detRes?.challenge?.strict_mode ?? false,
 
       // Assignments
-      assignments: (detRes?.assignments || []).map((a: any) => ({
+      assignments: (detRes?.assignments || []).map((a) => ({
         id: a.id,
         cohort_id: a.cohort_id,
         available_from: formatDatetimeLocal(a.available_from),
@@ -1516,6 +1380,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                           <option value="single_choice">Single Choice</option>
                           <option value="multiple_choice">Multiple Choice</option>
                           <option value="true_false">True / False</option>
+                          <option value="short_answer">Short answer</option>
                         </select>
                       </div>
                       <div>
@@ -1854,12 +1719,12 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                               </span>
                             </div>
                             <div className="grid grid-cols-1 gap-2 pl-2">
-                              {q.options?.map((opt: any, optIdx: number) => (
+                              {q.options?.map((opt, optIdx: number) => (
                                 <div key={opt.id || optIdx} className="flex items-center gap-2 text-xs border border-[#1A1C22] p-2 rounded hover:bg-[#16171D]/50">
                                   <input
                                     type={q.question_type === "multiple_choice" ? "checkbox" : "radio"}
                                     disabled
-                                    checked={opt.is_correct}
+                                    checked={!!opt.is_correct}
                                     className="accent-[#6E79F4] pointer-events-none scale-90"
                                   />
                                   <span className={opt.is_correct ? "text-[#2FBF71] font-medium" : "text-[#C2C6D1]"}>
@@ -2022,7 +1887,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                   (cohortFilter === "all" || (act.cohort_ids || []).includes(cohortFilter))
               );
 
-              const typeBadge = (act: any) => (
+              const typeBadge = (act: ManagedActivity) => (
                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                   act.activity_type_code === "quiz" ? "bg-[#22D3EE]/10 text-[#22D3EE] border border-[#22D3EE]/20" :
                   act.activity_type_code === "project" ? "bg-[#F5B04A]/10 text-[#F5B04A] border border-[#F5B04A]/20" :
@@ -2165,7 +2030,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
       )}
 
       {/* Activity Details & Student Performance Drawer */}
-      {selectedActivity && (
+      {selectedActivity && createPortal(
         <>
           {/* Drawer backdrop */}
           <div 
@@ -2185,10 +2050,11 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                 <p className="text-[10px] text-[#C2C6D1] mt-0.5 truncate">{selectedActivity.title}</p>
               </div>
               <button
+                aria-label="Close activity console"
                 onClick={() => setSelectedActivity(null)}
                 className="p-1.5 hover:bg-[#1A1C22] rounded-lg text-[#C2C6D1] hover:text-[#EDEFF5] transition-colors cursor-pointer font-bold shrink-0"
               >
-                âœ•
+                <X size={16} />
               </button>
             </div>
 
@@ -2357,7 +2223,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                             <button
                               type="button"
                               onClick={() => {
-                                setCreatedQuizId(activityDetails?.quiz?.id);
+                                setCreatedQuizId(activityDetails?.quiz?.id || "");
                                 setEditingQuestion(null);
                                 setNewQuestionText("");
                                 setNewQuestionOptions(["", "", "", ""]);
@@ -2372,7 +2238,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                           {/* Existing questions listing in edit mode */}
                           {activityDetails?.questions && activityDetails.questions.length > 0 && (
                             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                              {activityDetails.questions.map((q: any, idx: number) => (
+                              {activityDetails.questions.map((q, idx: number) => (
                                 <div key={q.id || idx} className="p-2 border border-[#23252C] rounded-lg bg-[#16171D] flex justify-between items-center gap-4">
                                   <div className="flex-1 min-w-0">
                                     <p className="font-semibold truncate text-[11px]">Q{idx + 1}: {q.question_text}</p>
@@ -2382,7 +2248,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        setCreatedQuizId(activityDetails?.quiz?.id);
+                                        setCreatedQuizId(activityDetails?.quiz?.id || "");
                                         handleStartEditQuestion(q);
                                       }}
                                       className="p-1 hover:bg-[#23252C] text-[#6E79F4] rounded transition-colors"
@@ -2442,6 +2308,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                                     <option value="single_choice">Single Choice</option>
                                     <option value="multiple_choice">Multiple Choice</option>
                                     <option value="true_false">True / False</option>
+                          <option value="short_answer">Short answer</option>
                                   </select>
                                 </div>
                                 <div>
@@ -2917,7 +2784,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                           Quiz Syllabus Questions ({activityDetails.questions.length})
                         </h4>
                         <div className="space-y-3">
-                          {activityDetails.questions.map((q: any, idx: number) => (
+                          {activityDetails.questions.map((q, idx: number) => (
                             <div key={q.id} className="border border-[#23252C] p-3 rounded-lg bg-[#131418] space-y-2">
                               <div className="flex justify-between items-start font-semibold text-[#EDEFF5]">
                                 <span>Q{idx + 1}: {q.question_text}</span>
@@ -2926,7 +2793,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                                 </span>
                               </div>
                               <div className="pl-2.5 border-l-2 border-[#1F2128] space-y-1">
-                                {q.options?.map((opt: any) => (
+                                {q.options?.map((opt) => (
                                   <div key={opt.id} className="flex items-center gap-1.5 text-[11px]">
                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${opt.is_correct ? "bg-[#2FBF71]" : "bg-[#2E313A]"}`} />
                                     <span className={opt.is_correct ? "text-[#2FBF71] font-medium" : "text-[#C2C6D1]"}>{opt.option_text}</span>
@@ -2961,7 +2828,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                         {activityDetails.examples && activityDetails.examples.length > 0 && (
                           <div className="space-y-2">
                             <span className="font-bold text-[#C2C6D1] uppercase text-[9px] tracking-wider block">Visible Examples</span>
-                            {activityDetails.examples.map((ex: any) => (
+                            {activityDetails.examples.map((ex) => (
                               <div key={ex.id} className="border border-[#23252C] rounded-lg p-2.5 bg-[#16171D]/30 font-mono text-[10px] space-y-1">
                                 <div><span className="text-[#C2C6D1]">Input:</span> {ex.input_example}</div>
                                 <div><span className="text-[#C2C6D1]">Output:</span> {ex.output_example}</div>
@@ -3007,7 +2874,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
 
                   <div className="space-y-2">
                     {studentProgressList.length > 0 ? (
-                      studentProgressList.map((prog: any) => (
+                      studentProgressList.map((prog) => (
                         <div key={prog.id} className="border border-[#23252C] rounded-xl p-3 bg-[#131418] hover:bg-[#16171D]/40 transition-colors flex justify-between items-center gap-4">
                           <div className="min-w-0">
                             <span className="font-semibold text-xs text-[#EDEFF5] block truncate">
@@ -3030,7 +2897,9 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                               {prog.status_code}
                             </span>
                             <span className="font-mono text-xs font-bold text-[#EDEFF5]">
-                              Score: {prog.score ?? 0} / {selectedActivity.max_score}
+                              Score: {prog.score ?? 0} / {selectedActivity.activity_type_code === "quiz"
+                                ? activityDetails?.questions?.reduce((total, question) => total + (question.points ?? 0), 0) ?? "—"
+                                : selectedActivity.max_score}
                             </span>
                           </div>
                         </div>
@@ -3097,7 +2966,7 @@ export default function LearningManager({ institutions, mode = "create", lockIns
               )}
             </div>
           </div>
-        </>
+        </>, document.body
       )}
 
     </div>

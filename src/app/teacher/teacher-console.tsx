@@ -1,122 +1,95 @@
 "use client";
+import { isPassedQuizAttempt, canApproveQuizRetake } from "@/lib/quiz-result";
+import { useHydrated,useInputsChanged } from "@/hooks/use-inputs-changed";
+import { errorMessage } from "@/lib/error-message";
+import type { ActivityDetails,ChallengeExample,ChallengeSubmission,Cohort,Course,Enrollment,Institution,Activity as LearningActivity,Lesson,LessonProgress,Lookup,Module,Program,ProjectSubmission,QuizAttempt,QuizQuestion,QuizSession } from "@/types/campus";
+import type { Row } from "@/types/database-rows";
 
-import React, { useState, useTransition, useEffect, useRef } from "react";
-import AttendanceModule from "@/components/attendance-register/attendance-module";
-import ChallengeEditor from "@/app/teacher/challenge-editor";
-import { MarkdownRenderer } from "@/components/markdown-renderer";
-import { useQueryClient } from "@tanstack/react-query";
-import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
-import { useAcademicPrefetchData } from "@/hooks/use-academics";
-import { useToast } from "@/components/toast";
-import { 
-  Users, 
-  BookOpen, 
-  CheckSquare, 
-  Terminal, 
-  Calendar, 
-  Search, 
-  ExternalLink, 
-  Star, 
-  Clock, 
-  ArrowRight,
-  TrendingUp,
-  AlertCircle,
-  Code2,
-  FileCode,
-  Layers,
-  Activity,
-  Plus,
-  Video,
-  FileText,
-  Trash2,
-  HelpCircle,
-  Save,
-  ChevronRight,
-  ShieldAlert,
-  Menu,
-  Award,
-  X,
-  RefreshCw,
-  Edit,
-  Eye,
-  File,
-  FolderCode,
-  Settings,
-  GraduationCap,
-  CheckCircle2,
-  ChevronDown,
-  Loader2,
-  Building2,
-  MapPin
-} from "lucide-react";
-import { 
-  reviewProjectSubmissionAction,
-  assignActivityToCohortAction,
-  createActivityAndSubclassAction,
-  createQuizQuestionAndOptionsAction,
-  createChallengeExampleAction,
-  createChallengeTestCaseAction,
-  getQuizDetailsAction,
-  getQuizSessionDetailsAction,
-  getProgrammingChallengeDetailsAction,
-  listProjectSubmissionsAction,
-  listChallengeSubmissionsAction,
-  listAllActivitiesAction,
-  listQuizAttemptsAction,
-  updateActivityAndSubclassAction,
-  deleteChallengeExampleAction,
-  deleteChallengeTestCaseAction,
-  getActivityDetailsNoStudentAction,
-  listCohortProjectSubmissionsAction,
-  listCohortChallengeSubmissionsAction,
-  listCohortActivitiesAction,
-  listCohortQuizAttemptsAction,
-  approveQuizRetakeAction
-} from "@/app/actions/learning-actions";
 import {
-  listTenantCoursesAction,
-  listLessonsForCourseAction,
-  listModulesAction,
-  listLessonsAction,
-  createLessonAction,
-  updateLessonAction,
-  createLessonResourceAction,
-  deleteLessonResourceAction,
-  listLessonResourcesAction,
-  listProgramsAction,
-  createModuleAction,
-  deleteModuleAction,
-  deleteLessonAction,
-  getAcademicLookupsAction
+createLessonAction,
+createLessonResourceAction,
+createModuleAction,
+deleteLessonAction,
+deleteLessonResourceAction,
+deleteModuleAction,
+getAcademicLookupsAction,
+listLessonsAction,
+listLessonsForCourseAction,
+listModulesAction,
+updateLessonAction
 } from "@/app/actions/academic-actions";
 import {
-  listCohortsAction,
-  listEnrollmentsAction,
-  getStudentDeliveryDataAction,
-  listStudentLessonProgressAction,
-  listCohortEnrollmentsAction,
-  listCohortCourseAssignmentsAction
+getStudentDeliveryDataAction,
+listStudentLessonProgressAction
 } from "@/app/actions/delivery-actions";
+import {
+approveQuizRetakeAction,
+assignActivityToCohortAction,
+createActivityAndSubclassAction,
+createChallengeExampleAction,
+createChallengeTestCaseAction,
+createQuizQuestionAndOptionsAction,
+deleteChallengeExampleAction,
+deleteChallengeTestCaseAction,
+getActivityDetailsNoStudentAction,
+getProgrammingChallengeDetailsAction,
+getQuizDetailsAction,
+getQuizSessionDetailsAction,
+reviewProjectSubmissionAction,
+updateActivityAndSubclassAction
+} from "@/app/actions/learning-actions";
 import LearningManager from "@/app/admin/learning-manager";
+import ChallengeEditor from "@/app/teacher/challenge-editor";
 import AppShell from "@/components/app-shell";
+import AttendanceModule from "@/components/attendance-register/attendance-module";
 import { CustomSelect } from "@/components/custom-select";
+import { LessonMedia,lessonMediaSource } from "@/components/lesson-media";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { useToast } from "@/components/toast";
+import { useAcademicPrefetchData } from "@/hooks/use-academics";
+import { useDeliveryData,useLearningData,useTeacherCohorts } from "@/hooks/use-delivery";
+import { useLessonResources } from "@/hooks/use-lesson-resources";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+Activity,
+AlertCircle,
+ArrowRight,
+Award,
+BookOpen,
+Building2,
+Calendar,
+CheckCircle2,
+CheckSquare,
+ChevronDown,
+ChevronRight,
+Clock,
+Code2,
+Edit,
+ExternalLink,
+Eye,
+FileCode,
+FileText,
+FolderCode,
+GraduationCap,
+HelpCircle,
+Layers,
+Loader2,
+MapPin,
+Plus,
+Save,
+Search,
+Settings,
+ShieldAlert,
+Trash2,
+TrendingUp,
+Users,
+Video,
+X
+} from "lucide-react";
+import { quizOptions } from "@/lib/quiz-options";
+import React,{ useEffect,useState,useTransition } from "react";
 
-function formatDatetimeLocal(isoString?: string) {
-  if (!isoString) return "";
-  try {
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return "";
-    const pad = (num: number) => String(num).padStart(2, "0");
-    const y = d.getFullYear();
-    const m = pad(d.getMonth() + 1);
-    const date = pad(d.getDate());
-    const h = pad(d.getHours());
-    const min = pad(d.getMinutes());
-    return `${y}-${m}-${date}T${h}:${min}`;
-  } catch {
-    return "";
-  }
-}
+
 
 import { DashboardLoader } from "@/components/dashboard-loader";
 import { SecondaryLoader } from "@/components/secondary-loader";
@@ -130,8 +103,8 @@ interface TeacherConsoleProps {
   teacherId: string;
   tenantId: string;
   initialCohortId: string;
-  initialCohorts: any[];
-  assignedInstitutions: any[];
+  initialCohorts: Cohort[];
+  assignedInstitutions: Institution[];
   teacherEmail: string;
   teacherName: string;
   primaryRole: string;
@@ -150,47 +123,48 @@ export default function TeacherConsole({
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
+  const [selectedInstId, setSelectedInstId] = useState<string>(assignedInstitutions[0]?.id || tenantId || "");
+  const { data: assignedCohorts } = useTeacherCohorts(teacherId);
+
   // React Query Prefetching - one shot for all academic data
-  const { data: deliveryData, isLoading: loadingDelivery, error: deliveryError } = useDeliveryData(tenantId);
-  const { data: learningData, isLoading: loadingLearning, error: learningError } = useLearningData(tenantId);
-  const { data: academicPrefetch, isLoading: loadingPrograms, error: academicError } = useAcademicPrefetchData(tenantId);
+  const { data: deliveryData, isLoading: loadingDelivery, error: deliveryError } = useDeliveryData(selectedInstId);
+  const { data: learningData, isLoading: loadingLearning, error: learningError } = useLearningData(selectedInstId);
+  const { data: academicPrefetch, isLoading: loadingPrograms, error: academicError } = useAcademicPrefetchData(selectedInstId);
   const acadPrograms = academicPrefetch?.programs;
   const acadCourses = academicPrefetch?.courses ?? EMPTY_LIST;
-  const acadLessons = academicPrefetch?.lessons ?? EMPTY_LIST;
 
   const [activeTab, setActiveTab] = useState<"overview" | "roster" | "projects" | "challenges" | "activities-manager" | "view_activities" | "syllabus" | "quiz-auditor" | "attendance">("overview");
   const [activeParentTab, setActiveParentTab] = useState<"overview" | "students" | "assessments" | "curriculum" | "attendance">("overview");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [, setIsSidebarOpen] = useState(true);
   const [isCohortDropdownOpen, setIsCohortDropdownOpen] = useState(false);
   const [openingStudentId, setOpeningStudentId] = useState<string | null>(null);
 
   // Sync state with URL params after hydration on client
-  useEffect(() => {
+  const hydrated = useHydrated();
+  if (useInputsChanged([hydrated]) && hydrated) {
+    (() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
       const validTabs = ["overview", "roster", "projects", "challenges", "activities-manager", "view_activities", "syllabus", "quiz-auditor", "attendance"];
       if (tab && validTabs.includes(tab)) {
-        setActiveTab(tab as any);
+        setActiveTab(tab as typeof activeTab);
       }
       const parent = params.get("parentTab");
       const validParents = ["overview", "students", "assessments", "curriculum", "attendance"];
       if (parent && validParents.includes(parent)) {
-        setActiveParentTab(parent as any);
+        setActiveParentTab(parent as typeof activeParentTab);
       }
     }
-  }, []);
+  })();
+  }
   
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setIsSidebarOpen(false);
-    }
-  }, []);
+  if (useInputsChanged([hydrated]) && hydrated && window.innerWidth < 1024) setIsSidebarOpen(false);
   
   // Unified Auditor states
-  const [selectedQuizAttempt, setSelectedQuizAttempt] = useState<any>(null);
-  const [auditorFilter, setAuditorFilter] = useState<"all" | "quiz" | "project" | "programming">("all");
-  const [quizAttemptSession, setQuizAttemptSession] = useState<any>(null);
+  const [selectedQuizAttempt, setSelectedQuizAttempt] = useState<QuizAttempt | null>(null);
+
+  const [quizAttemptSession, setQuizAttemptSession] = useState<QuizSession | null>(null);
   const [loadingQuizSession, setLoadingQuizSession] = useState(false);
 
   // Search & Date filters for Auditors
@@ -215,15 +189,18 @@ export default function TeacherConsole({
   };
 
   useEffect(() => {
-    if (selectedQuizAttempt) {
+    if (!selectedQuizAttempt) return;
+    const attemptId = selectedQuizAttempt.id;
+    let cancelled = false;
+    async function loadSession() {
       setLoadingQuizSession(true);
-      getQuizSessionDetailsAction(selectedQuizAttempt.id).then(res => {
-        setQuizAttemptSession(res);
-        setLoadingQuizSession(false);
-      });
-    } else {
-      setQuizAttemptSession(null);
+      try {
+        const res = await getQuizSessionDetailsAction(attemptId);
+        if (!cancelled) setQuizAttemptSession("questions" in res ? res : null);
+      } finally { if (!cancelled) setLoadingQuizSession(false); }
     }
+    void loadSession();
+    return () => { cancelled = true; };
   }, [selectedQuizAttempt]);
 
   // Syllabus Editor State
@@ -235,44 +212,50 @@ export default function TeacherConsole({
 
   // Active selected cohort as the primary driver
   const [selectedCohortId, setSelectedCohortId] = useState<string>(initialCohortId || initialCohorts?.[0]?.id || "");
-  const [selectedInstId, setSelectedInstId] = useState<string>(assignedInstitutions[0]?.id || "");
-  const [programsList, setProgramsList] = useState<any[]>(acadPrograms || []);
+  const [programsList, setProgramsList] = useState<Program[]>(acadPrograms || []);
   const [selectedProgramId, setSelectedProgramId] = useState<string>(acadPrograms?.[0]?.id || "");
-  const [tenantCourses, setTenantCourses] = useState<any[]>(acadCourses || []);
+  const [tenantCourses, setTenantCourses] = useState<Course[]>(acadCourses || []);
 
   // Main collections derived from React Query instantly
-  const cohorts = deliveryData?.cohorts || initialCohorts;
-  const enrollments = deliveryData?.enrollments || [];
+  const cohorts = assignedCohorts || initialCohorts;
+  const enrollments = deliveryData?.enrollments || EMPTY_LIST;
   const activities = learningData?.activities || [];
   const projectSubmissions = learningData?.projectSubmissions || [];
   const challengeSubmissions = learningData?.challengeSubmissions || [];
-  const quizAttempts = learningData?.quizAttempts || [];
-  const assignments = deliveryData?.assignments || [];
+  const quizAttempts = learningData?.quizAttempts || EMPTY_LIST;
 
-  const cohortOptions = cohorts.map(c => ({
-    id: c.id,
-    name: `${c.name} (${c.code}) - ${c.institution?.name || "Global"}`
-  }));
+
+
 
   const selectedCohort = cohorts.find(c => c.id === selectedCohortId);
+  if (useInputsChanged([assignedCohorts, assignedInstitutions, selectedCohort, selectedCohortId, selectedInstId])) {
+    (() => {
+    if (assignedCohorts && !assignedCohorts.some(cohort => cohort.id === selectedCohortId)) {
+      setSelectedCohortId(assignedCohorts[0]?.id || "");
+    }
+    const campus = selectedCohort?.tenant_id || assignedInstitutions[0]?.id || "";
+    if (campus !== selectedInstId) setSelectedInstId(campus);
+  })();
+  }
+
 
   // Guard: restore from URL only once – prevents background React Query refetches
   // from overriding the user's in-session selections.
-  const hasRestoredFromUrl = useRef(false);
+  const [restoredFromUrl, setRestoredFromUrl] = useState(false);
 
   // Sync state values from indices in URL query params on initial load/mount
-  useEffect(() => {
-    if (hasRestoredFromUrl.current) return;
+  if (useInputsChanged([hydrated, cohorts, assignedInstitutions, programsList]) && hydrated) { (() => {
+    if (restoredFromUrl) return;
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      let restored = false;
+
 
       const cohortIndexStr = params.get("c");
       if (cohortIndexStr !== null && cohorts.length > 0) {
         const idx = parseInt(cohortIndexStr, 10);
         if (!isNaN(idx) && idx >= 0 && idx < cohorts.length) {
           const cId = cohorts[idx]?.id;
-          if (cId && cId !== selectedCohortId) { setSelectedCohortId(cId); restored = true; }
+          if (cId && cId !== selectedCohortId) { setSelectedCohortId(cId); }
         }
       }
 
@@ -281,7 +264,7 @@ export default function TeacherConsole({
         const idx = parseInt(instIndexStr, 10);
         if (!isNaN(idx) && idx >= 0 && idx < assignedInstitutions.length) {
           const iId = assignedInstitutions[idx]?.id;
-          if (iId && iId !== selectedInstId) { setSelectedInstId(iId); restored = true; }
+          if (iId && iId !== selectedInstId) { setSelectedInstId(iId); }
         }
       }
 
@@ -290,16 +273,16 @@ export default function TeacherConsole({
         const idx = parseInt(programIndexStr, 10);
         if (!isNaN(idx) && idx >= 0 && idx < programsList.length) {
           const pId = programsList[idx]?.id;
-          if (pId && pId !== selectedProgramId) { setSelectedProgramId(pId); restored = true; }
+          if (pId && pId !== selectedProgramId) { setSelectedProgramId(pId); }
         }
       }
 
       // Mark as restored only once all required lists are non-empty
       if (cohorts.length > 0 && assignedInstitutions.length > 0 && programsList.length > 0) {
-        hasRestoredFromUrl.current = true;
+        setRestoredFromUrl(true);
       }
     }
-  }, [cohorts, assignedInstitutions, programsList]);
+  })(); }
 
   // Sync state modifications back to clean index-based query parameters
   useEffect(() => {
@@ -321,7 +304,7 @@ export default function TeacherConsole({
       if (params.has("instId")) { params.delete("instId"); changed = true; }
       if (params.has("programId")) { params.delete("programId"); changed = true; }
 
-      const cIdx = cohorts.findIndex((c: any) => c.id === selectedCohortId);
+      const cIdx = cohorts.findIndex((c) => c.id === selectedCohortId);
       if (cIdx !== -1) {
         if (params.get("c") !== String(cIdx)) {
           params.set("c", String(cIdx));
@@ -332,7 +315,7 @@ export default function TeacherConsole({
         changed = true;
       }
 
-      const iIdx = assignedInstitutions.findIndex((i: any) => i.id === selectedInstId);
+      const iIdx = assignedInstitutions.findIndex((i) => i.id === selectedInstId);
       if (iIdx !== -1) {
         if (params.get("i") !== String(iIdx)) {
           params.set("i", String(iIdx));
@@ -343,7 +326,7 @@ export default function TeacherConsole({
         changed = true;
       }
 
-      const pIdx = programsList.findIndex((p: any) => p.id === selectedProgramId);
+      const pIdx = programsList.findIndex((p) => p.id === selectedProgramId);
       if (pIdx !== -1) {
         if (params.get("p") !== String(pIdx)) {
           params.set("p", String(pIdx));
@@ -369,25 +352,17 @@ export default function TeacherConsole({
   const isSelectedProgDisabled = currentSelectedProg && (currentSelectedProg.status?.code === "suspended" || currentSelectedProg.status?.code === "disabled");
 
 
-  const studentsList = React.useMemo(() => {
-    const list: any[] = [];
-    enrollments.forEach((e: any) => {
-      if (e.student && !list.some((s: any) => s.id === e.student.id)) {
-        list.push(e.student);
-      }
-    });
-    return list;
-  }, [enrollments]);
 
-  const [selectedProjectSub, setSelectedProjectSub] = useState<any>(null);
-  const [selectedChallengeSub, setSelectedChallengeSub] = useState<any>(null);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [activeStudentProgress, setActiveStudentProgress] = useState<any[]>([]);
-  const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<any[]>([]);
-  const [drawerLessonsCache, setDrawerLessonsCache] = useState<Record<string, any[]>>({});
+
+  const [selectedProjectSub, setSelectedProjectSub] = useState<ProjectSubmission | null>(null);
+  const [selectedChallengeSub, setSelectedChallengeSub] = useState<ChallengeSubmission | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Enrollment | null>(null);
+  const [, setActiveStudentProgress] = useState<Program[]>([]);
+  const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<LessonProgress[]>([]);
+  const [drawerLessonsCache, setDrawerLessonsCache] = useState<Record<string, Lesson[]>>({});
   const [studentDetailTab, setStudentDetailTab] = useState<"overview" | "syllabus" | "quizzes" | "projects" | "challenges">("overview");
   const [rosterSearchQuery, setRosterSearchQuery] = useState("");
-  const [expandedQuizId, setExpandedQuizId] = useState<string | null>(null);
+
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const [expandedChallengeId, setExpandedChallengeId] = useState<string | null>(null);
   const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
@@ -401,31 +376,33 @@ export default function TeacherConsole({
   const [reviewStatus, setReviewStatus] = useState<string>("approved");
 
   // 2. ACTIVITY BUILDER & ASSIGNMENT STATE
-  const [coursesList, setCoursesList] = useState<any[]>(acadCourses || []);
+  const [coursesList, setCoursesList] = useState<Course[]>(acadCourses || []);
   const [selectedCourseId, setSelectedCourseId] = useState<string>(acadCourses?.[0]?.id || "");
 
   // Sync data when academic prefetch lands
-  useEffect(() => {
-    if (academicPrefetch?.programs && academicPrefetch.programs.length > 0) {
+  if (useInputsChanged([academicPrefetch])) {
+    (() => {
+    if (academicPrefetch?.programs) {
       setProgramsList(academicPrefetch.programs);
-      if (!selectedProgramId) setSelectedProgramId(academicPrefetch.programs[0].id);
+      if (!academicPrefetch.programs.some(program => program.id === selectedProgramId)) setSelectedProgramId(academicPrefetch.programs[0]?.id || "");
     }
-    if (academicPrefetch?.courses && academicPrefetch.courses.length > 0) {
+    if (academicPrefetch?.courses) {
       setTenantCourses(academicPrefetch.courses);
       setCoursesList(academicPrefetch.courses);
       // Resync if unset, or if the current selection belongs to a course list
       // from a different institution context and no longer exists in this one
       // (this was the root cause of the course dropdown appearing "stuck").
-      const stillValid = academicPrefetch.courses.some((c: any) => c.id === selectedCourseId);
+      const stillValid = academicPrefetch.courses.some((c) => c.id === selectedCourseId);
       if (!selectedCourseId || !stillValid) {
-        setSelectedCourseId(academicPrefetch.courses[0].id);
+        setSelectedCourseId(academicPrefetch.courses[0]?.id || "");
       }
     }
     // Keep deep course-module queries separate: their result includes lesson
     // resources, which the lightweight prefetch intentionally does not load.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [academicPrefetch]);
-  const [lessonsList, setLessonsList] = useState<any[]>([]);
+
+  })();
+  }
+  const [lessonsList, setLessonsList] = useState<Lesson[]>([]);
   const [selectedLessonId, setSelectedLessonId] = useState<string>("");
   const [lessonsLoading, setLessonsLoading] = useState(false);
 
@@ -447,16 +424,16 @@ export default function TeacherConsole({
   // Project details
   const [projOverview, setProjOverview] = useState("");
   const [projRequirements, setProjRequirements] = useState("");
-  const [projDeliverables, setProjDeliverables] = useState("");
-  const [projDifficulty, setProjDifficulty] = useState("intermediate");
-  const [projHours, setProjHours] = useState(10);
+  const [projDeliverables] = useState("");
+  const [projDifficulty] = useState("intermediate");
+  const [projHours] = useState(10);
 
   // Challenge details
-  const [chalDifficulty, setChalDifficulty] = useState("easy");
+  const [chalDifficulty] = useState("easy");
   const [chalStatement, setChalStatement] = useState("");
-  const [chalInput, setChalInput] = useState("");
-  const [chalOutput, setChalOutput] = useState("");
-  const [chalConstraints, setChalConstraints] = useState("");
+  const [chalInput] = useState("");
+  const [chalOutput] = useState("");
+  const [chalConstraints] = useState("");
   const [chalStrictMode, setChalStrictMode] = useState(false);
 
   // Subclass creation ids
@@ -465,12 +442,12 @@ export default function TeacherConsole({
   const [createdChallengeId, setCreatedChallengeId] = useState("");
 
   // Drawer states
-  const [selectedActivity, setSelectedActivity] = useState<any | null>(null);
-  const [activityDetails, setActivityDetails] = useState<any | null>(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<LearningActivity | null>(null);
+  const [activityDetails, setActivityDetails] = useState<ActivityDetails | null>(null);
+  const [detailsLoading] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<"config" | "performance">("config");
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<any>({
+  const [editForm, setEditForm] = useState({
     title: "",
     description: "",
     instructions: "",
@@ -498,19 +475,19 @@ export default function TeacherConsole({
     chal_time_limit: 1000,
     chal_memory_limit: 256,
     chal_strict_mode: false,
-    assignments: []
+    assignments: [] as Array<{id: string; cohort_id: string; available_from: string; available_until: string; is_required: boolean}>
   });
 
   // Children helpers
-  const [quizQuestionsList, setQuizQuestionsList] = useState<any[]>([]);
+  const [quizQuestionsList, setQuizQuestionsList] = useState<QuizQuestion[]>([]);
   const [newQuestionText, setNewQuestionText] = useState("");
   const [newQuestionType, setNewQuestionType] = useState("single_choice");
   const [newQuestionPoints, setNewQuestionPoints] = useState(10);
   const [newQuestionOptions, setNewQuestionOptions] = useState<string[]>(["", "", "", ""]);
   const [newQuestionCorrectIndices, setNewQuestionCorrectIndices] = useState<number[]>([0]);
 
-  const [examplesList, setExamplesList] = useState<any[]>([]);
-  const [testCasesList, setTestCasesList] = useState<any[]>([]);
+  const [examplesList, setExamplesList] = useState<ChallengeExample[]>([]);
+  const [testCasesList, setTestCasesList] = useState<Row<"learning.challenge_test_cases">[]>([]);
   const [newExInput, setNewExInput] = useState("");
   const [newExOutput, setNewExOutput] = useState("");
   const [newExExpl, setNewExExpl] = useState("");
@@ -519,7 +496,7 @@ export default function TeacherConsole({
   const [newTcHidden, setNewTcHidden] = useState(true);
 
   // Scheduling State
-  const [assignmentCohortId, setAssignmentCohortId] = useState<string>("");
+
   const [availableFrom, setAvailableFrom] = useState<string>("");
   const [availableUntil, setAvailableUntil] = useState<string>("");
 
@@ -527,10 +504,10 @@ export default function TeacherConsole({
   const [syllabusCourseId, setSyllabusCourseId] = useState<string>("");
   const [syllabusModuleId, setSyllabusModuleId] = useState<string>("");
   const [syllabusLessonId, setSyllabusLessonId] = useState<string>("");
-  const [syllabusModules, setSyllabusModules] = useState<any[]>([]);
-  const [syllabusLessons, setSyllabusLessons] = useState<any[]>([]);
-  const [syllabusResources, setSyllabusResources] = useState<any[]>([]);
-  const [syllabusLoading, setSyllabusLoading] = useState(false);
+  const [syllabusModules, setSyllabusModules] = useState<Module[]>([]);
+  const [syllabusLessons, setSyllabusLessons] = useState<Lesson[]>([]);
+  const { data: syllabusResources = [], isLoading: resourcesLoading, error: resourcesError, refetch: retryResources } = useLessonResources(syllabusLessonId);
+  const syllabusLoading = loadingPrograms;
 
   // Add Lesson Form
   const [newLessonTitle, setNewLessonTitle] = useState("");
@@ -540,10 +517,10 @@ export default function TeacherConsole({
   const [newLessonTypeId, setNewLessonTypeId] = useState("");
   const [newLessonPositionOrder, setNewLessonPositionOrder] = useState(1);
   const [newLessonIsPreview, setNewLessonIsPreview] = useState(false);
-  const [lessonStatuses, setLessonStatuses] = useState<any[]>([]);
+
 
   // Prefetch seeding is now handled by the useAcademicPrefetchData sync effect above
-  const [lessonTypes, setLessonTypes] = useState<any[]>([]);
+  const [lessonTypes, setLessonTypes] = useState<Lookup[]>([]);
   const [defaultLessonTypeId, setDefaultLessonTypeId] = useState("");
   const [syllabusViewMode, setSyllabusViewMode] = useState<"preview" | "edit">("preview");
 
@@ -557,7 +534,7 @@ export default function TeacherConsole({
       const res = await getAcademicLookupsAction();
       if (res.success && res.lookups) {
         setLessonTypes(res.lookups.lessonTypes || []);
-        const textType = res.lookups.lessonTypes?.find((t: any) => t.code === "text") || res.lookups.lessonTypes?.[0];
+        const textType = res.lookups.lessonTypes?.find((t) => t.code === "text") || res.lookups.lessonTypes?.[0];
         if (textType) setDefaultLessonTypeId(textType.id);
       }
     }
@@ -566,7 +543,7 @@ export default function TeacherConsole({
 
   // Removed the huge cohort data loading useEffect block.
   // The UI will just use the pre-fetched global collections and filter them locally.
-  const loadingCohortData = false;
+
 
   const filteredCohorts = cohorts;
   const filteredCohortIds = cohorts.map(c => c.id);
@@ -576,16 +553,11 @@ export default function TeacherConsole({
   // way to proceed — auto-provision a default module + lesson in that case,
   // mirroring the same fallback already used in admin/learning-manager.tsx.
   useEffect(() => {
-    setSelectedLessonId("");
-    if (!selectedCourseId) {
-      setLessonsList([]);
-      return;
-    }
-
+    if (!selectedCourseId) return;
     let cancelled = false;
-    setLessonsLoading(true);
-
     (async () => {
+      setSelectedLessonId("");
+      setLessonsLoading(true);
       try {
         const res = await listLessonsForCourseAction(selectedCourseId);
         let courseLessons = res.lessons || [];
@@ -624,10 +596,10 @@ export default function TeacherConsole({
           setLessonsList(courseLessons);
           if (courseLessons.length > 0) setSelectedLessonId(courseLessons[0].id);
         }
-      } catch (err: any) {
+      } catch (err) {
         if (!cancelled) {
           setLessonsList([]);
-          showError(err.message || "Failed to load lessons for the selected course.");
+          showError(errorMessage(err, "Failed to load lessons for the selected course."));
         }
       } finally {
         if (!cancelled) setLessonsLoading(false);
@@ -635,61 +607,38 @@ export default function TeacherConsole({
     })();
 
     return () => { cancelled = true; };
-  }, [selectedCourseId, selectedInstId]);
+  }, [selectedCourseId, selectedInstId, showError]);
 
-  // Load modules & lessons for syllabus manager - use prefetch cache first
-  useEffect(() => {
-    if (syllabusCourseId) {
-      // Try cache first (populated by prefetch)
-      const cachedModules = queryClient.getQueryData<any[]>(["course-modules", syllabusCourseId]);
-      if (cachedModules && cachedModules.length > 0) {
-        setSyllabusModules(cachedModules);
-        // Get lessons from prefetch data
-        const courseModuleIds = cachedModules.map((m: any) => m.id);
-        const cachedLessons = acadLessons.filter((l: any) => courseModuleIds.includes(l.module_id));
-        if (cachedLessons.length > 0) {
-          setSyllabusLessons(cachedLessons);
-          setSyllabusModuleId("");
-          setSyllabusLessonId("");
-          setSyllabusResources([]);
-          return;
-        }
-      }
-      // Fallback: fetch from API
-      setSyllabusLoading(true);
-      Promise.all([
-        listModulesAction(syllabusCourseId).then(res => setSyllabusModules(res.modules || [])),
-        listLessonsForCourseAction(syllabusCourseId).then(res => setSyllabusLessons(res.lessons || []))
-      ]).finally(() => setSyllabusLoading(false));
-      setSyllabusModuleId("");
-      setSyllabusLessonId("");
-      setSyllabusResources([]);
-    } else {
-      // Preserve the existing empty arrays so a render without prefetch data
-      // cannot keep retriggering this effect.
-      setSyllabusModules(previous => previous.length === 0 ? previous : []);
-      setSyllabusLessons(previous => previous.length === 0 ? previous : []);
-    }
-  }, [syllabusCourseId, acadLessons, queryClient]);
+  // Keep the selected lesson stable while a background curriculum refresh lands.
+  if (useInputsChanged([academicPrefetch, syllabusCourseId, syllabusModuleId, syllabusLessonId])) {
+    (() => {
+    const modules = (academicPrefetch?.modules || []).filter(module => module.course_id === syllabusCourseId);
+    const order = new Map(modules.map((module, index) => [module.id, index]));
+    const lessons = (academicPrefetch?.lessons || []).filter(lesson => order.has(lesson.module_id) && (!syllabusModuleId || lesson.module_id === syllabusModuleId))
+      .sort((left, right) => (order.get(left.module_id)! - order.get(right.module_id)!) || left.position - right.position || left.id.localeCompare(right.id));
+    setSyllabusModules(modules);
+    setSyllabusLessons(lessons);
+    if (syllabusLessonId && !lessons.some(lesson => lesson.id === syllabusLessonId)) setSyllabusLessonId("");
+  })();
+  }
 
   // Load resources when lesson is selected
-  useEffect(() => {
+  if (useInputsChanged([syllabusLessonId, syllabusLessons, syllabusViewMode])) {
+    (() => {
+    if (syllabusViewMode === "edit") return;
     if (syllabusLessonId) {
-      listLessonResourcesAction(syllabusLessonId).then(res => setSyllabusResources(res.resources || []));
-      
       // Load current lesson video details to form
       const lesObj = syllabusLessons.find(l => l.id === syllabusLessonId);
       if (lesObj) {
         setNewLessonTitle(lesObj.title || "");
         setNewLessonVideoUrl(lesObj.video_url || "");
-        setNewLessonDuration(lesObj.duration || 30);
+        setNewLessonDuration(lesObj.duration ?? 30);
         setNewLessonContentText(lesObj.content_json?.text || lesObj.content_json?.body || "");
         setNewLessonTypeId(lesObj.lesson_type_id || "");
         setNewLessonPositionOrder(lesObj.position || 1);
         setNewLessonIsPreview(lesObj.is_preview || false);
       }
     } else {
-      setSyllabusResources([]);
       setNewLessonTitle("");
       setNewLessonVideoUrl("");
       setNewLessonContentText("");
@@ -697,16 +646,12 @@ export default function TeacherConsole({
       setNewLessonPositionOrder(1);
       setNewLessonIsPreview(false);
     }
-  }, [syllabusLessonId, syllabusLessons]);
+  })();
+  }
 
   // Fetch real progress data for selected student
   // Clear cached progress when the drawer closes
-  useEffect(() => {
-    if (!selectedStudent) {
-      setActiveStudentProgress([]);
-      setActiveStudentLessonsProgress([]);
-    }
-  }, [selectedStudent]);
+
 
   // Lazy load lessons for courses expanded inside the student detail drawer
   useEffect(() => {
@@ -720,13 +665,15 @@ export default function TeacherConsole({
   }, [expandedCourseId, drawerLessonsCache]);
 
   // Sync grading form inputs when a project submission is selected
-  useEffect(() => {
+  if (useInputsChanged([selectedProjectSub])) {
+    (() => {
     if (selectedProjectSub) {
-      setScore(selectedProjectSub.review?.score ?? selectedProjectSub.max_score ?? 100);
-      setFeedback(selectedProjectSub.review?.feedback_comments ?? "");
+      setScore(selectedProjectSub.review?.score ?? ((selectedProjectSub.max_score ?? 100) ?? 100) ?? 100);
+      setFeedback(selectedProjectSub.review?.feedback ?? "");
       setReviewStatus(selectedProjectSub.review?.review_status ?? "approved");
     }
-  }, [selectedProjectSub]);
+  })();
+  }
 
   // Filter enrollments and submissions to program-scoped cohorts
   const filteredEnrollments = enrollments.filter(e => filteredCohortIds.includes(e.cohort_id));
@@ -797,66 +744,7 @@ export default function TeacherConsole({
   // Filter courses list to selected program  
   const filteredCourses = tenantCourses;
 
-  const combinedSubmissions = React.useMemo(() => {
-    const list: any[] = [];
-    
-    // Add Projects
-    filteredProjectSubmissions.forEach(sub => {
-      list.push({
-        id: sub.id,
-        type: "project",
-        title: sub.project_title,
-        studentName: sub.student?.full_name || sub.student?.email || "Unknown Student",
-        submittedAt: new Date(sub.submitted_at),
-        score: sub.review?.score,
-        maxScore: sub.max_score,
-        status: sub.review ? sub.review.review_status : "pending",
-        original: sub
-      });
-    });
 
-    // Add Challenges
-    filteredChallengeSubmissions.forEach(sub => {
-      list.push({
-        id: sub.id,
-        type: "programming",
-        title: sub.challenge_title,
-        studentName: sub.student?.full_name || sub.student?.email || "Unknown Student",
-        submittedAt: new Date(sub.submitted_at),
-        score: sub.result?.score,
-        maxScore: sub.max_score,
-        status: sub.submission_status_code,
-        original: sub
-      });
-    });
-
-    // Add Quiz attempts
-    quizAttempts.forEach(att => {
-      const isStudentInCohort = filteredEnrollments.some(e => e.user_id === att.student_id);
-      if (!isStudentInCohort) return;
-      
-      list.push({
-        id: att.id,
-        type: "quiz",
-        title: att.quiz_title,
-        studentName: att.student?.full_name || att.student?.email || "Unknown Student",
-        submittedAt: att.submitted_at ? new Date(att.submitted_at) : new Date(att.started_at),
-        score: att.score,
-        maxScore: att.max_score,
-        status: att.submitted_at ? "submitted" : "in_progress",
-        original: att
-      });
-    });
-
-    // Sort by submission date (newest first)
-    list.sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime());
-
-    // Filter by type
-    if (auditorFilter !== "all") {
-      return list.filter(item => item.type === auditorFilter);
-    }
-    return list;
-  }, [filteredProjectSubmissions, filteredChallengeSubmissions, quizAttempts, filteredEnrollments, auditorFilter]);
 
   // Form submit: project grading
   const handleReviewSubmit = (e: React.FormEvent) => {
@@ -901,7 +789,7 @@ export default function TeacherConsole({
         institution_id: selectedInstId,
         lesson_id: selectedLessonId,
         activity_type_code: activityType,
-        status_code: "published",
+        status_code: "draft",
         title,
         description,
         instructions,
@@ -961,11 +849,7 @@ export default function TeacherConsole({
     if (!createdQuizId) return;
 
     startTransition(async () => {
-      const optionsPayload = newQuestionOptions.filter(o => o.trim()).map((o, idx) => ({
-        optionText: o,
-        isCorrect: newQuestionCorrectIndices.includes(idx),
-        position: idx + 1
-      }));
+      const optionsPayload = quizOptions(newQuestionOptions, newQuestionCorrectIndices);
 
       const res = await createQuizQuestionAndOptionsAction(
         createdQuizId,
@@ -1033,75 +917,7 @@ export default function TeacherConsole({
     });
   };
 
-  const handleViewActivityClick = async (activity: any) => {
-    setSelectedActivity(activity);
-    setActivityDetails(null);
-    setDetailsLoading(true);
-    setActiveDrawerTab("config");
-    setIsEditing(false);
 
-    // Load details
-    const detRes = await getActivityDetailsNoStudentAction(activity.id, activity.activity_type_code);
-    setActivityDetails(detRes);
-
-    // Set edit form values
-    setEditForm({
-      title: activity.title || "",
-      description: activity.description || "",
-      instructions: activity.instructions || "",
-      max_score: activity.max_score ?? 100,
-      passing_score: activity.passing_score ?? 0,
-      is_mandatory: activity.is_mandatory ?? true,
-
-      // Quiz
-      quiz_time_limit: detRes?.quiz?.time_limit_minutes ?? 30,
-      quiz_max_attempts: detRes?.quiz?.max_attempts ?? 1,
-      quiz_shuffle_questions: detRes?.quiz?.shuffle_questions ?? false,
-      quiz_shuffle_options: detRes?.quiz?.shuffle_options ?? false,
-      quiz_show_results_immediately: detRes?.quiz?.show_results_immediately ?? true,
-      quiz_strict_mode: detRes?.quiz?.strict_mode ?? false,
-
-      // Project
-      project_overview: detRes?.project?.project_overview ?? "",
-      project_requirements: detRes?.project?.requirements ?? "",
-      project_deliverables: detRes?.project?.deliverables ?? "",
-      project_submission_instructions: detRes?.project?.submission_instructions ?? "",
-      project_difficulty: detRes?.project?.difficulty_level ?? "intermediate",
-      project_estimated_hours: detRes?.project?.estimated_hours ?? 10,
-
-      // Challenge
-      chal_difficulty: detRes?.challenge?.difficulty_level ?? "easy",
-      chal_problem_statement: detRes?.challenge?.problem_statement ?? "",
-      chal_input_format: detRes?.challenge?.input_format ?? "",
-      chal_output_format: detRes?.challenge?.output_format ?? "",
-      chal_constraints: detRes?.challenge?.constraints_text ?? "",
-      chal_starter_code: detRes?.challenge?.starter_code ?? "",
-      chal_time_limit: detRes?.challenge?.time_limit_ms ?? 1000,
-      chal_memory_limit: detRes?.challenge?.memory_limit_mb ?? 256,
-      chal_strict_mode: detRes?.challenge?.strict_mode ?? false,
-
-      // Assignments
-      assignments: (detRes?.assignments || []).map((a: any) => ({
-        id: a.id,
-        cohort_id: a.cohort_id,
-        available_from: formatDatetimeLocal(a.available_from),
-        available_until: formatDatetimeLocal(a.available_until),
-        is_required: a.is_required ?? true
-      }))
-    });
-
-    if (activity.activity_type_code === "programming" && detRes) {
-      setExamplesList(detRes.examples || []);
-      setTestCasesList(detRes.testCases || []);
-      setCreatedChallengeId(detRes.challenge?.id || "");
-    } else {
-      setExamplesList([]);
-      setTestCasesList([]);
-      setCreatedChallengeId("");
-    }
-
-    setDetailsLoading(false);
-  };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1149,7 +965,7 @@ export default function TeacherConsole({
         chal_strict_mode: editForm.chal_strict_mode,
 
         // Assignments
-        assignments: editForm.assignments.map((a: any) => ({
+        assignments: editForm.assignments.map((a) => ({
           id: a.id,
           cohort_id: a.cohort_id,
           available_from: a.available_from ? new Date(a.available_from).toISOString() : undefined,
@@ -1223,7 +1039,8 @@ export default function TeacherConsole({
         is_required: true,
         available_from: availableFrom ? new Date(availableFrom).toISOString() : undefined,
         available_until: availableUntil ? new Date(availableUntil).toISOString() : undefined,
-        created_by: teacherId
+        created_by: teacherId,
+        publish: true
       });
 
       if (result.assignment) {
@@ -1378,7 +1195,7 @@ export default function TeacherConsole({
       });
 
       if (res.resource) {
-        setSyllabusResources(prev => [...prev, res.resource]);
+        await queryClient.invalidateQueries({ queryKey: ["academic-resources", syllabusLessonId] });
         setResTitle("");
         setResExternalUrl("");
         showSuccess("Study material resource appended to lesson successfully!");
@@ -1395,7 +1212,7 @@ export default function TeacherConsole({
     startTransition(async () => {
       const res = await deleteLessonResourceAction(id);
       if (res.success) {
-        setSyllabusResources(prev => prev.filter(r => r.id !== id));
+        await queryClient.invalidateQueries({ queryKey: ["academic-resources", syllabusLessonId] });
         showSuccess("Resource removed.");
       } else {
         showError(res.error || "Failed to delete resource.");
@@ -1683,7 +1500,7 @@ export default function TeacherConsole({
                       {activityDetails.examples && activityDetails.examples.length > 0 && (
                         <div className="space-y-2">
                           <span className="font-bold text-[#C2C6D1] uppercase text-[9px] tracking-wider block">Visible Examples</span>
-                          {activityDetails.examples.map((ex: any) => (
+                          {activityDetails.examples.map((ex) => (
                             <div key={ex.id} className="border border-[#23252C] rounded-lg p-2.5 bg-[#16171D]/30 font-mono text-[10px] space-y-1">
                               <div><span className="text-[#C2C6D1]">Input:</span> {ex.input_example}</div>
                               <div><span className="text-[#C2C6D1]">Output:</span> {ex.output_example}</div>
@@ -1872,7 +1689,7 @@ export default function TeacherConsole({
     );
   };
 
-  const openStudentDrawer = async (enr: any) => {
+  const openStudentDrawer = async (enr: Enrollment) => {
     if (openingStudentId) return;
     setOpeningStudentId(enr.id);
     setStudentDetailTab("overview");
@@ -1881,7 +1698,7 @@ export default function TeacherConsole({
         getStudentDeliveryDataAction(enr.user_id),
         listStudentLessonProgressAction(enr.user_id),
         Promise.all(
-          tenantCourses.map(async (c: any) => {
+          tenantCourses.map(async (c) => {
             if (drawerLessonsCache[c.id]) return [c.id, drawerLessonsCache[c.id]] as const;
             const res = await listLessonsForCourseAction(c.id);
             return [c.id, res.success && res.lessons ? res.lessons : []] as const;
@@ -1923,16 +1740,16 @@ export default function TeacherConsole({
     const studentQuizAttempts = quizzes.map(q => {
       const attempts = studentQuizAttemptsList.filter(att => att.activity_id === q.id);
       const sortedAttempts = [...attempts].sort((a, b) => new Date(b.submitted_at || b.created_at || b.updated_at || 0).getTime() - new Date(a.submitted_at || a.created_at || a.updated_at || 0).getTime());
-      const passedAttempt = sortedAttempts.find(att => att.score >= (q.passing_score || 0));
+      const passedAttempt = sortedAttempts.find(isPassedQuizAttempt);
       const attempt = passedAttempt || sortedAttempts[0];
 
       return {
         id: q.id,
         title: q.title,
         attempted: !!attempt,
-        passed: attempt ? (attempt.score >= (q.passing_score || 0)) : false,
+        passed: isPassedQuizAttempt(attempt),
         score: attempt ? attempt.score : 0,
-        maxScore: q.max_score || 100,
+        maxScore: attempt?.max_score ?? q.max_score ?? 100,
         submittedAt: attempt ? new Date(attempt.submitted_at || attempt.created_at || attempt.updated_at || 0).toLocaleDateString() : "",
         attemptsCount: attempts.length
       };
@@ -1976,7 +1793,7 @@ export default function TeacherConsole({
                   <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
                     {selectedStudent.cohort?.name || "No cohort"}
                   </span>
-                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
+                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date((selectedStudent.created_at ?? "")).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
@@ -2259,7 +2076,7 @@ export default function TeacherConsole({
                               <div>
                                 <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-1">Student Notes</span>
                                 <p className="p-3 bg-[#131418] border border-[#23252C] rounded-xl text-[#EDEFF5] italic">
-                                  "{sub.submission_notes}"
+                                  &quot;{sub.submission_notes}&quot;
                                 </p>
                               </div>
                             )}
@@ -2287,7 +2104,7 @@ export default function TeacherConsole({
                                       setSelectedProjectSub(sub);
                                       setActiveParentTab("assessments");
                                       setActiveTab("projects");
-                                      setSelectedStudent(null);
+                                      setSelectedStudent(null); setActiveStudentProgress([]); setActiveStudentLessonsProgress([]);
                                     }}
                                     className="bg-[#6E79F4] text-white font-bold text-[10px] px-3 py-1.5 rounded-lg hover:bg-[#5A66F0]"
                                   >
@@ -2459,18 +2276,23 @@ export default function TeacherConsole({
                     Reason logged: <code className="text-[#F0555D] bg-[#F0555D]/10 px-1.5 py-0.5 rounded font-mono text-[10px] capitalize">{selectedQuizAttempt.forfeit_reason?.replace(/_/g, " ") || "Abnormal Exit / Rule Violation"}</code>
                   </span>
                 </p>
+
+              </div>
+            )}
+
+            {canApproveQuizRetake(selectedQuizAttempt) && (
                 <div className="pt-2">
                   <button
                     type="button"
                     disabled={isPending}
                     onClick={async () => {
-                      if (!confirm("Are you sure you want to approve this student for a retake? This will refund their attempt and allow them to take the quiz again.")) return;
+                      if (!confirm("Approve one additional attempt? Existing attempts and scores will be preserved.")) return;
                       startTransition(async () => {
                         const res = await approveQuizRetakeAction(selectedQuizAttempt.id);
                         if (res && !("error" in res)) {
                           queryClient.invalidateQueries({ queryKey: ["learning-prefetch", tenantId] });
                           showSuccess("Retake approved! The student can now restart the test attempt.");
-                          setSelectedQuizAttempt(null);
+                          setSelectedQuizAttempt(null); setQuizAttemptSession(null);
                         } else {
                           showError(res.error || "Failed to approve retake.");
                         }
@@ -2479,10 +2301,9 @@ export default function TeacherConsole({
                     className="bg-[#6E79F4] hover:bg-[#5A66F0] disabled:bg-[#2E313A] text-white font-bold text-[10px] uppercase tracking-wider px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
                     <CheckCircle2 size={12} />
-                    Approve Retake / Reset Attempt
+                    Approve Retake
                   </button>
                 </div>
-              </div>
             )}
 
             <hr className="border-[#23252C]" />
@@ -2498,21 +2319,22 @@ export default function TeacherConsole({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {quizAttemptSession.questions.map((q: any, qIdx: number) => {
-                    const isCorrect = q.selectedIndex === q.correctIndex;
+                  {quizAttemptSession.questions.map((q, qIdx: number) => {
+                    const isCorrect = q.is_correct === true;
                     return (
                       <div key={q.id || qIdx} className="p-4 bg-[#131418] border border-[#23252C] rounded-xl text-xs space-y-2 shadow-sm">
                         <div className="font-semibold text-[#EDEFF5] flex justify-between gap-4">
-                          <span>Q{qIdx + 1}: {q.text}</span>
+                          <span>Q{qIdx + 1}: {q.question_text || q.text}</span>
                           <span className={`font-black shrink-0 ${isCorrect ? "text-[#2FBF71]" : "text-[#F0555D]"}`}>
-                            {isCorrect ? `+${q.points} pts` : "0 pts"}
+                            {isCorrect ? `+${q.points_awarded ?? q.points ?? 0} pts` : "0 pts"}
                           </span>
                         </div>
                         
+                        {q.question_type === "short_answer" && <p className="break-words">Student answer: {q.answer_text || "No answer"}</p>}
                         <div className="grid grid-cols-1 gap-1.5 pt-1.5">
-                          {q.options.map((opt: any, oIdx: number) => {
-                            const isSelected = q.selectedIndex === oIdx;
-                            const isAnsCorrect = q.correctIndex === oIdx;
+                          {q.options.map((opt, oIdx: number) => {
+                            const isSelected = typeof opt === "string" ? q.selectedIndex === oIdx : q.selected_option_ids?.includes(opt.id);
+                            const isAnsCorrect = typeof opt === "string" ? q.correctIndex === oIdx : opt.is_correct === true;
                             
                             return (
                               <div 
@@ -2534,7 +2356,7 @@ export default function TeacherConsole({
                                   }`}>
                                   {oIdx === 0 ? "A" : oIdx === 1 ? "B" : oIdx === 2 ? "C" : oIdx === 3 ? "D" : String(oIdx + 1)}
                                 </div>
-                                <span>{opt.option_text || opt}</span>
+                                <span>{typeof opt === "string" ? opt : opt.option_text}</span>
                                 {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#2FBF71]/20 px-1.5 py-0.5 rounded text-[#2FBF71]">Correct Option</span>}
                                 {isSelected && !isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#F0555D]/20 px-1.5 py-0.5 rounded text-[#F0555D]">Submitted Answer</span>}
                               </div>
@@ -2704,7 +2526,7 @@ export default function TeacherConsole({
                       </div>
                       <div>
                         <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Passing Marks</span>
-                        <span className="font-mono font-bold text-[#F5B04A]">{selectedProjectSub.passing_score ?? Math.round(selectedProjectSub.max_score * 0.5)} pts</span>
+                        <span className="font-mono font-bold text-[#F5B04A]">{selectedProjectSub.passing_score ?? 0} pts</span>
                       </div>
                     </div>
 
@@ -2714,11 +2536,11 @@ export default function TeacherConsole({
                           Assigned Score
                         </label>
                         <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                          score >= (selectedProjectSub.passing_score ?? Math.round(selectedProjectSub.max_score * 0.5))
+                          score >= (selectedProjectSub.passing_score ?? 0)
                             ? "bg-[#2FBF71]/10 text-[#2FBF71]"
                             : "bg-[#F0555D]/10 text-[#F0555D]"
                         }`}>
-                          {score >= (selectedProjectSub.passing_score ?? Math.round(selectedProjectSub.max_score * 0.5)) ? "PASSED" : "FAILED"}
+                          {score >= (selectedProjectSub.passing_score ?? 0) ? "PASSED" : "FAILED"}
                         </span>
                       </div>
                       <input 
@@ -2922,9 +2744,9 @@ export default function TeacherConsole({
       activeId={activeParentTab}
       activeChildId={activeTab}
       onSelect={(parentId, childId) => {
-        setActiveParentTab(parentId as any);
+        setActiveParentTab(parentId as typeof activeParentTab);
         if (childId) {
-          setActiveTab(childId as any);
+          setActiveTab(childId as typeof activeTab);
         } else {
           // Defaults when parent is clicked
           if (parentId === "overview") {
@@ -2947,7 +2769,7 @@ export default function TeacherConsole({
           <div className="relative">
             <button
               onClick={() => setIsCohortDropdownOpen(!isCohortDropdownOpen)}
-              className="flex items-center gap-2 bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl hover:border-[#6E79F4]/40 hover:bg-[#6E79F4]/5 transition-all text-[11px] font-bold text-[#EDEFF5] cursor-pointer max-w-[220px] sm:max-w-[320px]"
+              className="flex items-center gap-2 bg-[#131418] border border-[#23252C] px-3 py-2 rounded-xl hover:border-[#6E79F4]/40 hover:bg-[#6E79F4]/5 transition-all text-[11px] font-bold text-[#EDEFF5] cursor-pointer max-w-[140px] sm:max-w-[320px]"
             >
               <GraduationCap size={14} className="text-[#6E79F4] shrink-0" />
               <span className="truncate">
@@ -3031,7 +2853,7 @@ export default function TeacherConsole({
               <div>
                 <span className="font-bold">Draft Batch Pathway</span>
                 <p className="mt-0.5 text-amber-700 font-medium">
-                  This batch is currently in draft mode. You can customize, update, and manage the curriculum/syllabus, but students and institutions won't be able to view or enroll in it until a Super Admin approves and activates it.
+                  This batch is currently in draft mode. You can customize, update, and manage the curriculum/syllabus, but students and institutions won&apos;t be able to view or enroll in it until a Super Admin approves and activates it.
                 </p>
               </div>
             </div>
@@ -3108,7 +2930,7 @@ export default function TeacherConsole({
                 ) : (
                   <div className="divide-y divide-[#23252C] mt-2">
                     {filteredQuizAttemptsList.map(att => {
-                      const isPassed = att.score >= (att.passing_score || 0) || (att.score >= (att.max_score * 0.5));
+                      const isPassed = isPassedQuizAttempt(att);
                       return (
                         <div 
                           key={att.id}
@@ -3279,7 +3101,7 @@ export default function TeacherConsole({
               </div>
 
               {(() => {
-                const filteredRoster = currentCohortEnrollments.filter((enr: any) => {
+                const filteredRoster = currentCohortEnrollments.filter((enr) => {
                   if (!rosterSearchQuery.trim()) return true;
                   const q = rosterSearchQuery.toLowerCase();
                   const fullName = (enr.student?.full_name || "").toLowerCase();
@@ -3316,7 +3138,7 @@ export default function TeacherConsole({
                       <>
                       {/* Mobile card list */}
                       <div className="sm:hidden space-y-2">
-                        {filteredRoster.map((enr: any) => (
+                        {filteredRoster.map((enr) => (
                           <div
                             key={enr.id}
                             onClick={() => openStudentDrawer(enr)}
@@ -3366,7 +3188,7 @@ export default function TeacherConsole({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-[#23252C]">
-                            {filteredRoster.map((enr: any) => (
+                            {filteredRoster.map((enr) => (
                               <tr 
                                 key={enr.id} 
                                 onClick={() => openStudentDrawer(enr)}
@@ -3648,7 +3470,7 @@ export default function TeacherConsole({
                         Select Course *
                       </label>
                       <CustomSelect
-                        options={filteredCourses.map((c: any) => ({ id: c.id, name: c.title }))}
+                        options={filteredCourses.map((c) => ({ id: c.id, name: c.title }))}
                         value={selectedCourseId}
                         onChange={setSelectedCourseId}
                         placeholder="-- Choose Course --"
@@ -3676,7 +3498,7 @@ export default function TeacherConsole({
                             { id: "programming", name: "Coding Challenge" },
                           ]}
                           value={activityType}
-                          onChange={(value: any) => setActivityType(value)}
+                          onChange={(value: string) => { if (value === "quiz" || value === "project" || value === "programming") setActivityType(value); }}
                           searchable={false}
                           required
                         />
@@ -3913,7 +3735,7 @@ export default function TeacherConsole({
                                 { id: "multiple_choice", name: "Multiple Choice" },
                               ]}
                               value={newQuestionType}
-                              onChange={(value: any) => setNewQuestionType(value)}
+                              onChange={(value: string) => setNewQuestionType(value)}
                               searchable={false}
                               required
                             />
@@ -4092,7 +3914,7 @@ export default function TeacherConsole({
                 <div>
                   <label className="text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider block mb-1">Select Course</label>
                   <CustomSelect
-                    options={filteredCourses.map((c: any) => ({ id: c.id, name: c.title }))}
+                    options={filteredCourses.map((c) => ({ id: c.id, name: c.title }))}
                     value={syllabusCourseId}
                     onChange={setSyllabusCourseId}
                     placeholder="-- Choose Course --"
@@ -4146,7 +3968,7 @@ export default function TeacherConsole({
                     <div className="flex gap-2 items-center">
                       <CustomSelect
                         className="flex-1"
-                        options={syllabusModules.map((m: any) => ({ id: m.id, name: `Mod ${m.position}: ${m.title}` }))}
+                        options={syllabusModules.map((m) => ({ id: m.id, name: `Mod ${m.position}: ${m.title}` }))}
                         value={syllabusModuleId}
                         onChange={(modId) => {
                           setSyllabusModuleId(modId);
@@ -4318,101 +4140,16 @@ export default function TeacherConsole({
                             </div>
                           </div>
 
-                          {/* Render Video Player if URL is present and not a PDF */}
+                          <LessonMedia url={newLessonVideoUrl} title={newLessonTitle} />
                           {(() => {
-                            if (!newLessonVideoUrl) return null;
-                            const isPdf = newLessonVideoUrl.toLowerCase().endsWith(".pdf") || 
-                                          lessonTypes.find(t => t.id === newLessonTypeId)?.code?.toLowerCase() === "pdf";
-                            if (isPdf) return null;
-
-                            const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-                            const ytMatch = newLessonVideoUrl.match(ytRegex);
-                            const vimeoRegex = /vimeo\.com\/(?:video\/)?([0-9]+)/;
-                            const vimeoMatch = newLessonVideoUrl.match(vimeoRegex);
-
-                            if (ytMatch && ytMatch[1]) {
-                              return (
-                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-[#23252C] shadow-sm">
-                                  <iframe
-                                    src={`https://www.youtube.com/embed/${ytMatch[1]}`}
-                                    className="w-full h-full border-0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                    title={newLessonTitle}
-                                  />
-                                </div>
-                              );
-                            } else if (vimeoMatch && vimeoMatch[1]) {
-                              return (
-                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-[#23252C] shadow-sm">
-                                  <iframe
-                                    src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
-                                    className="w-full h-full border-0"
-                                    allow="autoplay; fullscreen; picture-in-picture"
-                                    allowFullScreen
-                                    title={newLessonTitle}
-                                  />
-                                </div>
-                              );
-                            } else if (newLessonVideoUrl.match(/\.(mp4|webm|ogg)/i)) {
-                              return (
-                                <div className="bg-black aspect-video rounded-xl overflow-hidden border border-[#23252C] shadow-sm">
-                                  <video src={newLessonVideoUrl} className="w-full h-full" controls preload="metadata" />
-                                </div>
-                              );
-                            } else {
-                              return (
-                                <div className="bg-slate-900 aspect-video rounded-xl flex flex-col items-center justify-center text-white p-6 text-center border border-slate-800 shadow-sm">
-                                  <Video size={32} className="text-[#6E79F4] mb-2" />
-                                  <p className="text-xs font-semibold mb-2">Video Resource Link</p>
-                                  <a
-                                    href={newLessonVideoUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="bg-[#6E79F4] hover:bg-[#5A66F0] text-white font-bold text-[10px] px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
-                                  >
-                                    Open Video Resource <ExternalLink size={10} />
-                                  </a>
-                                </div>
-                              );
-                            }
-                          })()}
-
-                          {/* Render PDF Reader if Video URL ends with PDF or lesson type is PDF */}
-                          {(() => {
-                            const isPdf = newLessonVideoUrl.toLowerCase().endsWith(".pdf") || 
-                                          lessonTypes.find(t => t.id === newLessonTypeId)?.code?.toLowerCase() === "pdf";
-                            
-                            const pdfUrl = isPdf ? newLessonVideoUrl : syllabusResources.find(r => 
-                              r.resource_type === "pdf" || 
-                              r.external_url?.toLowerCase().endsWith(".pdf") ||
-                              r.file_url?.toLowerCase().endsWith(".pdf")
-                            )?.external_url || syllabusResources.find(r => 
-                              r.resource_type === "pdf" || 
-                              r.external_url?.toLowerCase().endsWith(".pdf") ||
-                              r.file_url?.toLowerCase().endsWith(".pdf")
-                            )?.file_url;
-
-                            if (!pdfUrl) return null;
-
-                            return (
-                              <div className="bg-[#131418] border border-[#23252C] rounded-xl overflow-hidden shadow-sm h-[500px] w-full flex flex-col">
-                                <div className="bg-[#16171D] border-b border-[#23252C] px-4 py-2 flex items-center justify-between text-[10px]">
-                                  <span className="font-bold text-[#EDEFF5] flex items-center gap-1">
-                                    <File size={12} className="text-[#6E79F4]" /> Embedded PDF document viewer
-                                  </span>
-                                  <a
-                                    href={pdfUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[#6E79F4] hover:underline font-bold flex items-center gap-0.5"
-                                  >
-                                    Open Fullscreen <ExternalLink size={9} />
-                                  </a>
-                                </div>
-                                <iframe src={pdfUrl} className="w-full h-full border-0" title={newLessonTitle} />
-                              </div>
-                            );
+                            const pdf = syllabusResources.find(resource => {
+                              const url = resource.external_url || resource.file_url;
+                              return url && lessonMediaSource(url)?.kind === "document";
+                            });
+                            const url = pdf?.external_url || pdf?.file_url;
+                            return url && url !== newLessonVideoUrl
+                              ? <LessonMedia url={url} title={pdf.title || "PDF attachment"} />
+                              : null;
                           })()}
 
                           {/* Text Content */}
@@ -4425,6 +4162,8 @@ export default function TeacherConsole({
                             </div>
                           )}
 
+                          {resourcesLoading && <p role="status">Loading lesson resources…</p>}
+                          {resourcesError && <div role="alert">Unable to load lesson resources. <button type="button" onClick={() => retryResources()}>Retry</button></div>}
                           {/* Reference Resources */}
                           {syllabusResources.length > 0 && (
                             <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 space-y-3 shadow-2xs">
@@ -4517,7 +4256,7 @@ export default function TeacherConsole({
                             <div>
                               <label className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Lesson Type *</label>
                               <CustomSelect
-                                options={lessonTypes.map((t: any) => ({ id: t.id, name: t.description || t.code }))}
+                                options={lessonTypes.map((t) => ({ id: t.id, name: t.description || t.code }))}
                                 value={newLessonTypeId || defaultLessonTypeId}
                                 onChange={setNewLessonTypeId}
                                 searchable={false}

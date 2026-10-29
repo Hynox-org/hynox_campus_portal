@@ -4,20 +4,14 @@ import { createClient } from "@/utils/supabase/server";
 import { createInstitution, updateInstitutionStatus, listInstitutionUsers, listTeacherInstitutions, getInstitutionRelationsCount, deleteInstitution } from "./institution";
 const campus="11111111-1111-4111-8111-111111111111";
 beforeEach(()=>vi.clearAllMocks());
-it("starts independent teacher mappings together and merges duplicate campuses",async()=>{
-  const started = new Set<string>();
-  let release!: () => void;
-  const gate = new Promise<void>(resolve => { release=resolve; });
-  const from=(table:string)=>{
-    const query={select:vi.fn().mockReturnThis(),eq:vi.fn().mockReturnThis(),in:vi.fn().mockReturnThis(),order:vi.fn().mockReturnThis(),
-      maybeSingle:()=>{started.add(table);return gate.then(()=>({data:{tenant_id:campus},error:null}));},
-      then:(resolve:(value:unknown)=>void)=>{started.add(table);return gate.then(()=>resolve({data:table==="institutions"?[{id:campus}]:[{tenant_id:campus}],error:null}));},
-    };return query;
-  };
-  vi.mocked(createClient).mockResolvedValue({schema:()=>({from})} as never);
-  const result=listTeacherInstitutions("teacher",false);
-  await vi.waitFor(()=>expect([...started].sort()).toEqual(["course_instructors","tenant_teachers","users"]));
-  release();expect(await result).toEqual([{id:campus}]);
+it("discovers standalone teachers through the protected assignment resolver", async () => {
+  const rpc = vi.fn().mockResolvedValue({ data: [campus, campus], error: null });
+  const inIds = vi.fn().mockReturnThis();
+  const query = { select: vi.fn().mockReturnThis(), in: inIds, order: vi.fn().mockResolvedValue({ data: [{ id: campus }], error: null }) };
+  vi.mocked(createClient).mockResolvedValue({ schema: () => ({ rpc, from: () => query }) } as never);
+  expect(await listTeacherInstitutions("teacher", false)).toEqual([{ id: campus }]);
+  expect(rpc).toHaveBeenCalledWith("teacher_campus_ids", { p_user_id: "teacher" });
+  expect(inIds).toHaveBeenCalledWith("id", [campus]);
 });
 it("validates creation before making any database call",async()=>{
   await expect(createInstitution({name:" ",institution_code:"campus",institution_type:"college"})).rejects.toThrow();

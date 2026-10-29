@@ -1,0 +1,31 @@
+src/app/admin/admin-panel.tsx(3150,77): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/delivery-manager.tsx(1390,57): error TS2339: Property 'selectedIndex' does not exist on type 'QuizQuestion'.
+src/app/admin/delivery-manager.tsx(1390,77): error TS2339: Property 'correctIndex' does not exist on type 'QuizQuestion'.
+src/app/admin/delivery-manager.tsx(1394,65): error TS2339: Property 'text' does not exist on type 'QuizQuestion'.
+src/app/admin/delivery-manager.tsx(1402,66): error TS2339: Property 'selectedIndex' does not exist on type 'QuizQuestion'.
+src/app/admin/delivery-manager.tsx(1403,68): error TS2339: Property 'correctIndex' does not exist on type 'QuizQuestion'.
+src/app/admin/library-builder.tsx(688,59): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/app/student/student-console.tsx(522,49): error TS7006: Parameter 'course' implicitly has an 'any' type.
+src/app/student/student-console.tsx(2442,98): error TS18048: 'assignment' is possibly 'undefined'.
+src/app/student/student-console.tsx(2554,58): error TS2538: Type 'null' cannot be used as an index type.
+src/app/teacher/teacher-console.tsx(1317,28): error TS2345: Argument of type '(prev: Lesson[]) => (Lesson | { title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; ... 15 more ...; module_position?: number | undefined; })[]' is not assignable to parameter of type 'SetStateAction<Lesson[]>'.
+  Type '(prev: Lesson[]) => (Lesson | { title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; ... 15 more ...; module_position?: number | undefined; })[]' is not assignable to type '(prevState: Lesson[]) => Lesson[]'.
+    Type '(Lesson | { title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; position: number; ... 14 more ...; module_position?: number | undefined; })[]' is not assignable to type 'Lesson[]'.
+      Type 'Lesson | { title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; position: number; ... 14 more ...; module_position?: number | undefined; }' is not assignable to type 'Lesson'.
+        Type '{ title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; position: number; is_preview: boolean; ... 13 more ...; module_position?: number; }' is not assignable to type 'Lesson'.
+          Type '{ title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; position: number; is_preview: boolean; ... 13 more ...; module_position?: number; }' is not assignable to type '{ content_json?: { text?: string | undefined; body?: string | undefined; } | null | undefined; resources?: Resource[] | undefined; module_title?: string | undefined; module_position?: number | undefined; lesson_type?: { ...; } | undefined; }'.
+            Types of property 'lesson_type' are incompatible.
+              Type 'Lookup | { code: string; description?: string | undefined; } | undefined' is not assignable to type '{ code: string; description?: string | undefined; } | undefined'.
+                Type 'Lookup' is not assignable to type '{ code: string; description?: string | undefined; }'.
+                  Types of property 'description' are incompatible.
+                    Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+                      Type 'null' is not assignable to type 'string | undefined'.
+src/app/teacher/teacher-console.tsx(2473,41): error TS2339: Property 'selectedIndex' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2473,61): error TS2339: Property 'correctIndex' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2477,49): error TS2339: Property 'text' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2485,50): error TS2339: Property 'selectedIndex' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2486,52): error TS2339: Property 'correctIndex' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2678,126): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.
+src/app/teacher/teacher-console.tsx(2688,84): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.
+src/app/teacher/teacher-console.tsx(2692,85): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.

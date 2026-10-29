@@ -4,7 +4,7 @@ import { validateInstitutionId } from "@/lib/institution-validation";
 
 export async function requireInstitutionAccess(institutionId: string, staffOnly = false) {
   validateInstitutionId(institutionId);
-  const current = await getCurrentUser();
+  const current = await getCurrentUser(true);
   if (!current?.user) throw new Error("Access denied.");
   const role = current.primaryRole;
   if (role === "super_admin") return current;
@@ -13,7 +13,7 @@ export async function requireInstitutionAccess(institutionId: string, staffOnly 
   if (teacher) {
     const institutions = await listTeacherInstitutions(current.user.id, false);
     if (!institutions.some(institution => institution.id === institutionId && !["inactive", "suspended"].includes(institution.status))) throw new Error("Access denied.");
-  } else if (current.tenantId !== institutionId || !current.institution || ["inactive", "suspended"].includes(current.institution.status)) {
+  } else if (current.tenantId !== institutionId || !current.institution || ["inactive", "suspended"].includes((current.institution.status ?? ""))) {
     throw new Error("Access denied.");
   }
   return current;

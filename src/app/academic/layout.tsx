@@ -18,7 +18,7 @@ export default async function AcademicLayout({ children }: AcademicLayoutProps) 
     redirect("/login");
   }
 
-  const { authUser, primaryRole, institution } = userDetails;
+  const { primaryRole, institution } = userDetails;
 
   // Let's resolve tenant display details
   const tenantName = institution ? institution.name : "Public Cohort";

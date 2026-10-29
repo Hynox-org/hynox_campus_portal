@@ -1,124 +1,97 @@
 "use client";
+import { useHydrated,useInputsChanged } from "@/hooks/use-inputs-changed";
+import { errorMessage } from "@/lib/error-message";
+import type { InstitutionUser } from "@/services/institution";
+import type { CampusUser,Course,CourseInstructor,Institution,Invitation,Lesson,Module,Program } from "@/types/campus";
 
-import React, { useState, useEffect, useRef } from "react";
-import InvitationStatusBadge from "@/components/invitation-status-badge";
-import InstitutionUserTable from "@/components/institution-user-table";
-import { useQueryClient } from "@tanstack/react-query";
-import { usePrograms, useTenantInstructors, useCourses, useCourseModules, useCourseInstructors, useAcademicLookups } from "@/hooks/use-academics";
-import { DataTable } from "@/components/data-table";
-import { ColumnDef } from "@tanstack/react-table";
-import { useAcademicPrefetchData } from "@/hooks/use-academics";
-import { seedAcademicListCaches } from "@/lib/dashboard-query";
-import { useToast } from "@/components/toast";
-import { 
-  createNewInstitutionAction, 
-  assignAdminAction, 
-  uploadCsvOnboardingAction,
-  regenerateInvitationAction,
-  listInstitutionUsersAction,
-  onboardSingleUserAction,
-  listInvitationsAction,
-  listAllTeachersAction,
-  mapTeacherToInstitutionAction,
-  unmapTeacherFromInstitutionAction,
-  getTeacherInstitutionDetailsAction,
-  updateInstitutionStatusAction,
-  onboardSuperAdminAction,
-  updateInstitutionAction,
-  getInstitutionRelationsCountAction,
-  deleteInstitutionAction,
-  deleteUserAction
-} from "@/app/actions/institution-actions";
-import { 
-  createProgramAction,
-  updateProgramAction,
-  deleteProgramAction,
-  createCourseAction,
-  updateCourseAction,
-  deleteCourseAction,
-  assignCourseInstructorsAction,
-  createModuleAction,
-  updateModuleAction,
-  deleteModuleAction,
-  createLessonAction,
-  updateLessonAction,
-  deleteLessonAction,
-  createLessonResourceAction,
-  deleteLessonResourceAction,
-  listLessonsAction,
-  listLessonResourcesAction,
-  listProgramsAction,
-  listCoursesAction,
-  listModulesAction,
-  getCourseInstructorsAction,
-  listTenantInstructorsAction,
-  getAcademicLookupsAction
+import {
+assignCourseInstructorsAction,
+createCourseAction,
+createLessonAction,
+createLessonResourceAction,
+createModuleAction,
+createProgramAction,
+deleteCourseAction,
+deleteLessonAction,
+deleteLessonResourceAction,
+deleteModuleAction,
+updateCourseAction,
+updateLessonAction,
+updateModuleAction,
+updateProgramAction
 } from "@/app/actions/academic-actions";
 import {
-  listTeacherCohortsAction,
-  assignTeacherToCohortAction,
-  removeTeacherFromCohortAction,
-  listCohortsAction,
-  listAllCohortsAction
+assignTeacherToCohortAction,
+removeTeacherFromCohortAction,
 } from "@/app/actions/delivery-actions";
-import * as XLSX from "xlsx";
-import { 
-  Building, 
-  UserPlus, 
-  FileSpreadsheet, 
-  LogOut, 
-  Plus,
-  AlertCircle,
-  Link as LinkIcon, 
-  Globe, 
-  Code,
-  Copy,
-  Search,
-  RefreshCw,
-  Clock,
-  ShieldCheck,
-  CheckCircle,
-  XCircle,
-  HelpCircle,
-  Ban,
-  Download,
-  Upload,
-  GraduationCap,
-  Folder,
-  ArrowRight,
-  Edit,
-  Trash2,
-  ExternalLink,
-  File,
-  Link2,
-  Video,
-  ChevronDown,
-  ChevronRight,
-  FolderPlus,
-  Save,
-  Users,
-  BookOpen,
-  UserCheck,
-  Award,
-  Menu,
-  X,
-  Play,
-  Layers,
-  Mail
-} from "lucide-react";
+import {
+createNewInstitutionAction,
+deleteInstitutionAction,
+deleteUserAction,
+getInstitutionRelationsCountAction,
+listInstitutionUsersAction,
+listInvitationsAction,
+onboardSingleUserAction,
+onboardSuperAdminAction,
+regenerateInvitationAction,
+updateInstitutionAction,
+uploadCsvOnboardingAction
+} from "@/app/actions/institution-actions";
+import AttendanceModule from "@/components/attendance-register/attendance-module";
+import { DataTable } from "@/components/data-table";
+import InstitutionUserTable from "@/components/institution-user-table";
+import InvitationStatusBadge from "@/components/invitation-status-badge";
+import { useToast } from "@/components/toast";
 import NewsletterAdminPanel from "@/features/newsletter/admin-panel";
-import LibraryBuilder from "./library-builder";
-import ProgramManager from "./program-manager";
+import { useAcademicLookups,useAcademicPrefetchData,useCourseInstructors,useCourseModules,useCourses,usePrograms,useTenantInstructors } from "@/hooks/use-academics";
+import { useAllCohorts,useAllTeachers,useTeacherCohorts } from "@/hooks/use-delivery";
+import { seedAcademicListCaches } from "@/lib/dashboard-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { ColumnDef } from "@tanstack/react-table";
+import {
+AlertCircle,
+Award,
+BookOpen,
+Building,
+ChevronDown,
+ChevronRight,
+Copy,
+Download,
+Edit,
+ExternalLink,
+File,
+Folder,
+FolderPlus,
+Globe,
+GraduationCap,
+Link2,
+Mail,
+Play,
+Plus,
+RefreshCw,
+Save,
+Search,
+ShieldCheck,
+Trash2,
+Upload,
+UserCheck,
+UserPlus,
+Users,
+X
+} from "lucide-react";
+import React,{ useEffect,useRef,useState } from "react";
+import * as XLSX from "xlsx";
 import DeliveryManager from "./delivery-manager";
 import LearningManager from "./learning-manager";
+import LibraryBuilder from "./library-builder";
+import ProgramManager from "./program-manager";
 import AdminStudentProgress from "./student-progress";
-import AttendanceModule from "@/components/attendance-register/attendance-module";
 
-import { useAdminData } from "@/hooks/use-admin";
+import AppShell,{ ShellNavItem } from "@/components/app-shell";
+import { CustomSelect } from "@/components/custom-select";
 import { DashboardLoader } from "@/components/dashboard-loader";
 import { SecondaryLoader } from "@/components/secondary-loader";
-import { CustomSelect } from "@/components/custom-select";
-import AppShell, { ShellNavItem } from "@/components/app-shell";
+import { useAdminData } from "@/hooks/use-admin";
 
 const ADMIN_NAV_ITEMS: ShellNavItem[] = [
   {
@@ -207,29 +180,32 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   
   const { data: adminData, isLoading: loadingAdmin, error: adminError } = useAdminData();
   
-  const [showPreviewLoader, setShowPreviewLoader] = useState(false);
+  const [showPreviewLoader] = useState(false);
   const [showSecondaryPreview, setShowSecondaryPreview] = useState(false);
 
   const [activeParentTab, setActiveParentTab] = useState<"institutions" | "onboarding" | "library" | "programs" | "learning_manager" | "attendance" | "newsletters">("institutions");
-  const [selectedUserDetail, setSelectedUserDetail] = useState<any | null>(null);
+  const [selectedUserDetail, setSelectedUserDetail] = useState<CampusUser | null>(null);
 
   const [activeTab, setActiveTab] = useState<"institutions" | "add_institution" | "explorer" | "csv" | "onboarding" | "academics" | "library" | "programs" | "examine_programs" | "cohorts" | "enrollments" | "course_assignments" | "learning_manager" | "create_activity" | "view_activities" | "teacher_mapping" | "teacher_assignments" | "program_student_progress" | "super_admin_invite" | "attendance" | "newsletters">("institutions");
 
   // Sync state with URL params after hydration on client
-  useEffect(() => {
+  const hydrated = useHydrated();
+  if (useInputsChanged([hydrated]) && hydrated) {
+    (() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const parent = params.get("parentTab") || (params.get("tab") === "newsletters" ? "newsletters" : null);
       if (parent && ["institutions", "onboarding", "library", "programs", "learning_manager", "attendance", "newsletters"].includes(parent)) {
-        setActiveParentTab(parent as any);
+        setActiveParentTab(parent as typeof activeParentTab);
       }
       const tab = params.get("tab") || (parent === "newsletters" ? "newsletters" : null);
       const validTabs = ["institutions", "add_institution", "explorer", "csv", "onboarding", "academics", "library", "programs", "examine_programs", "cohorts", "enrollments", "course_assignments", "learning_manager", "create_activity", "view_activities", "teacher_mapping", "teacher_assignments", "program_student_progress", "super_admin_invite", "attendance", "newsletters"];
       if (tab && validTabs.includes(tab)) {
-        setActiveTab(tab as any);
+        setActiveTab(tab as typeof activeTab);
       }
     }
-  }, []);
+  })();
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -245,18 +221,20 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   }, [activeParentTab, activeTab]);
   
   // Use data from hook as initial state or direct derivation
-  const [institutions, setInstitutions] = useState<any[]>([]);
-  const [invitations, setInvitations] = useState<any[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
 
-  useEffect(() => {
+  if (useInputsChanged([adminData])) {
+    (() => {
     if (adminData) {
       setInstitutions(adminData.institutions || []);
       setInvitations(adminData.invitations || []);
     }
-  }, [adminData]);
+  })();
+  }
 
   // Sidebar for Institution Details
-  const [selectedInstForSidebar, setSelectedInstForSidebar] = useState<any | null>(null);
+  const [selectedInstForSidebar, setSelectedInstForSidebar] = useState<Institution | null>(null);
   const [isInstSidebarOpen, setIsInstSidebarOpen] = useState(false);
   const [isEditingInst, setIsEditingInst] = useState(false);
   
@@ -274,7 +252,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
   // Deletion warnings and confirmation states
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [instToDelete, setInstToDelete] = useState<any | null>(null);
+  const [instToDelete, setInstToDelete] = useState<Institution | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
   const [relationCounts, setRelationCounts] = useState<{ cohorts: number; programs: number; users: number } | null>(null);
   const [checkingRelations, setCheckingRelations] = useState(false);
@@ -286,7 +264,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [userDeleteConfirmEmail, setUserDeleteConfirmEmail] = useState("");
   const [userDeleteLoading, setUserDeleteLoading] = useState(false);
 
-  const handleOpenSidebar = (inst: any) => {
+  const handleOpenSidebar = (inst: Institution) => {
     setSelectedInstForSidebar(inst);
     setEditInstForm({
       name: inst.name || "",
@@ -320,7 +298,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     setLoading(false);
   };
 
-  const handleOpenDeleteModal = async (inst: any) => {
+  const handleOpenDeleteModal = async (inst: Institution) => {
     setInstToDelete(inst);
     setDeleteConfirmName("");
     setCheckingRelations(true);
@@ -396,27 +374,32 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [inviteRoleFilter, setInviteRoleFilter] = useState("all");
   const [inviteDateFilter, setInviteDateFilter] = useState("all");
   const [progSelectedInstId, setProgSelectedInstId] = useState("");
-  const [progSelectedProgram, setProgSelectedProgram] = useState<any | null>(null);
+  const [progSelectedProgram, setProgSelectedProgram] = useState<Program | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [openProgDropdownId, setOpenProgDropdownId] = useState<string | null>(null);
 
   // Institution Explorer states
   const [explorerSelectedId, setExplorerSelectedId] = useState("");
-  const [explorerUsers, setExplorerUsers] = useState<any[]>([]);
+  const [explorerUsers, setExplorerUsers] = useState<InstitutionUser[]>([]);
   const [explorerLoading, setExplorerLoading] = useState(false);
   const [explorerSearch, setExplorerSearch] = useState("");
   const [explorerRoleFilter, setExplorerRoleFilter] = useState<"all" | "admin" | "teacher" | "student">("all");
   const explorerRequest = useRef(0);
 
   // Teacher mapping states
-  const [teachersList, setTeachersList] = useState<any[]>([]);
-  const [loadingTeachers, setLoadingTeachers] = useState(false);
+  const teacherMappingVisible = activeTab === "teacher_mapping" || activeTab === "teacher_assignments";
+  const teacherPool = useAllTeachers(teacherMappingVisible);
+  const cohortPool = useAllCohorts(teacherMappingVisible);
+  const teachersList: Array<{ id: string; full_name: string; email: string; tenant_id: string | null; mapped_tenant_ids: string[] }> = teacherPool.data || [];
+  const [teacherMutationLoading, setLoadingTeachers] = useState(false);
+  const loadingTeachers = teacherMutationLoading || teacherPool.isFetching || cohortPool.isFetching;
   const [teacherSearch, setTeacherSearch] = useState("");
   const [mappingInstId, setMappingInstId] = useState("");
-  const [selectedTeacherForDetail, setSelectedTeacherForDetail] = useState<any | null>(null);
-  const [teacherDetailsLoading, setTeacherDetailsLoading] = useState(false);
-  const [teacherInstDetails, setTeacherInstDetails] = useState<any[]>([]);
-  const [systemCohorts, setSystemCohorts] = useState<any[]>([]);
+  const [selectedTeacherForDetail, setSelectedTeacherForDetail] = useState<CampusUser | null>(null);
+  const teacherCohorts = useTeacherCohorts(selectedTeacherForDetail?.id || "");
+  const teacherDetailsLoading = teacherCohorts.isLoading;
+  const teacherInstDetails = teacherCohorts.data || [];
+  const systemCohorts = cohortPool.data || [];
   
   // Teacher Onboarding Form States
   const [teacherOnboardName, setTeacherOnboardName] = useState("");
@@ -462,7 +445,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
               expires_at: res.invitation.expires_at,
               status: res.invitation.status,
               accepted_at: null,
-              user: inv.user ? { ...inv.user, status: "invited" } : undefined
+              user: { ...inv.user, status: "invited" }
             };
           }
           return inv;
@@ -476,7 +459,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     const filteredInvs = invitations.filter((inv) =>
       ["student_onboarding", "institution_admin_invite"].includes(inv.invitation_type)
     );
-    let total = filteredInvs.length;
+    const total = filteredInvs.length;
     let accepted = 0;
     let pending = 0;
     let expired = 0;
@@ -570,9 +553,9 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     let students = 0;
 
     explorerUsers.forEach((u) => {
-      const isTeacher = u.roles.includes("teacher") || u.roles.includes("trainer");
-      const isAdmin = u.roles.includes("institution_admin") || u.roles.includes("super_admin");
-      const isStudent = u.roles.includes("student");
+      const isTeacher = u.roles?.includes("teacher") || u.roles?.includes("trainer");
+      const isAdmin = u.roles?.includes("institution_admin") || u.roles?.includes("super_admin");
+      const isStudent = u.roles?.includes("student");
 
       if (isAdmin) admins++;
       if (isTeacher) teachers++;
@@ -593,13 +576,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
       if (explorerRoleFilter === "all") return true;
       if (explorerRoleFilter === "admin") {
-        return u.roles.includes("institution_admin") || u.roles.includes("super_admin");
+        return u.roles?.includes("institution_admin") || u.roles?.includes("super_admin");
       }
       if (explorerRoleFilter === "teacher") {
-        return u.roles.includes("teacher") || u.roles.includes("trainer");
+        return u.roles?.includes("teacher") || u.roles?.includes("trainer");
       }
       if (explorerRoleFilter === "student") {
-        return u.roles.includes("student");
+        return u.roles?.includes("student");
       }
 
       return true;
@@ -611,11 +594,11 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   // Status states
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useToast();
-  const [links, setLinks] = useState<any[]>([]);
+  const [links, setLinks] = useState<Array<{ email: string; link?: string; error?: string; status: string }>>([]);
 
   // Form states
   const [instName, setInstName] = useState("");
-  const [instSlug, setInstSlug] = useState("");
+
   const [instCode, setInstCode] = useState("");
   const [instType, setInstType] = useState("college");
   const [instEmail, setInstEmail] = useState("");
@@ -624,7 +607,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [instWebsite, setInstWebsite] = useState("");
   const [instFormErrors, setInstFormErrors] = useState<Record<string, string>>({});
 
-  const [adminEmailInput, setAdminEmailInput] = useState("");
+
   const [selectedInstId, setSelectedInstId] = useState(institutions[0]?.id || "");
 
   const [csvContent, setCsvContent] = useState("");
@@ -644,13 +627,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   const [acadSelectedInstId, setAcadSelectedInstId] = useState("");
   const { data: academicPrefetch } = useAcademicPrefetchData(acadSelectedInstId);
   const { data: acadPrograms = [] } = usePrograms(acadSelectedInstId);
-  const [acadSelectedProgram, setAcadSelectedProgram] = useState<any | null>(null);
-  const { data: acadCourses = [] } = useCourses(acadSelectedProgram?.id);
-  const [acadSelectedCourse, setAcadSelectedCourse] = useState<any | null>(null);
-  const { data: acadModules = [] } = useCourseModules(acadSelectedCourse?.id);
-  const { data: acadInstructors = [] } = useCourseInstructors(acadSelectedCourse?.id);
+  const [acadSelectedProgram, setAcadSelectedProgram] = useState<Program | null>(null);
+  const { data: acadCourses = [] } = useCourses(acadSelectedProgram?.id || "");
+  const [acadSelectedCourse, setAcadSelectedCourse] = useState<Course | null>(null);
+  const { data: acadModules = [] } = useCourseModules(acadSelectedCourse?.id || "");
+  const { data: acadInstructors = [] } = useCourseInstructors(acadSelectedCourse?.id || "");
   
-  const setAcadInstructors = (newInstructors: any[]) => {
+  const setAcadInstructors = (newInstructors: CourseInstructor[]) => {
     if (acadSelectedCourse?.id) {
       queryClient.setQueryData(["course-instructors", acadSelectedCourse.id], newInstructors);
     }
@@ -663,11 +646,11 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
   // Modal / Form Open States
   const [programModalOpen, setProgramModalOpen] = useState(false);
-  const [editingProgram, setEditingProgram] = useState<any | null>(null);
+  const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [programForm, setProgramForm] = useState({ title: "", slug: "", description: "", status_id: "", visibility_type_id: "" });
 
   const [courseModalOpen, setCourseModalOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<any | null>(null);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [courseForm, setCourseForm] = useState({
     title: "",
     slug: "",
@@ -675,17 +658,17 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     course_type_id: "",
     status_id: "",
     visibility_type_id: "",
-    enrollment_mode: "open" as any,
+    enrollment_mode: "open" as NonNullable<import("@/services/academic").CourseInput["enrollment_mode"]>,
     duration_minutes: 0,
     thumbnail_path: ""
   });
 
   const [moduleModalOpen, setModuleModalOpen] = useState(false);
-  const [editingModule, setEditingModule] = useState<any | null>(null);
+  const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [moduleForm, setModuleForm] = useState({ title: "", description: "", position: 1, status_id: "" });
 
   const [lessonModalOpen, setLessonModalOpen] = useState(false);
-  const [editingLesson, setEditingLesson] = useState<any | null>(null);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [lessonSelectedModuleId, setLessonSelectedModuleId] = useState("");
   const [lessonForm, setLessonForm] = useState({
     title: "",
@@ -708,20 +691,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   });
 
   const loadAllTeachersData = async () => {
-    setLoadingTeachers(true);
-    const [tRes, cRes] = await Promise.all([
-      listAllTeachersAction(),
-      listAllCohortsAction()
-    ]);
-    if (tRes.teachers) {
-      setTeachersList(tRes.teachers);
-    } else if (tRes.error) {
-      showError(tRes.error);
-    }
-    if (cRes.cohorts) {
-      setSystemCohorts(cRes.cohorts);
-    }
-    setLoadingTeachers(false);
+    const results = await Promise.all([teacherPool.refetch(), cohortPool.refetch(), ...(selectedTeacherForDetail ? [teacherCohorts.refetch()] : [])]);
+    for (const result of results) if (result.error) showError(errorMessage(result.error));
   };
 
   const handleMapTeacher = async (userId: string, cohortId: string) => {
@@ -733,10 +704,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     const res = await assignTeacherToCohortAction(cohortId, userId);
     if (res.success) {
       showSuccess("Teacher assigned to group successfully!");
-      const freshCohorts = await listTeacherCohortsAction(userId, false);
-      if (freshCohorts.cohorts) {
-        setTeacherInstDetails(freshCohorts.cohorts);
-      }
+      await queryClient.invalidateQueries({ queryKey: ["teacher-cohorts", userId] });
     } else {
       showError(res.error || "Failed to assign teacher to group.");
     }
@@ -751,35 +719,18 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     const res = await removeTeacherFromCohortAction(cohortId, userId);
     if (res.success) {
       showSuccess("Teacher removed from group successfully!");
-      const freshCohorts = await listTeacherCohortsAction(userId, false);
-      if (freshCohorts.cohorts) {
-        setTeacherInstDetails(freshCohorts.cohorts);
-      }
+      await queryClient.invalidateQueries({ queryKey: ["teacher-cohorts", userId] });
     } else {
       showError(res.error || "Failed to remove teacher from group.");
     }
     setLoadingTeachers(false);
   };
 
-  const loadTeacherDetailsData = async (teacher: any) => {
+  const loadTeacherDetailsData = async (teacher: CampusUser) => {
     setSelectedTeacherForDetail(teacher);
-    setMappingInstId(""); // Reset mapping selection when loading a teacher
-    setTeacherDetailsLoading(true);
-    setTeacherInstDetails([]);
-    const res = await listTeacherCohortsAction(teacher.id, false);
-    if (res.cohorts) {
-      setTeacherInstDetails(res.cohorts);
-    } else if (res.error) {
-      showError(res.error);
-    }
-    setTeacherDetailsLoading(false);
+    setMappingInstId("");
+    await queryClient.invalidateQueries({ queryKey: ["teacher-cohorts", teacher.id] });
   };
-
-  React.useEffect(() => {
-    if (activeTab === "teacher_mapping" || activeTab === "teacher_assignments") {
-      loadAllTeachersData();
-    }
-  }, [activeTab]);
 
   // Data fetching is now handled by React Query hooks (usePrograms, useCourses, etc.)
 
@@ -840,6 +791,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   };
 
   const handleCourseSubmit = async (e: React.FormEvent) => {
+if (!acadSelectedProgram) return;
+
     e.preventDefault();
     setLoading(true);
 
@@ -867,6 +820,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   };
 
   const handleModuleSubmit = async (e: React.FormEvent) => {
+if (!acadSelectedCourse) return;
+
     e.preventDefault();
     setLoading(true);
 
@@ -894,6 +849,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   };
 
   const handleLessonSubmit = async (e: React.FormEvent) => {
+if (!acadSelectedCourse) return;
+
     e.preventDefault();
     setLoading(true);
 
@@ -940,6 +897,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   };
 
   const handleResourceSubmit = async (e: React.FormEvent) => {
+if (!acadSelectedCourse) return;
+
     e.preventDefault();
     setLoading(true);
 
@@ -965,6 +924,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
   };
 
   const handleSaveInstructors = async (e: React.FormEvent) => {
+if (!acadSelectedCourse) return;
+
     e.preventDefault();
     setLoading(true);
 
@@ -1048,26 +1009,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     setLoading(false);
   };
 
-  const handleAssignAdmin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    clearStatuses();
 
-    if (!selectedInstId) {
-      showError("Please select or create an institution first.");
-      setLoading(false);
-      return;
-    }
-
-    const res = await assignAdminAction(selectedInstId, adminEmailInput);
-    if (res.error) {
-      showError(res.error);
-    } else {
-      showSuccess(`User '${adminEmailInput}' successfully assigned as administrator.`);
-      setAdminEmailInput("");
-    }
-    setLoading(false);
-  };
 
   const handleCsvUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1091,8 +1033,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       showError(res.error);
     } else if (res.results) {
       setLinks(res.results);
-      const errors = res.results.filter((r: any) => r.status === "error");
-      const successes = res.results.filter((r: any) => r.status === "success");
+      const errors = res.results.filter((r) => r.status === "error");
+      const successes = res.results.filter((r) => r.status === "success");
       
       showSuccess(`Processed CSV: ${successes.length} provisioned successfully, ${errors.length} errors.`);
       
@@ -1254,8 +1196,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Student Onboarding Template");
       XLSX.writeFile(workbook, `hynox_student_onboarding_${code}.xlsx`);
       showSuccess("Excel template generated successfully!");
-    } catch (err: any) {
-      showError(`Failed to generate Excel template: ${err.message}`);
+    } catch (err) {
+      showError(`Failed to generate Excel template: ${errorMessage(err)}`);
     }
   };
 
@@ -1282,13 +1224,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
           
-          const jsonData = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
+          const jsonData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1 });
           if (jsonData.length === 0) {
             throw new Error("The uploaded sheet has no rows.");
           }
           
           // Map headers: name, email, role, institution_id
-          const rawHeaders = (jsonData[0] as any[]).map(h => String(h || "").trim());
+          const rawHeaders = (jsonData[0] as unknown[]).map(h => String(h || "").trim());
           const headers = rawHeaders.map(h => {
             const lower = h.toLowerCase();
             if (lower.includes("name")) return "name";
@@ -1300,7 +1242,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
           const csvRows = [headers.join(",")];
           for (let i = 1; i < jsonData.length; i++) {
-            const row = jsonData[i] as any[];
+            const row = jsonData[i] as unknown[];
             if (!row || row.length === 0 || row.every(c => c === null || c === undefined || String(c).trim() === "")) continue;
             
             while (row.length < headers.length) {
@@ -1311,8 +1253,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
           
           setCsvContent(csvRows.join("\n"));
           showSuccess(`Successfully parsed and loaded Excel file: ${file.name}`);
-        } catch (err: any) {
-          showError(`Failed to parse Excel file: ${err.message}`);
+        } catch (err) {
+          showError(`Failed to parse Excel file: ${errorMessage(err)}`);
         }
       };
       reader.readAsArrayBuffer(file);
@@ -1345,7 +1287,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                   <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
                     {selectedUserDetail.roles?.join(", ") || "No roles"}
                   </span>
-                  <span className="text-[9px] text-[#C2C6D1] font-medium">• Joined {new Date(selectedUserDetail.created_at).toLocaleDateString()}</span>
+                  <span className="text-[9px] text-[#C2C6D1] font-medium">• Joined {new Date((selectedUserDetail.created_at || "")).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
@@ -1391,7 +1333,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 </div>
                 <div className="py-2.5 flex justify-between">
                   <span className="text-[#C2C6D1] font-medium">Created On</span>
-                  <span className="font-semibold text-[#EDEFF5]">{new Date(selectedUserDetail.created_at).toLocaleString()}</span>
+                  <span className="font-semibold text-[#EDEFF5]">{new Date((selectedUserDetail.created_at || "")).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -1455,7 +1397,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {teacherInstDetails.map((cohort: any) => (
+                  {teacherInstDetails.map((cohort) => (
                     <div key={cohort.id} className="border border-[#23252C] rounded-xl p-4 bg-[#131418] shadow-sm flex justify-between items-center">
                       <div>
                         <h5 className="text-xs font-bold text-[#EDEFF5]">
@@ -1548,7 +1490,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
     );
   };
 
-  const institutionColumns = React.useMemo<ColumnDef<any>[]>(() => [
+  const institutionColumns = React.useMemo<ColumnDef<Institution>[]>(() => [
     {
       accessorKey: "name",
       header: "Name",
@@ -2015,7 +1957,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
                         {link.link && (
                           <button
-                            onClick={() => copyToClipboard(link.link)}
+                            onClick={() => copyToClipboard((link.link ?? ""))}
                             className="flex items-center justify-center gap-1.5 border border-[#23252C] bg-[#131418] px-2.5 py-1.5 rounded-lg hover:bg-[#16171D] transition-all font-semibold shrink-0 text-[10px]"
                           >
                             <Copy size={12} />
@@ -2114,7 +2056,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
 
                         {link.link && (
                           <button
-                            onClick={() => copyToClipboard(link.link)}
+                            onClick={() => copyToClipboard((link.link ?? ""))}
                             className="flex items-center justify-center gap-1.5 border border-[#23252C] bg-[#131418] px-2.5 py-1.5 rounded-lg hover:bg-[#16171D] transition-all font-semibold shrink-0 text-[10px]"
                           >
                             <Copy size={12} />
@@ -2692,7 +2634,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                       t.full_name?.toLowerCase().includes(teacherSearch.toLowerCase()) || 
                       t.email?.toLowerCase().includes(teacherSearch.toLowerCase())
                     ).map(teacher => {
-                      const primaryInst = institutions.find(i => i.id === teacher.tenant_id);
+
                       
                       return (
                         <div 
@@ -2965,8 +2907,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                         <button
                           onClick={() => {
                             setEditingProgram(null);
-                            const activeStatus = acadLookups.statuses.find((s: any) => s.code === "active")?.id || "";
-                            const publicVisibility = acadLookups.visibilityTypes.find((v: any) => v.code === "public")?.id || "";
+                            const activeStatus = acadLookups.statuses.find((s) => s.code === "active")?.id || "";
+                            const publicVisibility = acadLookups.visibilityTypes.find((v) => v.code === "public")?.id || "";
                             setProgramForm({ title: "", slug: "", description: "", status_id: activeStatus, visibility_type_id: publicVisibility });
                             setProgramModalOpen(true);
                           }}
@@ -3020,14 +2962,14 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                       setOpenProgDropdownId(openProgDropdownId === prog.id ? null : prog.id);
                                     }}
                                     className={`px-2 py-0.5 rounded-full text-[9px] font-bold border flex items-center gap-1 cursor-pointer transition-all ${
-                                      acadLookups.statuses.find((s: any) => s.id === prog.status_id)?.code === "active"
+                                      acadLookups.statuses.find((s) => s.id === prog.status_id)?.code === "active"
                                         ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/80"
-                                        : acadLookups.statuses.find((s: any) => s.id === prog.status_id)?.code === "draft"
+                                        : acadLookups.statuses.find((s) => s.id === prog.status_id)?.code === "draft"
                                         ? "bg-[#1A1C22] text-[#E2E4EB] border-[#23252C] hover:bg-[#23252C]/80"
                                         : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
                                     }`}
                                   >
-                                    {acadLookups.statuses.find((s: any) => s.id === prog.status_id)?.code.toUpperCase() || "DRAFT"}
+                                    {acadLookups.statuses.find((s) => s.id === prog.status_id)?.code.toUpperCase() || "DRAFT"}
                                     <ChevronDown size={10} className="opacity-70" />
                                   </button>
 
@@ -3036,8 +2978,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                       <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenProgDropdownId(null); }}></div>
                                       <div className="absolute right-0 mt-1.5 w-28 bg-[#131418] border border-[#23252C] rounded-xl shadow-lg z-20 py-1 font-semibold text-[9px] overflow-hidden text-[#E2E4EB]">
                                         {acadLookups.statuses
-                                          .filter((s: any) => ["active", "draft", "disabled"].includes(s.code))
-                                          .map((s: any) => (
+                                          .filter((s) => ["active", "draft", "disabled"].includes(s.code))
+                                          .map((s) => (
                                             <button
                                               key={s.id}
                                               type="button"
@@ -3087,13 +3029,13 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             <h4 className="text-xs font-bold uppercase tracking-wider text-[#EDEFF5] flex items-center gap-1.5">
                               <GraduationCap size={14} className="text-[#6E79F4]" /> Courses
                             </h4>
-                            <p className="text-[10px] text-[#C2C6D1] truncate font-medium">under: {acadSelectedProgram.title}</p>
+                            <p className="text-[10px] text-[#C2C6D1] truncate font-medium">under: {acadSelectedProgram?.title}</p>
                           </div>
                           <button
                             onClick={() => {
                               setEditingCourse(null);
-                              const activeStatus = acadLookups.statuses.find((s: any) => s.code === "active")?.id || "";
-                              const publicVisibility = acadLookups.visibilityTypes.find((v: any) => v.code === "public")?.id || "";
+                              const activeStatus = acadLookups.statuses.find((s) => s.code === "active")?.id || "";
+                              const publicVisibility = acadLookups.visibilityTypes.find((v) => v.code === "public")?.id || "";
                               const defaultType = acadLookups.courseTypes[0]?.id || "";
                               setCourseForm({
                                 title: "",
@@ -3188,8 +3130,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                         <div className="bg-[#131418] border border-[#23252C] rounded-xl p-6 shadow-sm space-y-6">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#23252C] pb-4">
                             <div>
-                              <h3 className="text-sm font-bold text-[#EDEFF5]">{acadSelectedCourse.title}</h3>
-                              <p className="text-xs text-[#C2C6D1] mt-0.5">{acadSelectedCourse.description || "No description set for this course."}</p>
+                              <h3 className="text-sm font-bold text-[#EDEFF5]">{acadSelectedCourse?.title}</h3>
+                              <p className="text-xs text-[#C2C6D1] mt-0.5">{acadSelectedCourse?.description || "No description set for this course."}</p>
                             </div>
                             
                           </div>
@@ -3203,7 +3145,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             <form onSubmit={handleSaveInstructors} className="space-y-4">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[160px] overflow-y-auto p-1 border border-[#23252C] rounded-lg">
                                 {acadTenantTeachers.length > 0 ? (
-                                  acadTenantTeachers.map((teach: any) => {
+                                  acadTenantTeachers.map((teach: CampusUser) => {
                                     const isAssigned = acadInstructors.some(i => i.user_id === teach.id);
                                     return (
                                       <label key={teach.id} className="flex items-center gap-2 px-3 py-2 bg-[#16171D] hover:bg-[#1A1C22] rounded-lg cursor-pointer text-xs transition-colors">
@@ -3253,7 +3195,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             <button
                               onClick={() => {
                                 setEditingModule(null);
-                                const activeStatus = acadLookups.statuses.find((s: any) => s.code === "active")?.id || "";
+                                const activeStatus = acadLookups.statuses.find((s) => s.code === "active")?.id || "";
                                 setModuleForm({ title: "", description: "", position: acadModules.length + 1, status_id: activeStatus });
                                 setModuleModalOpen(true);
                               }}
@@ -3280,7 +3222,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                         onClick={() => {
                                           setLessonSelectedModuleId(mod.id);
                                           setEditingLesson(null);
-                                          const activeStatus = acadLookups.statuses.find((s: any) => s.code === "active")?.id || "";
+                                          const activeStatus = acadLookups.statuses.find((s) => s.code === "active")?.id || "";
                                           const defaultType = acadLookups.lessonTypes[0]?.id || "";
                                           setLessonForm({
                                             title: "",
@@ -3304,7 +3246,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                             title: mod.title,
                                             description: mod.description || "",
                                             position: mod.position,
-                                            status_id: mod.status_id
+                                            status_id: (mod.status_id ?? "")
                                           });
                                           setModuleModalOpen(true);
                                         }}
@@ -3314,6 +3256,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                       </button>
                                       <button
                                         onClick={async () => {
+if (!acadSelectedCourse) return;
+
                                           if (confirm("Are you sure you want to delete this module?")) {
                                             const res = await deleteModuleAction(mod.id);
                                             if (res.error) showError(res.error);
@@ -3333,7 +3277,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                   {/* Lessons under this module */}
                                   <div className="p-4 space-y-3">
                                     {mod.lessons && mod.lessons.length > 0 ? (
-                                      mod.lessons.map((les: any) => (
+                                      mod.lessons.map((les) => (
                                         <div key={les.id} className="bg-[#131418] border border-[#23252C] rounded-xl p-3.5 space-y-3 shadow-xs">
                                           <div className="flex items-start justify-between">
                                             <div className="min-w-0 pr-2">
@@ -3370,12 +3314,12 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                                   setLessonSelectedModuleId(mod.id);
                                                   setLessonForm({
                                                     title: les.title,
-                                                    lesson_type_id: les.lesson_type_id,
+                                                    lesson_type_id: (les.lesson_type_id ?? ""),
                                                     content_text: les.content_json?.body || les.content_json?.text || "",
                                                     video_url: les.video_url || "",
                                                     duration: les.duration || 0,
                                                     position: les.position || 1,
-                                                    status_id: les.status_id
+                                                    status_id: (les.status_id ?? "")
                                                   });
                                                   setLessonModalOpen(true);
                                                 }}
@@ -3385,6 +3329,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                               </button>
                                               <button
                                                 onClick={async () => {
+if (!acadSelectedCourse) return;
+
                                                   if (confirm("Are you sure you want to delete this lesson?")) {
                                                     const res = await deleteLessonAction(les.id);
                                                     if (res.error) showError(res.error);
@@ -3416,7 +3362,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                             <div className="bg-[#16171D]/50 border border-[#23252C] rounded-lg p-2 space-y-1.5">
                                               <p className="text-[10px] font-bold uppercase tracking-wider text-[#C2C6D1] px-1">Attachments & External Resources</p>
                                               <div className="divide-y divide-[#23252C] bg-[#131418] rounded-md border border-[#23252C]">
-                                                {les.resources.map((res: any) => (
+                                                {les.resources.map((res) => (
                                                   <div key={res.id} className="px-2 py-1.5 flex items-center justify-between text-[11px]">
                                                     <div className="flex items-center gap-1.5 min-w-0">
                                                       <File size={12} className="text-[#C2C6D1] shrink-0" />
@@ -3431,6 +3377,8 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                                                       )}
                                                       <button
                                                         onClick={async () => {
+if (!acadSelectedCourse) return;
+
                                                           if (confirm("Remove this resource attachment?")) {
                                                             const delRes = await deleteLessonResourceAction(res.id);
                                                             if (delRes.error) showError(delRes.error);
@@ -3523,7 +3471,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setProgramForm({ ...programForm, status_id: e.target.value })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
-                            {acadLookups.statuses.map((s: any) => (
+                            {acadLookups.statuses.map((s) => (
                               <option key={s.id} value={s.id}>{s.description}</option>
                             ))}
                           </select>
@@ -3535,7 +3483,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setProgramForm({ ...programForm, visibility_type_id: e.target.value })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
-                            {acadLookups.visibilityTypes.map((v: any) => (
+                            {acadLookups.visibilityTypes.map((v) => (
                               <option key={v.id} value={v.id}>{v.description}</option>
                             ))}
                           </select>
@@ -3608,7 +3556,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setCourseForm({ ...courseForm, course_type_id: e.target.value })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
-                            {acadLookups.courseTypes.map((t: any) => (
+                            {acadLookups.courseTypes.map((t) => (
                               <option key={t.id} value={t.id}>{t.description}</option>
                             ))}
                           </select>
@@ -3617,7 +3565,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                           <label className="block font-semibold mb-1 text-[#C2C6D1]">Enrollment Mode *</label>
                           <select
                             value={courseForm.enrollment_mode}
-                            onChange={(e) => setCourseForm({ ...courseForm, enrollment_mode: e.target.value as any })}
+                            onChange={(e) => setCourseForm({ ...courseForm, enrollment_mode: e.target.value as typeof courseForm.enrollment_mode })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
                             <option value="open">Open Access</option>
@@ -3644,7 +3592,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setCourseForm({ ...courseForm, status_id: e.target.value })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
-                            {acadLookups.statuses.map((s: any) => (
+                            {acadLookups.statuses.map((s) => (
                               <option key={s.id} value={s.id}>{s.description}</option>
                             ))}
                           </select>
@@ -3656,7 +3604,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setCourseForm({ ...courseForm, visibility_type_id: e.target.value })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
-                            {acadLookups.visibilityTypes.map((v: any) => (
+                            {acadLookups.visibilityTypes.map((v) => (
                               <option key={v.id} value={v.id}>{v.description}</option>
                             ))}
                           </select>
@@ -3728,7 +3676,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setModuleForm({ ...moduleForm, status_id: e.target.value })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
-                            {acadLookups.statuses.map((s: any) => (
+                            {acadLookups.statuses.map((s) => (
                               <option key={s.id} value={s.id}>{s.description}</option>
                             ))}
                           </select>
@@ -3780,7 +3728,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setLessonForm({ ...lessonForm, lesson_type_id: e.target.value })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
-                            {acadLookups.lessonTypes.map((t: any) => (
+                            {acadLookups.lessonTypes.map((t) => (
                               <option key={t.id} value={t.id}>{t.description}</option>
                             ))}
                           </select>
@@ -3792,7 +3740,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
                             onChange={(e) => setLessonForm({ ...lessonForm, status_id: e.target.value })}
                             className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                           >
-                            {acadLookups.statuses.map((s: any) => (
+                            {acadLookups.statuses.map((s) => (
                               <option key={s.id} value={s.id}>{s.description}</option>
                             ))}
                           </select>

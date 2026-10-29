@@ -1,0 +1,13 @@
+
+> hynox-campus@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.9 D:/hynox_campus
+
+
+ Test Files  70 passed (70)
+      Tests  519 passed (519)
+   Start at  16:19:18
+   Duration  35.62s (transform 10.22s, setup 0ms, import 48.41s, tests 44.85s, environment 98.51s)
+

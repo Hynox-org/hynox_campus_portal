@@ -1,0 +1,5 @@
+const fs=require('fs');function edit(f,fn){const p='src/'+f;fs.writeFileSync(p,fn(fs.readFileSync(p,'utf8')));}
+edit('app/admin/admin-panel.tsx',s=>s.replace('acadSelectedCourse.description','acadSelectedCourse?.description'));
+edit('app/admin/library-builder.tsx',s=>s.replace('href={resrc.file_url || resrc.external_url}','href={resrc.file_url || resrc.external_url || undefined}'));
+edit('app/student/student-console.tsx',s=>s.replace('async (course) =>','async (course: Course) =>').replace('assignment.available_from ?? ""','assignment?.available_from ?? ""').replace('[quizSubmittedResult.forfeit_reason]','[quizSubmittedResult.forfeit_reason || ""]'));
+edit('app/teacher/teacher-console.tsx',s=>s.replace('    let cancelled = false;\n    async function loadSession()', '    const attemptId = selectedQuizAttempt.id;\n    let cancelled = false;\n    async function loadSession()').replace('getQuizSessionDetailsAction(selectedQuizAttempt.id)','getQuizSessionDetailsAction(attemptId)').replace('hasRestoredFromUrl.current = true','setRestoredFromUrl(true)').replace('selectedProjectSub.max_score * 0.5','(selectedProjectSub.max_score ?? 100) * 0.5'));

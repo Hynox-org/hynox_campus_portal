@@ -1,5 +1,13 @@
 import { createClient } from "@/utils/supabase/server";
 import { getSessionTenant } from "./academic";
+import { validateInstitutionId } from "@/lib/institution-validation";
+import { validateBlueprintInput } from "@/lib/library-validation";
+
+async function requireLibraryAdmin() {
+  const session = await getSessionTenant();
+  if (!session?.roles?.includes("super_admin")) throw new Error("Access denied. Super Admin privileges required.");
+  return session;
+}
 
 export interface CourseTemplateInput {
   title: string;
@@ -24,7 +32,7 @@ export interface LessonTemplateInput {
   module_template_id: string;
   title: string;
   lesson_type_code?: string;
-  content_json?: any;
+  content_json?: unknown;
   video_url?: string;
   duration?: number;
   position?: number;
@@ -55,6 +63,7 @@ export async function listCourseTemplates() {
 }
 
 export async function getCourseTemplate(id: string) {
+  validateInstitutionId(id);
   const supabase = await createClient();
   const { data, error } = await supabase
     .schema("library")
@@ -69,9 +78,9 @@ export async function getCourseTemplate(id: string) {
 }
 
 export async function createCourseTemplate(input: CourseTemplateInput) {
+  input = validateBlueprintInput(input, "course", false);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session found.");
+  const session = await requireLibraryAdmin();
 
   const { data, error } = await supabase
     .schema("library")
@@ -99,9 +108,10 @@ export async function createCourseTemplate(input: CourseTemplateInput) {
 }
 
 export async function updateCourseTemplate(id: string, input: Partial<CourseTemplateInput>) {
+  validateInstitutionId(id);
+  input = validateBlueprintInput(input, "course", true);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session found.");
+  const session = await requireLibraryAdmin();
 
   const { data, error } = await supabase
     .schema("library")
@@ -120,6 +130,7 @@ export async function updateCourseTemplate(id: string, input: Partial<CourseTemp
       updated_at: new Date().toISOString()
     })
     .eq("id", id)
+    .is("deleted_at", null)
     .select()
     .single();
 
@@ -128,9 +139,9 @@ export async function updateCourseTemplate(id: string, input: Partial<CourseTemp
 }
 
 export async function deleteCourseTemplate(id: string) {
+  validateInstitutionId(id);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session found.");
+  const session = await requireLibraryAdmin();
 
   const { error } = await supabase
     .schema("library")
@@ -139,7 +150,10 @@ export async function deleteCourseTemplate(id: string) {
       deleted_at: new Date().toISOString(),
       updated_by: session.userId
     })
-    .eq("id", id);
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id")
+    .single();
 
   if (error) throw error;
   return true;
@@ -147,6 +161,7 @@ export async function deleteCourseTemplate(id: string) {
 
 // Module Templates
 export async function listModuleTemplates(courseTemplateId: string) {
+  validateInstitutionId(courseTemplateId);
   const supabase = await createClient();
   const { data, error } = await supabase
     .schema("library")
@@ -154,16 +169,18 @@ export async function listModuleTemplates(courseTemplateId: string) {
     .select("*")
     .eq("course_template_id", courseTemplateId)
     .is("deleted_at", null)
-    .order("position", { ascending: true });
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) throw error;
   return data || [];
 }
 
 export async function createModuleTemplate(input: ModuleTemplateInput) {
+  input = validateBlueprintInput(input, "module", false);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session found.");
+  const session = await requireLibraryAdmin();
 
   const { data, error } = await supabase
     .schema("library")
@@ -172,7 +189,7 @@ export async function createModuleTemplate(input: ModuleTemplateInput) {
       course_template_id: input.course_template_id,
       title: input.title,
       description: input.description,
-      position: input.position || 1,
+      position: input.position ?? 1,
       created_by: session.userId,
       updated_by: session.userId
     })
@@ -184,9 +201,10 @@ export async function createModuleTemplate(input: ModuleTemplateInput) {
 }
 
 export async function updateModuleTemplate(id: string, input: Partial<ModuleTemplateInput>) {
+  validateInstitutionId(id);
+  input = validateBlueprintInput(input, "module", true);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session found.");
+  const session = await requireLibraryAdmin();
 
   const { data, error } = await supabase
     .schema("library")
@@ -199,6 +217,7 @@ export async function updateModuleTemplate(id: string, input: Partial<ModuleTemp
       updated_at: new Date().toISOString()
     })
     .eq("id", id)
+    .is("deleted_at", null)
     .select()
     .single();
 
@@ -207,9 +226,9 @@ export async function updateModuleTemplate(id: string, input: Partial<ModuleTemp
 }
 
 export async function deleteModuleTemplate(id: string) {
+  validateInstitutionId(id);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session");
+  const session = await requireLibraryAdmin();
 
   const { error } = await supabase
     .schema("library")
@@ -218,7 +237,10 @@ export async function deleteModuleTemplate(id: string) {
       deleted_at: new Date().toISOString(),
       updated_by: session.userId
     })
-    .eq("id", id);
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id")
+    .single();
 
   if (error) throw error;
   return true;
@@ -226,6 +248,7 @@ export async function deleteModuleTemplate(id: string) {
 
 // Lesson Templates
 export async function listLessonTemplates(moduleTemplateId: string) {
+  validateInstitutionId(moduleTemplateId);
   const supabase = await createClient();
   const { data, error } = await supabase
     .schema("library")
@@ -233,16 +256,18 @@ export async function listLessonTemplates(moduleTemplateId: string) {
     .select("*")
     .eq("module_template_id", moduleTemplateId)
     .is("deleted_at", null)
-    .order("position", { ascending: true });
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) throw error;
   return data || [];
 }
 
 export async function createLessonTemplate(input: LessonTemplateInput) {
+  input = validateBlueprintInput(input, "lesson", false);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session");
+  const session = await requireLibraryAdmin();
 
   const code = (input.lesson_type_code || "").toLowerCase();
   if (code === "assignment" || code === "assessment") {
@@ -258,8 +283,8 @@ export async function createLessonTemplate(input: LessonTemplateInput) {
       lesson_type_code: input.lesson_type_code || "text",
       content_json: input.content_json || {},
       video_url: input.video_url || null,
-      duration: input.duration || 15,
-      position: input.position || 1,
+      duration: input.duration ?? 15,
+      position: input.position ?? 1,
       is_preview: input.is_preview || false,
       created_by: session.userId,
       updated_by: session.userId
@@ -272,9 +297,10 @@ export async function createLessonTemplate(input: LessonTemplateInput) {
 }
 
 export async function updateLessonTemplate(id: string, input: Partial<LessonTemplateInput>) {
+  validateInstitutionId(id);
+  input = validateBlueprintInput(input, "lesson", true);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session");
+  const session = await requireLibraryAdmin();
 
   if (input.lesson_type_code) {
     const code = input.lesson_type_code.toLowerCase();
@@ -298,6 +324,7 @@ export async function updateLessonTemplate(id: string, input: Partial<LessonTemp
       updated_at: new Date().toISOString()
     })
     .eq("id", id)
+    .is("deleted_at", null)
     .select()
     .single();
 
@@ -306,9 +333,9 @@ export async function updateLessonTemplate(id: string, input: Partial<LessonTemp
 }
 
 export async function deleteLessonTemplate(id: string) {
+  validateInstitutionId(id);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session");
+  const session = await requireLibraryAdmin();
 
   const { error } = await supabase
     .schema("library")
@@ -317,7 +344,10 @@ export async function deleteLessonTemplate(id: string) {
       deleted_at: new Date().toISOString(),
       updated_by: session.userId
     })
-    .eq("id", id);
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id")
+    .single();
 
   if (error) throw error;
   return true;
@@ -325,6 +355,7 @@ export async function deleteLessonTemplate(id: string) {
 
 // Resource Templates
 export async function listResourceTemplates(lessonTemplateId: string) {
+  validateInstitutionId(lessonTemplateId);
   const supabase = await createClient();
   const { data, error } = await supabase
     .schema("library")
@@ -332,16 +363,18 @@ export async function listResourceTemplates(lessonTemplateId: string) {
     .select("*")
     .eq("lesson_template_id", lessonTemplateId)
     .is("deleted_at", null)
-    .order("position", { ascending: true });
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) throw error;
   return data || [];
 }
 
 export async function createResourceTemplate(input: ResourceTemplateInput) {
+  input = validateBlueprintInput(input, "resource", false);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session");
+  const session = await requireLibraryAdmin();
 
   const { data, error } = await supabase
     .schema("library")
@@ -352,7 +385,7 @@ export async function createResourceTemplate(input: ResourceTemplateInput) {
       title: input.title,
       file_url: input.file_url || null,
       external_url: input.external_url || null,
-      position: input.position || 1,
+      position: input.position ?? 1,
       created_by: session.userId
     })
     .select()
@@ -363,6 +396,8 @@ export async function createResourceTemplate(input: ResourceTemplateInput) {
 }
 
 export async function deleteResourceTemplate(id: string) {
+  validateInstitutionId(id);
+  await requireLibraryAdmin();
   const supabase = await createClient();
   const { error } = await supabase
     .schema("library")
@@ -370,7 +405,10 @@ export async function deleteResourceTemplate(id: string) {
     .update({
       deleted_at: new Date().toISOString()
     })
-    .eq("id", id);
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id")
+    .single();
 
   if (error) throw error;
   return true;
@@ -384,8 +422,9 @@ export async function instantiateCourseTemplate(
   institutionId: string
 ) {
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session");
+  const session = await requireLibraryAdmin();
+
+  for (const id of [templateId, programId, tenantId, institutionId]) validateInstitutionId(id);
 
   // Call the library.duplicate_course_template RPC
   const { data, error } = await supabase

@@ -1,21 +1,22 @@
 "use client";
 
+import type { Program, Course, Lookup } from "@/types/campus";
 import React, { useState } from "react";
-import { BookOpen, ArrowRight, Edit, Trash2, Plus, X, GraduationCap, Clock } from "lucide-react";
+import { BookOpen, ArrowRight, Edit, Trash2, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { createCourseAction, updateCourseAction, deleteCourseAction } from "@/app/actions/academic-actions";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/toast";
 
 interface ClientCourseListProps {
-  program: any;
-  initialCourses: any[];
+  program: Program;
+  initialCourses: Course[];
   primaryRole: string;
   lookups: {
-    courseTypes: any[];
-    lessonTypes: any[];
-    statuses: any[];
-    visibilityTypes: any[];
+    courseTypes: Lookup[];
+    lessonTypes: Lookup[];
+    statuses: Lookup[];
+    visibilityTypes: Lookup[];
   };
 }
 
@@ -29,7 +30,7 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
 
   // Modal toggles
   const [isOpen, setIsOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<any | null>(null);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -56,17 +57,17 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
     setIsOpen(true);
   };
 
-  const handleOpenEdit = (course: any) => {
+  const handleOpenEdit = (course: Course) => {
     setEditingCourse(course);
     setTitle(course.title);
-    setSlug(course.slug);
+    setSlug((course.slug ?? ""));
     setDescription(course.description || "");
     setDurationMinutes(course.duration_minutes || 0);
     setEnrollmentMode(course.enrollment_mode || "open");
     setThumbnailPath(course.thumbnail_path || "");
     setCourseTypeId(course.course_type_id || "");
-    setStatusId(course.status_id);
-    setVisibilityId(course.visibility_type_id);
+    setStatusId((course.status_id ?? ""));
+    setVisibilityId((course.visibility_type_id ?? ""));
     setIsOpen(true);
   };
 
@@ -92,9 +93,9 @@ export default function ClientCourseList({ program, initialCourses, primaryRole,
       slug,
       description,
       duration_minutes: durationMinutes,
-      enrollment_mode: enrollmentMode as any,
+      enrollment_mode: enrollmentMode as import("@/services/academic").CourseInput["enrollment_mode"],
       thumbnail_path: thumbnailPath,
-      course_type_id: courseTypeId || null,
+      course_type_id: courseTypeId || undefined,
       status_id: statusId,
       visibility_type_id: visibilityId,
     };

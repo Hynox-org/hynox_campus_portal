@@ -1,0 +1,4 @@
+src/app/institution/analytics-tab.tsx(91,50): error TS18047: 'a.score' is possibly 'null'.
+src/app/institution/analytics-tab.tsx(91,60): error TS18047: 'a.max_score' is possibly 'null'.
+src/app/institution/analytics-tab.tsx(128,22): error TS18047: 'a.score' is possibly 'null'.
+src/app/institution/analytics-tab.tsx(185,60): error TS18047: 'a.score' is possibly 'null'.

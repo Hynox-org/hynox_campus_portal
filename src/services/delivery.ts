@@ -1,5 +1,13 @@
+import { averageLearningProgress } from "@/lib/learning-progress";
+import { readProgressSnapshots, refreshProgressSnapshot, setLessonProgress } from "./course-progress";
+import type { Program, Institution, CampusUser, Course } from "@/types/campus";
+import type { Cohort } from "@/types/campus";
+import { getCurrentUser } from "./auth";
+import { validateInstitutionId } from "@/lib/institution-validation";
 import { createClient } from "@/utils/supabase/server";
 import { getSessionTenant } from "./academic";
+import { academicScope, requireAcademicWrite, deliveryCohortIds, requireCohortRead, requireStudentRead } from "./academic-access";
+import { validateAcademicInput, validateAssignmentIds } from "@/lib/academic-validation";
 
 // ----------------------------------------------------
 // Lookups
@@ -32,12 +40,15 @@ export interface CohortInput {
 }
 
 export async function listCohorts(tenantId: string) {
+  const allowedCohorts = await deliveryCohortIds(tenantId);
+  if (!allowedCohorts.length) return [];
   const supabase = await createClient();
   const { data: cohorts, error } = await supabase
     .schema("delivery")
     .from("cohorts")
     .select("*")
     .eq("tenant_id", tenantId)
+    .in("id", allowedCohorts)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
@@ -46,7 +57,7 @@ export async function listCohorts(tenantId: string) {
 
   // Fetch programs manually (cross-schema)
   const programIds = [...new Set(cohorts.map(c => c.program_id).filter(Boolean))];
-  let programs: any[] = [];
+  let programs: Program[] = [];
   if (programIds.length > 0) {
     const { data: progData } = await supabase
       .schema("academic")
@@ -58,7 +69,7 @@ export async function listCohorts(tenantId: string) {
 
   // Fetch institutions manually (cross-schema)
   const instIds = [...new Set(cohorts.map(c => c.institution_id).filter(Boolean))];
-  let institutions: any[] = [];
+  let institutions: Institution[] = [];
   if (instIds.length > 0) {
     const { data: instData } = await supabase
       .schema("institution")
@@ -76,11 +87,14 @@ export async function listCohorts(tenantId: string) {
 }
 
 export async function createCohort(input: CohortInput) {
+  input = validateAcademicInput(input, ["name", "code", "program_id", "status_code"]) as typeof input;
+  const scope = await requireAcademicWrite("programs", input.program_id, true);
+  if ((input.tenant_id && input.tenant_id !== scope.tenantId) || (input.institution_id && input.institution_id !== scope.tenantId)) throw new Error("Invalid campus hierarchy.");
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
 
-  const tenantId = input.tenant_id || session.tenantId;
+  const tenantId = scope.tenantId;
   const institutionId = input.institution_id || tenantId;
 
   if (!tenantId || !institutionId) {
@@ -109,6 +123,8 @@ export async function createCohort(input: CohortInput) {
 }
 
 export async function updateCohort(id: string, input: Partial<CohortInput>) {
+  input = validateAcademicInput(input) as typeof input;
+  await requireAcademicWrite("cohorts", id, true);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
@@ -119,12 +135,12 @@ export async function updateCohort(id: string, input: Partial<CohortInput>) {
     .update({
       name: input.name,
       code: input.code,
-      start_date: input.start_date || null,
-      end_date: input.end_date || null,
+      start_date: input.start_date === "" ? null : input.start_date,
+      end_date: input.end_date === "" ? null : input.end_date,
       status_code: input.status_code,
       updated_at: new Date().toISOString()
     })
-    .eq("id", id)
+    .eq("id", id).is("deleted_at", null)
     .select()
     .single();
 
@@ -133,6 +149,7 @@ export async function updateCohort(id: string, input: Partial<CohortInput>) {
 }
 
 export async function deleteCohort(id: string) {
+  await requireAcademicWrite("cohorts", id, true);
   const supabase = await createClient();
   const { error } = await supabase
     .schema("delivery")
@@ -140,7 +157,7 @@ export async function deleteCohort(id: string) {
     .update({
       deleted_at: new Date().toISOString()
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null).select("id").single();
 
   if (error) throw error;
   return true;
@@ -156,19 +173,23 @@ export interface EnrollmentInput {
 }
 
 export async function listEnrollments(tenantId: string) {
+  const allowedCohorts = await deliveryCohortIds(tenantId);
+  if (!allowedCohorts.length) return [];
   const supabase = await createClient();
   const { data: enrollments, error } = await supabase
     .schema("delivery")
     .from("enrollments")
     .select(`
       *,
-      cohort:cohort_id (
+      cohort:cohort_id!inner (
         id, 
         name, 
         code, 
         tenant_id
       )
     `)
+    .eq("cohort.tenant_id", tenantId)
+    .in("cohort_id", allowedCohorts)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
@@ -176,47 +197,23 @@ export async function listEnrollments(tenantId: string) {
   if (!enrollments) return [];
   
   // Filter enrollments belonging to the user's institution
-  const filtered = enrollments.filter((e: any) => e.cohort?.tenant_id === tenantId);
+  const filtered = enrollments.filter((e) => e.cohort?.tenant_id === tenantId);
   if (filtered.length === 0) return [];
 
   // Fetch student details from core.users (cross-schema)
-  const studentIds = [...new Set(filtered.map((e: any) => e.user_id).filter(Boolean))];
-  let students: any[] = [];
-  if (studentIds.length > 0) {
-    const { data: userData } = await supabase
-      .schema("core")
-      .from("users")
-      .select("id, full_name, email")
-      .in("id", studentIds);
-    students = userData || [];
-  }
+  const studentIds = [...new Set(filtered.map((e) => e.user_id).filter(Boolean))];
+  const [userResult, assignmentResult] = await Promise.all([
+    supabase.schema("core").from("users").select("id, full_name, email").in("id", studentIds),
+    supabase.schema("delivery").from("course_assignments").select("*").in("cohort_id", [...new Set(filtered.map(enrollment => enrollment.cohort_id))]).is("deleted_at", null),
+  ]);
+  if (userResult.error) throw userResult.error;
+  if (assignmentResult.error) throw assignmentResult.error;
+  const students: CampusUser[] = userResult.data || [];
+  const assignments = assignmentResult.data || [];
 
-  // Fetch course progress & course assignments to calculate actual progress percentage
-  let assignments: any[] = [];
-  try {
-    const { data: assignData } = await supabase
-      .schema("delivery")
-      .from("course_assignments")
-      .select("*")
-      .is("deleted_at", null);
-    assignments = assignData || [];
-  } catch (err) {
-    console.error("Failed to fetch assignments in listEnrollments:", err);
-  }
+  const progressRecords = await readProgressSnapshots(studentIds, assignments.map(assignment => assignment.course_id), supabase);
 
-  let progressRecords: any[] = [];
-  try {
-    const { data: progData } = await supabase
-      .schema("delivery")
-      .from("course_progress")
-      .select("*")
-      .in("user_id", studentIds);
-    progressRecords = progData || [];
-  } catch (err) {
-    console.error("Failed to fetch course progress in listEnrollments:", err);
-  }
-
-  return filtered.map((e: any) => {
+  return filtered.map((e) => {
     const student = students.find(s => s.id === e.user_id) || null;
     
     // Find course assignments for this cohort
@@ -226,16 +223,7 @@ export async function listEnrollments(tenantId: string) {
     // Find student course progress for these courses
     const studentProgress = progressRecords.filter(p => p.user_id === e.user_id && assignedCourseIds.includes(p.course_id));
     
-    // Calculate average progress percentage
-    let totalProgress = 0;
-    const count = assignedCourseIds.length;
-    if (count > 0) {
-      for (const courseId of assignedCourseIds) {
-        const prog = studentProgress.find(p => p.course_id === courseId);
-        totalProgress += prog ? (prog.progress_percentage || 0) : 0;
-      }
-    }
-    const avgProgress = count > 0 ? parseFloat((totalProgress / count).toFixed(2)) : 0;
+    const avgProgress = averageLearningProgress(studentProgress.map(progress => progress.progress_percentage));
 
     return {
       ...e,
@@ -246,6 +234,8 @@ export async function listEnrollments(tenantId: string) {
 }
 
 export async function enrollStudent(input: EnrollmentInput) {
+  input = validateAcademicInput(input, ["user_id", "cohort_id", "status_code"]) as typeof input;
+  await requireAcademicWrite("cohorts", input.cohort_id, true);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
@@ -260,7 +250,7 @@ export async function enrollStudent(input: EnrollmentInput) {
 
   if (ccError || !currentCohort) throw new Error("Cohort not found.");
 
-  const isCohortActive = (cohort: any) => {
+  const isCohortActive = (cohort: Pick<Cohort, "status_code" | "end_date">) => {
     if (cohort.status_code !== "active") return false;
     const now = new Date();
     if (cohort.end_date && new Date(cohort.end_date) < now) return false;
@@ -291,7 +281,7 @@ export async function enrollStudent(input: EnrollmentInput) {
     if (eeError) throw eeError;
 
     for (const enroll of (existingEnrollments || [])) {
-      const cohort = enroll.cohort as any;
+      const cohort = (Array.isArray(enroll.cohort) ? enroll.cohort[0] : enroll.cohort);
       if (cohort && cohort.program_id === currentCohort.program_id && isCohortActive(cohort)) {
         throw new Error(`Student is already active in another active cohort "${cohort.name}" of this program.`);
       }
@@ -315,9 +305,11 @@ export async function enrollStudent(input: EnrollmentInput) {
 }
 
 export async function updateEnrollmentStatus(id: string, status_code: string) {
+  validateAcademicInput({ status_code }, ["status_code"]);
+  await requireAcademicWrite("enrollments", id, true);
   const supabase = await createClient();
 
-  const isCohortActive = (cohort: any) => {
+  const isCohortActive = (cohort: Cohort) => {
     if (cohort.status_code !== "active") return false;
     const now = new Date();
     if (cohort.end_date && new Date(cohort.end_date) < now) return false;
@@ -340,12 +332,12 @@ export async function updateEnrollmentStatus(id: string, status_code: string) {
           end_date
         )
       `)
-      .eq("id", id)
+      .eq("id", id).is("deleted_at", null)
       .single();
 
     if (ceError || !currentEnroll) throw new Error("Enrollment not found.");
 
-    const currentCohort = currentEnroll.cohort as any;
+    const currentCohort = (Array.isArray(currentEnroll.cohort) ? currentEnroll.cohort[0] : currentEnroll.cohort);
     if (currentCohort && isCohortActive(currentCohort)) {
       // Check if student has active enrollment in another active cohort of this program
       const { data: existingEnrollments, error: eeError } = await supabase
@@ -371,7 +363,7 @@ export async function updateEnrollmentStatus(id: string, status_code: string) {
       if (eeError) throw eeError;
 
       for (const enroll of (existingEnrollments || [])) {
-        const cohort = enroll.cohort as any;
+        const cohort = (Array.isArray(enroll.cohort) ? enroll.cohort[0] : enroll.cohort);
         if (cohort && cohort.program_id === currentCohort.program_id && isCohortActive(cohort)) {
           throw new Error(`Student is already active in another active cohort "${cohort.name}" of this program.`);
         }
@@ -386,7 +378,7 @@ export async function updateEnrollmentStatus(id: string, status_code: string) {
       status_code,
       updated_at: new Date().toISOString()
     })
-    .eq("id", id)
+    .eq("id", id).is("deleted_at", null)
     .select()
     .single();
 
@@ -395,6 +387,7 @@ export async function updateEnrollmentStatus(id: string, status_code: string) {
 }
 
 export async function removeEnrollment(id: string) {
+  await requireAcademicWrite("enrollments", id, true);
   const supabase = await createClient();
   const { error } = await supabase
     .schema("delivery")
@@ -402,7 +395,7 @@ export async function removeEnrollment(id: string) {
     .update({
       deleted_at: new Date().toISOString()
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null).select("id").single();
 
   if (error) throw error;
   return true;
@@ -420,19 +413,23 @@ export interface CourseAssignmentInput {
 }
 
 export async function listCourseAssignments(tenantId: string) {
+  const allowedCohorts = await deliveryCohortIds(tenantId);
+  if (!allowedCohorts.length) return [];
   const supabase = await createClient();
   const { data: assignments, error } = await supabase
     .schema("delivery")
     .from("course_assignments")
     .select(`
       *,
-      cohort:cohort_id (
+      cohort:cohort_id!inner (
         id, 
         name, 
         code,
         tenant_id
       )
     `)
+    .eq("cohort.tenant_id", tenantId)
+    .in("cohort_id", allowedCohorts)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
@@ -440,12 +437,12 @@ export async function listCourseAssignments(tenantId: string) {
   if (!assignments) return [];
 
   // Filter assignments belonging to the user's institution
-  const filtered = assignments.filter((a: any) => a.cohort?.tenant_id === tenantId);
+  const filtered = assignments.filter((a) => a.cohort?.tenant_id === tenantId);
   if (filtered.length === 0) return [];
 
   // Fetch courses from academic.courses (cross-schema)
-  const courseIds = [...new Set(filtered.map((a: any) => a.course_id).filter(Boolean))];
-  let courses: any[] = [];
+  const courseIds = [...new Set(filtered.map((a) => a.course_id).filter(Boolean))];
+  let courses: Course[] = [];
   if (courseIds.length > 0) {
     const { data: courseData } = await supabase
       .schema("academic")
@@ -455,13 +452,17 @@ export async function listCourseAssignments(tenantId: string) {
     courses = courseData || [];
   }
 
-  return filtered.map((a: any) => ({
+  return filtered.map((a) => ({
     ...a,
     course: courses.find(c => c.id === a.course_id) || null
   }));
 }
 
 export async function assignCourse(input: CourseAssignmentInput) {
+  input = validateAcademicInput(input, ["cohort_id", "course_id"]) as typeof input;
+  const cohortScope = await requireAcademicWrite("cohorts", input.cohort_id, true);
+  const courseScope = await academicScope("courses", input.course_id);
+  if (cohortScope.tenantId !== courseScope.tenantId) throw new Error("Course and cohort must belong to the same campus.");
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
@@ -528,6 +529,7 @@ export async function assignCourse(input: CourseAssignmentInput) {
 }
 
 export async function removeCourseAssignment(id: string) {
+  await requireAcademicWrite("course_assignments", id, true);
   const supabase = await createClient();
   const { error } = await supabase
     .schema("delivery")
@@ -535,7 +537,7 @@ export async function removeCourseAssignment(id: string) {
     .update({
       deleted_at: new Date().toISOString()
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null).select("id").single();
 
   if (error) throw error;
   return true;
@@ -545,146 +547,66 @@ export async function removeCourseAssignment(id: string) {
 // Student Dashboard / Learning Progress Operations
 // ----------------------------------------------------
 export async function getStudentDeliveryData(userId: string) {
+  validateInstitutionId(userId);
+  const caller = await getCurrentUser(true);
+  if (!caller?.user) throw new Error("Access denied.");
   const supabase = await createClient();
-  
-  // 1. Fetch active enrollments (same schema relations are fine)
-  const { data: enrollments, error: enrollError } = await supabase
-    .schema("delivery")
-    .from("enrollments")
-    .select(`
-      *,
-      cohort:cohort_id (
-        id,
-        name,
-        code,
-        program_id
-      )
-    `)
-    .eq("user_id", userId)
-    .eq("status_code", "active")
-    .is("deleted_at", null);
-
-  if (enrollError) throw enrollError;
-  if (!enrollments || enrollments.length === 0) return [];
-
-  // Fetch programs manually (cross-schema)
-  const programIds = [...new Set(enrollments.map(e => e.cohort?.program_id).filter(Boolean))];
-  let programs: any[] = [];
-  if (programIds.length > 0) {
-    const { data: progData } = await supabase
-      .schema("academic")
-      .from("programs")
-      .select(`
-        id, 
-        title, 
-        description,
-        status:status_id (
-          code
-        )
-      `)
-      .in("id", programIds);
-    programs = (progData || []).filter((p: any) => p.status?.code === "active");
+  let allowedCohorts: string[] | undefined;
+  if (caller.user.id !== userId && caller.primaryRole !== "super_admin") {
+    const { data: student, error } = await supabase.schema("core").from("users").select("tenant_id")
+      .eq("id", userId).is("deleted_at", null).maybeSingle();
+    if (error) throw error;
+    if (!student?.tenant_id) throw new Error("Access denied.");
+    allowedCohorts = await deliveryCohortIds(student.tenant_id);
   }
-
-  // Group cohorts and programs
-  const resultProgramsMap: Record<string, any> = {};
-
-  for (const enrollment of enrollments) {
-    const cohort = enrollment.cohort;
-    if (!cohort) continue;
-
-    const program = programs.find(p => p.id === cohort.program_id);
-    if (!program) continue;
-
-    if (!resultProgramsMap[program.id]) {
-      resultProgramsMap[program.id] = {
-        id: program.id,
-        title: program.title,
-        description: program.description,
-        status_code: program.status?.code || "active",
-        cohorts: [],
-        courses: []
-      };
-    }
-
-    resultProgramsMap[program.id].cohorts.push({
-      id: cohort.id,
-      name: cohort.name,
-      code: cohort.code
-    });
-
-    // 2. Fetch assigned courses for this cohort
-    const { data: assignments, error: assignError } = await supabase
-      .schema("delivery")
-      .from("course_assignments")
-      .select("*")
-      .eq("cohort_id", cohort.id)
-      .is("deleted_at", null);
-
-    if (assignError) throw assignError;
-
-    if (assignments && assignments.length > 0) {
-      // Fetch courses manually (cross-schema)
-      const courseIds = [...new Set(assignments.map(a => a.course_id).filter(Boolean))];
-      let courses: any[] = [];
-      if (courseIds.length > 0) {
-        const { data: courseData } = await supabase
-          .schema("academic")
-          .from("courses")
-          .select(`
-            id,
-            title,
-            description,
-            duration_minutes,
-            course_type:course_type_id (code, description)
-          `)
-          .in("id", courseIds);
-        courses = courseData || [];
-      }
-
-      const progressPromises = assignments.map(async (assignment) => {
-        const course = courses.find(c => c.id === assignment.course_id);
-        if (!course) return null;
-
-        // Recalculate/Sync course progress to account for dynamic teacher modifications
-        const progressRecord = await syncCourseProgress(userId, course.id);
-        return { assignment, course, progressRecord };
-      });
-
-      const resolvedProgressList = (await Promise.all(progressPromises)).filter(Boolean);
-
-      for (const item of resolvedProgressList) {
-        const { assignment, course, progressRecord } = item!;
-
-        // Check if course is already added from another cohort to avoid duplicates
-        const existingCourse = resultProgramsMap[program.id].courses.find((c: any) => c.id === course.id && c.cohort_id === cohort.id);
-        if (!existingCourse) {
-          resultProgramsMap[program.id].courses.push({
-            id: course.id,
-            title: course.title,
-            description: course.description,
-            duration_minutes: course.duration_minutes,
-            course_type: course.course_type?.code || "Theory",
-            isRequired: assignment.is_required,
-            startDate: assignment.start_date,
-            dueDate: assignment.due_date,
-            cohort_id: cohort.id,
-            progress: progressRecord || {
-              completed_lessons: 0,
-              total_lessons: 0,
-              progress_percentage: 0,
-              status_code: "not_started"
-            }
-          });
-        }
-      }
-    }
+  let enrollmentQuery = supabase.schema("delivery").from("enrollments")
+    .select("cohort:cohort_id!inner(id,name,code,program_id,tenant_id,status_code,deleted_at)")
+    .eq("user_id", userId).eq("status_code", "active").is("deleted_at", null)
+    .eq("cohort.status_code", "active").is("cohort.deleted_at", null);
+  if (allowedCohorts) {
+    if (!allowedCohorts.length) return [];
+    enrollmentQuery = enrollmentQuery.in("cohort_id", allowedCohorts);
   }
-
-  return Object.values(resultProgramsMap);
+  const { data: enrollments, error: enrollmentError } = await enrollmentQuery;
+  if (enrollmentError) throw enrollmentError;
+  const cohorts = (enrollments || []).map(row => row.cohort as unknown as { id: string; name: string; code: string; program_id: string });
+  if (!cohorts.length) return [];
+  const [programResult, assignmentResult] = await Promise.all([
+    supabase.schema("academic").from("programs").select("*,status:status_id(code),visibility:visibility_type_id(code)")
+      .in("id", [...new Set(cohorts.map(row => row.program_id))]).is("deleted_at", null),
+    supabase.schema("delivery").from("course_assignments").select("*").in("cohort_id", cohorts.map(row => row.id)).is("deleted_at", null),
+  ]);
+  if (programResult.error || assignmentResult.error) throw new Error("Unable to load assigned programs and courses.");
+  const assignments = assignmentResult.data || [];
+  const courseIds = [...new Set(assignments.map(row => row.course_id))];
+  const [courseResult, progressResult] = courseIds.length ? await Promise.all([
+    supabase.schema("academic").from("courses").select("*,status:status_id(code),visibility:visibility_type_id(code),course_type:course_type_id(code)")
+      .in("id", courseIds).is("deleted_at", null),
+    readProgressSnapshots([userId], courseIds, supabase).then(data => ({ data, error: null })),
+  ]) : [{ data: [], error: null }, { data: [], error: null }];
+  if (courseResult.error || progressResult.error) throw new Error("Unable to load courses and progress.");
+  const courses = new Map((courseResult.data || []).filter(course => course.status?.code === "active" && course.visibility?.code !== "private")
+    .map(course => [course.id, course]));
+  const progress = new Map((progressResult.data || []).map(row => [row.course_id, row]));
+  return (programResult.data || []).filter(program => program.status?.code === "active" && program.visibility?.code !== "private").map(program => {
+    const groups = cohorts.filter(cohort => cohort.program_id === program.id);
+    const groupIds = new Set(groups.map(cohort => cohort.id));
+    return {
+      id: program.id, title: program.title, description: program.description, status_code: "active", cohorts: groups,
+      courses: assignments.filter(assignment => groupIds.has(assignment.cohort_id)).flatMap(assignment => {
+        const course = courses.get(assignment.course_id);
+        if (!course || course.program_id !== program.id) return [];
+        return [{ id: course.id, title: course.title, description: course.description, duration_minutes: course.duration_minutes,
+          course_type: course.course_type?.code || "theory", isRequired: assignment.is_required, startDate: assignment.start_date,
+          dueDate: assignment.due_date, cohort_id: assignment.cohort_id,
+          progress: progress.get(course.id) || { user_id: userId, course_id: course.id, completed_lessons: 0, total_lessons: 0, completed_activities: 0, total_activities: 0, progress_percentage: 0, status_code: "not_started" } }];
+      }),
+    };
+  });
 }
 
 export async function getLessonProgress(userId: string, lessonId: string) {
+  await requireStudentRead(userId);
   const supabase = await createClient();
   const { data, error } = await supabase
     .schema("delivery")
@@ -699,341 +621,26 @@ export async function getLessonProgress(userId: string, lessonId: string) {
 }
 
 export async function startOrUpdateLessonProgress(userId: string, lessonId: string, courseId: string) {
-  const supabase = await createClient();
-  
-  // 1. Get or create lesson progress
-  let { data: progress, error } = await supabase
-    .schema("delivery")
-    .from("lesson_progress")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("lesson_id", lessonId)
-    .maybeSingle();
-
-  if (!progress) {
-    // Create new
-    const { data: newProg, error: insertError } = await supabase
-      .schema("delivery")
-      .from("lesson_progress")
-      .insert({
-        user_id: userId,
-        lesson_id: lessonId,
-        status_code: "in_progress",
-        progress_percentage: 10, // Start with 10%
-        started_at: new Date().toISOString(),
-        last_accessed_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-
-    if (insertError) throw insertError;
-    progress = newProg;
-  } else if (progress.status_code === "not_started") {
-    // Update to in_progress
-    const { data: updatedProg, error: updateError } = await supabase
-      .schema("delivery")
-      .from("lesson_progress")
-      .update({
-        status_code: "in_progress",
-        progress_percentage: 10,
-        started_at: new Date().toISOString(),
-        last_accessed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", progress.id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-    progress = updatedProg;
-  } else {
-    // Just update last accessed
-    const { data: updatedProg, error: updateError } = await supabase
-      .schema("delivery")
-      .from("lesson_progress")
-      .update({
-        last_accessed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", progress.id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-    progress = updatedProg;
-  }
-
-  // Recalculate/Sync course progress (will do dynamically on completion or progress change)
-  await syncCourseProgress(userId, courseId);
-
-  return progress;
+  const caller = await requireStudentRead(userId);
+  if (caller.primaryRole !== "student" || caller.user.id !== userId) throw new Error("Only the student may update their lesson progress.");
+  validateInstitutionId(lessonId); validateInstitutionId(courseId);
+  return setLessonProgress(userId, lessonId, courseId, false);
 }
 
 export async function completeLessonProgress(userId: string, lessonId: string, courseId: string) {
-  const supabase = await createClient();
-
-  // Upsert or update progress to completed (100%)
-  const { data: progress, error } = await supabase
-    .schema("delivery")
-    .from("lesson_progress")
-    .upsert({
-      user_id: userId,
-      lesson_id: lessonId,
-      status_code: "completed",
-      progress_percentage: 100,
-      completed_at: new Date().toISOString(),
-      last_accessed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }, {
-      onConflict: "user_id,lesson_id"
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  // Sync the overall course progress
-  await syncCourseProgress(userId, courseId);
-
-  return progress;
+  const caller = await requireStudentRead(userId);
+  if (caller.primaryRole !== "student" || caller.user.id !== userId) throw new Error("Only the student may update their lesson progress.");
+  validateInstitutionId(lessonId); validateInstitutionId(courseId);
+  return setLessonProgress(userId, lessonId, courseId, true);
 }
 
 export async function syncCourseProgress(userId: string, courseId: string) {
-  const supabase = await createClient();
-
-  // 1. Get all lesson IDs for this course
-  // course -> modules -> lessons
-  const { data: modules, error: modError } = await supabase
-    .schema("academic")
-    .from("modules")
-    .select("id")
-    .eq("course_id", courseId)
-    .is("deleted_at", null);
-
-  if (modError) throw modError;
-  const moduleIds = (modules || []).map(m => m.id);
-
-  let totalLessons = 0;
-  let completedLessons = 0;
-  let startedLessons = 0;
-
-  if (moduleIds.length > 0) {
-    const { data: lessons, error: lesError } = await supabase
-      .schema("academic")
-      .from("lessons")
-      .select(`
-        id,
-        lesson_type:lesson_type_id (code)
-      `)
-      .in("module_id", moduleIds)
-      .is("deleted_at", null);
-
-    if (lesError) throw lesError;
-
-    const filteredLessons = (lessons || []).filter((l: any) => {
-      const code = (l.lesson_type?.code || "").toLowerCase();
-      return code !== "assignment" && code !== "assessment";
-    });
-
-    totalLessons = filteredLessons.length;
-    const lessonIds = filteredLessons.map(l => l.id);
-
-    if (lessonIds.length > 0) {
-      // Get count of completed lessons
-      const { data: completedProgress } = await supabase
-        .schema("delivery")
-        .from("lesson_progress")
-        .select("id, status_code")
-        .eq("user_id", userId)
-        .in("lesson_id", lessonIds);
-
-      completedLessons = (completedProgress || []).filter(p => p.status_code === "completed").length;
-      startedLessons = (completedProgress || []).filter(p => p.status_code === "in_progress" || p.status_code === "completed").length;
-    }
-  }
-
-  // 2. Fetch cohort activities and count them
-  const { data: enrollment } = await supabase
-    .schema("delivery")
-    .from("enrollments")
-    .select("cohort_id")
-    .eq("user_id", userId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  let totalActivitiesCount = 0;
-  let completedActivitiesCount = 0;
-
-  if (enrollment?.cohort_id) {
-    const { data: assignments } = await supabase
-      .schema("learning")
-      .from("activity_assignments")
-      .select("activity_id")
-      .eq("cohort_id", enrollment.cohort_id)
-      .is("deleted_at", null);
-
-    if (assignments && assignments.length > 0) {
-      const assignedActivityIds = assignments.map(a => a.activity_id);
-
-      // Fetch active course lessons to make sure the activity belongs to a lesson in this course!
-      const { data: courseLessons } = await supabase
-        .schema("academic")
-        .from("lessons")
-        .select("id")
-        .in("module_id", moduleIds)
-        .is("deleted_at", null);
-
-      const courseLessonIds = (courseLessons || []).map(l => l.id);
-
-      if (courseLessonIds.length > 0) {
-        // Query activities that match both assigned activity IDs AND belong to this course's lessons!
-        // Only mandatory activities count toward course completion — optional
-        // ones are excluded from both the numerator and denominator.
-        const { data: courseActivities } = await supabase
-          .schema("learning")
-          .from("activities")
-          .select("id")
-          .in("id", assignedActivityIds)
-          .in("lesson_id", courseLessonIds)
-          .eq("is_mandatory", true)
-          .is("deleted_at", null);
-
-        const courseActivityIds = (courseActivities || []).map(a => a.id);
-
-        if (courseActivityIds.length > 0) {
-          // Quiz activities
-          const { data: quizzes } = await supabase
-            .schema("learning")
-            .from("quizzes")
-            .select("id")
-            .in("activity_id", courseActivityIds);
-          
-          // Project activities
-          const { data: projects } = await supabase
-            .schema("learning")
-            .from("projects")
-            .select("id")
-            .in("activity_id", courseActivityIds);
-
-          // Challenge activities
-          const { data: challenges } = await supabase
-            .schema("learning")
-            .from("programming_challenges")
-            .select("id")
-            .in("activity_id", courseActivityIds);
-
-          const quizIds = quizzes?.map(q => q.id) || [];
-          const projectIds = projects?.map(p => p.id) || [];
-          const challengeIds = challenges?.map(c => c.id) || [];
-
-          totalActivitiesCount = quizIds.length + projectIds.length + challengeIds.length;
-
-          // Quiz completions — only a passed attempt counts, matching the
-          // "already passed, no more attempts needed" retake rule; a
-          // submitted-but-failed attempt does not count toward completion.
-          if (quizIds.length > 0) {
-            const { data: quizAttempts } = await supabase
-              .schema("learning")
-              .from("quiz_attempts")
-              .select("quiz_id, passed")
-              .eq("student_id", userId)
-              .in("quiz_id", quizIds);
-
-            const completedQuizIds = new Set(quizAttempts?.filter(a => a.passed === true).map(a => a.quiz_id));
-            completedActivitiesCount += completedQuizIds.size;
-          }
-
-          // Project completions (review status is approved)
-          if (projectIds.length > 0) {
-            const { data: projSubmissions } = await supabase
-              .schema("learning")
-              .from("project_submissions")
-              .select("id, project_id")
-              .eq("student_id", userId)
-              .in("project_id", projectIds);
-            
-            if (projSubmissions && projSubmissions.length > 0) {
-              const subIds = projSubmissions.map(s => s.id);
-              const { data: reviews } = await supabase
-                .schema("learning")
-                .from("project_reviews")
-                .select("submission_id, review_status")
-                .in("submission_id", subIds);
-              
-              const approvedSubIds = new Set(reviews?.filter(r => r.review_status === "approved").map(r => r.submission_id));
-              const completedProjectIds = new Set(projSubmissions.filter(s => approvedSubIds.has(s.id)).map(s => s.project_id));
-              completedActivitiesCount += completedProjectIds.size;
-            }
-          }
-
-          // Challenge completions — pass/fail lives on
-          // challenge_submissions.submission_status_code ("accepted" is the
-          // only passing value); challenge_submission_results has no status
-          // column at all, so it can't be used to determine this.
-          if (challengeIds.length > 0) {
-            const { data: challengeSubmissions } = await supabase
-              .schema("learning")
-              .from("challenge_submissions")
-              .select("challenge_id, submission_status_code")
-              .eq("student_id", userId)
-              .in("challenge_id", challengeIds);
-
-            const completedChallengeIds = new Set(
-              challengeSubmissions?.filter(s => s.submission_status_code === "accepted").map(s => s.challenge_id)
-            );
-            completedActivitiesCount += completedChallengeIds.size;
-          }
-        }
-      }
-    }
-  }
-
-  // 3. Calculate dynamic percentage based on both lessons and activities
-  const totalItems = totalLessons + totalActivitiesCount;
-  const completedItems = completedLessons + completedActivitiesCount;
-  const progressPercentage = totalItems > 0 ? parseFloat(((completedItems / totalItems) * 100).toFixed(2)) : 0;
-  
-  // Resolve status
-  let statusCode = "not_started";
-  if (progressPercentage === 100) {
-    statusCode = "completed";
-  } else if (startedLessons > 0 || progressPercentage > 0) {
-    statusCode = "in_progress";
-  }
-
-  // 4. Upsert course progress record
-  const progressData: any = {
-    user_id: userId,
-    course_id: courseId,
-    status_code: statusCode,
-    completed_lessons: completedLessons,
-    total_lessons: totalLessons,
-    progress_percentage: progressPercentage,
-    last_accessed_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-
-  if (statusCode === "in_progress" && progressPercentage > 0) {
-    // If not set yet, started_at could be set, but let's just make it simple
-    progressData.started_at = new Date().toISOString();
-  } else if (statusCode === "completed") {
-    progressData.completed_at = new Date().toISOString();
-  }
-
-  const { data, error } = await supabase
-    .schema("delivery")
-    .from("course_progress")
-    .upsert(progressData, {
-      onConflict: "user_id,course_id"
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  await requireStudentRead(userId);
+  return refreshProgressSnapshot(userId, courseId);
 }
 
 export async function listStudentLessonProgress(userId: string) {
+  await requireStudentRead(userId);
   const supabase = await createClient();
   const { data, error } = await supabase
     .schema("delivery")
@@ -1046,6 +653,10 @@ export async function listStudentLessonProgress(userId: string) {
 }
 
 export async function listTeacherCohorts(teacherId: string, isSuperAdmin: boolean = false) {
+  validateInstitutionId(teacherId);
+  const caller = await getCurrentUser(true);
+  if (!caller?.user || (caller.primaryRole !== "super_admin" && caller.user.id !== teacherId)) throw new Error("Access denied.");
+  isSuperAdmin = isSuperAdmin && caller.primaryRole === "super_admin";
   const supabase = await createClient();
 
   if (isSuperAdmin) {
@@ -1060,7 +671,7 @@ export async function listTeacherCohorts(teacherId: string, isSuperAdmin: boolea
     if (!cohorts || cohorts.length === 0) return [];
 
     const programIds = [...new Set(cohorts.map(c => c.program_id).filter(Boolean))];
-    let programs: any[] = [];
+    let programs: Program[] = [];
     if (programIds.length > 0) {
       const { data: progData } = await supabase
         .schema("academic")
@@ -1071,7 +682,7 @@ export async function listTeacherCohorts(teacherId: string, isSuperAdmin: boolea
     }
 
     const instIds = [...new Set(cohorts.map(c => c.institution_id).filter(Boolean))];
-    let institutions: any[] = [];
+    let institutions: Institution[] = [];
     if (instIds.length > 0) {
       const { data: instData } = await supabase
         .schema("institution")
@@ -1110,7 +721,7 @@ export async function listTeacherCohorts(teacherId: string, isSuperAdmin: boolea
   if (!cohorts || cohorts.length === 0) return [];
 
   const programIds = [...new Set(cohorts.map(c => c.program_id).filter(Boolean))];
-  let programs: any[] = [];
+  let programs: Program[] = [];
   if (programIds.length > 0) {
     const { data: progData } = await supabase
       .schema("academic")
@@ -1121,7 +732,7 @@ export async function listTeacherCohorts(teacherId: string, isSuperAdmin: boolea
   }
 
   const instIds = [...new Set(cohorts.map(c => c.institution_id).filter(Boolean))];
-  let institutions: any[] = [];
+  let institutions: Institution[] = [];
   if (instIds.length > 0) {
     const { data: instData } = await supabase
       .schema("institution")
@@ -1139,16 +750,20 @@ export async function listTeacherCohorts(teacherId: string, isSuperAdmin: boolea
 }
 
 export async function assignTeacherToCohort(cohortId: string, teacherId: string) {
+  validateAssignmentIds(cohortId, [teacherId]);
+  await requireAcademicWrite("cohorts", cohortId, true);
   const supabase = await createClient();
   const { error } = await supabase
     .schema("delivery")
     .from("cohort_teachers")
-    .insert({ cohort_id: cohortId, teacher_id: teacherId });
+    .upsert({ cohort_id: cohortId, teacher_id: teacherId }, { onConflict: "cohort_id,teacher_id", ignoreDuplicates: true });
   if (error) throw error;
   return true;
 }
 
 export async function removeTeacherFromCohort(cohortId: string, teacherId: string) {
+  validateAssignmentIds(cohortId, [teacherId]);
+  await requireAcademicWrite("cohorts", cohortId, true);
   const supabase = await createClient();
   const { error } = await supabase
     .schema("delivery")
@@ -1161,6 +776,7 @@ export async function removeTeacherFromCohort(cohortId: string, teacherId: strin
 }
 
 export async function listCohortCourseAssignments(cohortId: string) {
+  await requireCohortRead(cohortId);
   const supabase = await createClient();
   const { data: assignments, error } = await supabase
     .schema("delivery")
@@ -1173,7 +789,7 @@ export async function listCohortCourseAssignments(cohortId: string) {
   if (error) throw error;
   if (!assignments || assignments.length === 0) return [];
 
-  const courseIds = assignments.map((a: any) => a.course_id);
+  const courseIds = assignments.map((a) => a.course_id);
   const { data: courses, error: courseError } = await supabase
     .schema("academic")
     .from("courses")
@@ -1182,13 +798,14 @@ export async function listCohortCourseAssignments(cohortId: string) {
 
   if (courseError) throw courseError;
 
-  return assignments.map((a: any) => ({
+  return assignments.map((a) => ({
     ...a,
     course: courses?.find(c => c.id === a.course_id) || null
   }));
 }
 
 export async function listCohortEnrollments(cohortId: string) {
+  await requireCohortRead(cohortId);
   const supabase = await createClient();
   const { data: enrollments, error } = await supabase
     .schema("delivery")
@@ -1209,63 +826,37 @@ export async function listCohortEnrollments(cohortId: string) {
   if (error) throw error;
   if (!enrollments || enrollments.length === 0) return [];
 
-  const studentIds = [...new Set(enrollments.map((e: any) => e.user_id).filter(Boolean))];
-  let students: any[] = [];
-  if (studentIds.length > 0) {
-    const { data: userData } = await supabase
-      .schema("core")
-      .from("users")
-      .select("id, full_name, email")
-      .in("id", studentIds);
-    students = userData || [];
-  }
+  const studentIds = [...new Set(enrollments.map((e) => e.user_id).filter(Boolean))];
+  const [userResult, assignmentResult] = await Promise.all([
+    supabase.schema("core").from("users").select("id, full_name, email").in("id", studentIds),
+    supabase.schema("delivery").from("course_assignments").select("*").eq("cohort_id", cohortId).is("deleted_at", null),
+  ]);
+  if (userResult.error) throw userResult.error;
+  if (assignmentResult.error) throw assignmentResult.error;
+  const students: CampusUser[] = userResult.data || [];
+  const assignments = assignmentResult.data || [];
 
-  let assignments: any[] = [];
-  try {
-    const { data: assignData } = await supabase
-      .schema("delivery")
-      .from("course_assignments")
-      .select("*")
-      .eq("cohort_id", cohortId)
-      .is("deleted_at", null);
-    assignments = assignData || [];
-  } catch (err) {
-    console.error("Failed to fetch assignments in listCohortEnrollments:", err);
-  }
+  const courseIds = assignments.map((a) => a.course_id);
+  const progresses = await readProgressSnapshots(studentIds, courseIds, supabase);
 
-  const courseIds = assignments.map((a: any) => a.course_id);
-  let progresses: any[] = [];
-  if (studentIds.length > 0 && courseIds.length > 0) {
-    try {
-      const { data: progData } = await supabase
-        .schema("delivery")
-        .from("course_progress")
-        .select("*")
-        .in("user_id", studentIds)
-        .in("course_id", courseIds);
-      progresses = progData || [];
-    } catch (err) {
-      console.error("Failed to fetch course progress in listCohortEnrollments:", err);
-    }
-  }
-
-  return enrollments.map((e: any) => {
+  return enrollments.map((e) => {
     const student = students.find(s => s.id === e.user_id) || null;
     
     const userProgs = progresses.filter(p => p.user_id === e.user_id);
-    const avgProgress = userProgs.length > 0 
-      ? userProgs.reduce((acc, curr) => acc + (curr.progress_percentage || 0), 0) / userProgs.length 
-      : 0;
+    const avgProgress = averageLearningProgress(userProgs.map(progress => progress.progress_percentage));
 
     return {
       ...e,
       student,
-      progress_percentage: Math.round(avgProgress)
+      progress_percentage: avgProgress
     };
   });
 }
 
 export async function listAllCohorts() {
+  const caller = await getCurrentUser(true);
+  if (!caller?.user) throw new Error("Access denied.");
+  if (caller.primaryRole !== "super_admin") return caller.tenantId ? listCohorts(caller.tenantId) : [];
   const supabase = await createClient();
   const { data: cohorts, error } = await supabase
     .schema("delivery")
@@ -1277,8 +868,8 @@ export async function listAllCohorts() {
   if (error) throw error;
   if (!cohorts || cohorts.length === 0) return [];
 
-  const tenantIds = [...new Set(cohorts.map((c: any) => c.tenant_id).filter(Boolean))];
-  let institutions: any[] = [];
+  const tenantIds = [...new Set(cohorts.map((c) => c.tenant_id).filter(Boolean))];
+  let institutions: Institution[] = [];
   if (tenantIds.length > 0) {
     const { data: instData } = await supabase
       .schema("institution")
@@ -1287,69 +878,18 @@ export async function listAllCohorts() {
     institutions = instData || [];
   }
 
-  return cohorts.map((c: any) => ({
+  return cohorts.map((c) => ({
     ...c,
     institution: institutions.find(i => i.id === c.tenant_id) || null
   }));
 }
 
 export async function syncCourseProgressByActivity(userId: string, activityId: string) {
+  await requireStudentRead(userId);
   const supabase = await createClient();
-
-  const { data: activity } = await supabase
-    .schema("learning")
-    .from("activities")
-    .select("lesson_id")
-    .eq("id", activityId)
-    .maybeSingle();
-
-  if (activity?.lesson_id) {
-    // 1. Fetch activity progress status
-    const { data: progress } = await supabase
-      .schema("learning")
-      .from("student_activity_progress")
-      .select("status_code")
-      .eq("student_id", userId)
-      .eq("activity_id", activityId)
-      .maybeSingle();
-
-    const isDone = progress && ["submitted", "completed", "reviewed"].includes(progress.status_code);
-
-    if (isDone) {
-      await supabase
-        .schema("delivery")
-        .from("lesson_progress")
-        .upsert({
-          user_id: userId,
-          lesson_id: activity.lesson_id,
-          status_code: "completed",
-          progress_percentage: 100,
-          completed_at: new Date().toISOString(),
-          last_accessed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: "user_id,lesson_id"
-        });
-    }
-
-    const { data: lesson } = await supabase
-      .schema("academic")
-      .from("lessons")
-      .select("module_id")
-      .eq("id", activity.lesson_id)
-      .maybeSingle();
-
-    if (lesson?.module_id) {
-      const { data: module } = await supabase
-        .schema("academic")
-        .from("modules")
-        .select("course_id")
-        .eq("id", lesson.module_id)
-        .maybeSingle();
-
-      if (module?.course_id) {
-        await syncCourseProgress(userId, module.course_id);
-      }
-    }
-  }
+  const { data: activity, error } = await supabase.schema("learning").from("activities").select("lesson_id").eq("id", activityId).is("deleted_at", null).maybeSingle();
+  if (error) throw error;
+  if (!activity?.lesson_id) return;
+  const scope = await academicScope("lessons", activity.lesson_id);
+  if (scope.courseId) await syncCourseProgress(userId, scope.courseId);
 }

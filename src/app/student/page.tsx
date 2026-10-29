@@ -5,7 +5,7 @@ import StudentConsole from "./student-console";
 export const dynamic = "force-dynamic";
 
 export default async function StudentPage() {
-  const userDetails = await getCurrentUser();
+  const userDetails = await getCurrentUser(true);
 
   if (!userDetails || userDetails.primaryRole !== "student") {
     redirect("/login");
@@ -15,7 +15,7 @@ export default async function StudentPage() {
 
   return (
     <StudentConsole
-      studentEmail={authUser.email}
+      studentEmail={(authUser.email ?? "")}
       fullName={userDetails.user.full_name || "Student"}
       primaryRole={primaryRole}
       institution={institution}

@@ -1,0 +1,26 @@
+{
+  "purpose": "User-authorized persistent QA course and synthetic media for Student browser verification",
+  "program_id": "7fd43d42-9bea-4244-84e1-cebe709f5b8f",
+  "course_id": "8bdcc9e0-6bdb-4632-b5c9-c16bbecae6b7",
+  "blueprint_id": "ef887cc1-231b-4af1-80d7-f3fedf5e9b4d",
+  "cohort_id": "43b28433-8fd1-4472-95ab-0e8fe7044f32",
+  "enrollment_id": "4f393b97-a873-433a-96cb-b9d324a6825a",
+  "student_email": "akshaykumar7.m@gmail.com",
+  "course_title": "QA Module 4 - Every Learning Format",
+  "modules": 3,
+  "lessons": 11,
+  "attachments": 7,
+  "bucket": "module04-qa-assets",
+  "storage_prefix": "v1/",
+  "synthetic_assets_only": true,
+  "youtube_source": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+  "cc0_video_source": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+  "retained_for_user_review": true,
+  "teacher_email": "akshay.m.cse.2022@snsce.ac.in",
+  "teacher_id": "4a28c457-fe7c-4306-b5ec-71664d46217d",
+  "teacher_qa_assignments": [
+    "academic.tenant_teachers",
+    "academic.course_instructors",
+    "delivery.cohort_teachers"
+  ]
+}

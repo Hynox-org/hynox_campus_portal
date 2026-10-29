@@ -69,4 +69,9 @@ describe("Google login callback", () => {
     exchange.mockRejectedValue(new Error("private provider details"));
     expect((await GET(request())).headers.get("location")).toContain("OAuthExchangeFailed");
   });
+  it("distinguishes provider access denial without attempting a session exchange", async () => {
+    const response = await GET(new Request("http://localhost:3000/auth/callback?error=access_denied&error_description=private-details"));
+    expect(response.headers.get("location")).toBe("http://localhost:3000/login?error=OAuthAccessDenied");
+    expect(exchange).not.toHaveBeenCalled();
+  });
 });

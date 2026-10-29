@@ -1,0 +1,2 @@
+src/app/teacher/teacher-console.tsx(2691,84): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.
+src/app/teacher/teacher-console.tsx(2695,85): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.

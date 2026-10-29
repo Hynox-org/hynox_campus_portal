@@ -1,4 +1,5 @@
 "use server";
+import { errorMessage } from "@/lib/error-message";
 
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/services/auth";
@@ -7,7 +8,7 @@ import { listInstitutionUsers } from "@/services/institution";
 
 async function verifyAdmin() {
   const user = await getCurrentUser();
-  if (!user) throw new Error("Unauthorized.");
+  if (!user?.user) throw new Error("Unauthorized.");
   const allowed = ["super_admin", "institution_admin", "teacher", "trainer"];
   if (!allowed.includes(user.primaryRole)) {
     throw new Error("Access denied. Insufficient permissions.");
@@ -20,8 +21,8 @@ export async function getDeliveryLookupsAction() {
   try {
     const data = await deliveryService.getDeliveryLookups();
     return { success: true, lookups: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to fetch delivery lookups." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to fetch delivery lookups.") };
   }
 }
 
@@ -30,8 +31,8 @@ export async function listCohortsAction(tenantId: string) {
     await verifyAdmin();
     const data = await deliveryService.listCohorts(tenantId);
     return { success: true, cohorts: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list cohorts." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list cohorts.") };
   }
 }
 
@@ -41,8 +42,8 @@ export async function createCohortAction(input: deliveryService.CohortInput) {
     const data = await deliveryService.createCohort(input);
     revalidatePath("/admin");
     return { success: true, cohort: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to create cohort.") };
   }
 }
 
@@ -52,8 +53,8 @@ export async function updateCohortAction(id: string, input: Partial<deliveryServ
     const data = await deliveryService.updateCohort(id, input);
     revalidatePath("/admin");
     return { success: true, cohort: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to update cohort.") };
   }
 }
 
@@ -63,8 +64,8 @@ export async function deleteCohortAction(id: string) {
     await deliveryService.deleteCohort(id);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to delete cohort.") };
   }
 }
 
@@ -73,8 +74,8 @@ export async function listEnrollmentsAction(tenantId: string) {
     await verifyAdmin();
     const data = await deliveryService.listEnrollments(tenantId);
     return { success: true, enrollments: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list enrollments." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list enrollments.") };
   }
 }
 
@@ -84,8 +85,8 @@ export async function enrollStudentAction(input: deliveryService.EnrollmentInput
     const data = await deliveryService.enrollStudent(input);
     revalidatePath("/admin");
     return { success: true, enrollment: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to enroll student." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to enroll student.") };
   }
 }
 
@@ -95,8 +96,8 @@ export async function updateEnrollmentStatusAction(id: string, status_code: stri
     const data = await deliveryService.updateEnrollmentStatus(id, status_code);
     revalidatePath("/admin");
     return { success: true, enrollment: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update enrollment status." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to update enrollment status.") };
   }
 }
 
@@ -106,8 +107,8 @@ export async function removeEnrollmentAction(id: string) {
     await deliveryService.removeEnrollment(id);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to remove enrollment." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to remove enrollment.") };
   }
 }
 
@@ -116,8 +117,8 @@ export async function listCourseAssignmentsAction(tenantId: string) {
     await verifyAdmin();
     const data = await deliveryService.listCourseAssignments(tenantId);
     return { success: true, assignments: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list course assignments." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list course assignments.") };
   }
 }
 
@@ -127,8 +128,8 @@ export async function assignCourseAction(input: deliveryService.CourseAssignment
     const data = await deliveryService.assignCourse(input);
     revalidatePath("/admin");
     return { success: true, assignment: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to assign course." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to assign course.") };
   }
 }
 
@@ -138,8 +139,8 @@ export async function removeCourseAssignmentAction(id: string) {
     await deliveryService.removeCourseAssignment(id);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to remove course assignment." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to remove course assignment.") };
   }
 }
 
@@ -149,8 +150,8 @@ export async function listInstitutionStudentsAction(tenantId: string) {
     const allUsers = await listInstitutionUsers(tenantId);
     const students = allUsers.filter(u => u.roles.includes("student"));
     return { success: true, students };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list students." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list students.") };
   }
 }
 
@@ -158,8 +159,8 @@ export async function getStudentDeliveryDataAction(userId: string) {
   try {
     const data = await deliveryService.getStudentDeliveryData(userId);
     return { success: true, programs: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to fetch student programs and courses." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to fetch student programs and courses.") };
   }
 }
 
@@ -167,8 +168,8 @@ export async function getLessonProgressAction(userId: string, lessonId: string) 
   try {
     const data = await deliveryService.getLessonProgress(userId, lessonId);
     return { success: true, progress: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to fetch lesson progress." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to fetch lesson progress.") };
   }
 }
 
@@ -176,8 +177,8 @@ export async function startOrUpdateLessonProgressAction(userId: string, lessonId
   try {
     const data = await deliveryService.startOrUpdateLessonProgress(userId, lessonId, courseId);
     return { success: true, progress: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to start/update lesson progress." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to start/update lesson progress.") };
   }
 }
 
@@ -185,8 +186,8 @@ export async function completeLessonProgressAction(userId: string, lessonId: str
   try {
     const data = await deliveryService.completeLessonProgress(userId, lessonId, courseId);
     return { success: true, progress: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to complete lesson progress." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to complete lesson progress.") };
   }
 }
 
@@ -194,8 +195,8 @@ export async function listStudentLessonProgressAction(userId: string) {
   try {
     const data = await deliveryService.listStudentLessonProgress(userId);
     return { success: true, progressList: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list student lesson progress." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list student lesson progress.") };
   }
 }
 
@@ -204,8 +205,8 @@ export async function listTeacherCohortsAction(teacherId: string, isSuperAdmin: 
     await verifyAdmin();
     const data = await deliveryService.listTeacherCohorts(teacherId, isSuperAdmin);
     return { success: true, cohorts: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list teacher cohorts." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list teacher cohorts.") };
   }
 }
 
@@ -214,8 +215,8 @@ export async function listCohortCourseAssignmentsAction(cohortId: string) {
     await verifyAdmin();
     const data = await deliveryService.listCohortCourseAssignments(cohortId);
     return { success: true, assignments: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list cohort course assignments." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list cohort course assignments.") };
   }
 }
 
@@ -224,8 +225,8 @@ export async function listCohortEnrollmentsAction(cohortId: string) {
     await verifyAdmin();
     const data = await deliveryService.listCohortEnrollments(cohortId);
     return { success: true, enrollments: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list cohort enrollments." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list cohort enrollments.") };
   }
 }
 
@@ -234,8 +235,8 @@ export async function assignTeacherToCohortAction(cohortId: string, teacherId: s
     await verifyAdmin();
     const data = await deliveryService.assignTeacherToCohort(cohortId, teacherId);
     return { success: true, mapping: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to assign teacher to cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to assign teacher to cohort.") };
   }
 }
 
@@ -244,8 +245,8 @@ export async function removeTeacherFromCohortAction(cohortId: string, teacherId:
     await verifyAdmin();
     await deliveryService.removeTeacherFromCohort(cohortId, teacherId);
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to remove teacher from cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to remove teacher from cohort.") };
   }
 }
 
@@ -254,7 +255,7 @@ export async function listAllCohortsAction() {
     await verifyAdmin();
     const data = await deliveryService.listAllCohorts();
     return { success: true, cohorts: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list all cohorts." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list all cohorts.") };
   }
 }

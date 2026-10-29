@@ -1,9 +1,7 @@
-import { getVisibleTestCases, getAllTestCasesInternal } from "./learning";
-import { cookies } from "next/headers";
-import { syncCourseProgressByActivity } from "./delivery";
-import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
-import { SHARED_ROLE_COOKIE, SHARED_ROLE_HEADER } from "@/lib/shared-login";
+import { errorMessage } from "@/lib/error-message";
+import { getVisibleTestCases } from "./learning";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { refreshProgressSnapshot } from "./course-progress";
 
 interface RunResult {
   stdout: string;
@@ -17,49 +15,6 @@ interface RunResult {
 export function normalizeNewlines(str: string): string {
   if (!str) return "";
   return str.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
-}
-
-// Resolve Supabase client statically based on environment (Next.js server context vs standalone background worker process)
-let cachedSupabase: any = null;
-export async function getSupabaseClient() {
-  // Standalone node script execution fallback (worker mode or non-Next.js runtime)
-  if (process.env.IS_WORKER === "true" || !process.env.NEXT_RUNTIME) {
-    if (cachedSupabase) return cachedSupabase;
-    cachedSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    return cachedSupabase;
-  }
-
-  try {
-    const cookieStore = await cookies();
-    return createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: { headers: { [SHARED_ROLE_HEADER]: cookieStore.get(SHARED_ROLE_COOKIE)?.value || "" } },
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {}
-          },
-        },
-      }
-    );
-  } catch (e) {
-    // If standard cookies fail or we aren't in HTTP context, construct a client dynamically
-    return createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }
 }
 
 // Executes code in the sandbox-engine service, where it runs inside a locked-down
@@ -120,10 +75,10 @@ async function runInSandbox(
       memoryUsedKb: data.memoryUsedKb || 0,
       status: data.status || "runtime_error",
     };
-  } catch (error: any) {
+  } catch (error) {
     return {
       stdout: "",
-      stderr: `Failed to reach sandbox engine: ${error.message}`,
+      stderr: `Failed to reach sandbox engine: ${errorMessage(error, "Unknown sandbox error")}`,
       executionTimeMs: 0,
       memoryUsedKb: 0,
       status: "runtime_error",
@@ -158,7 +113,11 @@ export async function executeVisibleTests(
 }
 
 export async function executeAllTestsAndGrade(submissionId: string) {
-  const supabase = await getSupabaseClient();
+  const supabase = createAdminClient();
+  const { data: claimed, error: claimError } = await supabase.schema("learning").from("challenge_execution_queue")
+    .update({ status: "running", started_at: new Date().toISOString() }).eq("submission_id", submissionId).eq("status", "queued").select("id").maybeSingle();
+  if (claimError) throw claimError;
+  if (!claimed) return;
 
   // Load submission details
   const { data: sub, error: subError } = await supabase
@@ -218,7 +177,10 @@ export async function executeAllTestsAndGrade(submissionId: string) {
         log_message: `AUDIT: Time limit set to ${timeLimitMs}ms, memory limit ${memoryLimitMb}MB per test case.`
       });
 
-    const testCases = await getAllTestCasesInternal(sub.challenge_id);
+    const { data: testCases, error: testError } = await supabase.schema("learning").from("challenge_test_cases")
+      .select("*").eq("challenge_id", sub.challenge_id).order("position");
+    if (testError) throw testError;
+    if (!testCases?.length) throw new Error("Challenge has no test cases; it cannot be graded as accepted.");
 
     let passedCount = 0;
     let totalExecutionTime = 0;
@@ -342,7 +304,14 @@ export async function executeAllTestsAndGrade(submissionId: string) {
       .eq("id", sub.student_activity_progress_id);
 
     if (challenge?.activity_id) {
-      await syncCourseProgressByActivity(sub.student_id, challenge.activity_id);
+      const { data: activity, error } = await supabase.schema("learning").from("activities")
+        .select("lesson_id").eq("id", challenge.activity_id).single();
+      if (error) throw error;
+      const { data: lesson, error: lessonError } = await supabase.schema("academic").from("lessons")
+        .select("modules!inner(course_id)").eq("id", activity.lesson_id).single();
+      if (lessonError) throw lessonError;
+      const parent = Array.isArray(lesson.modules) ? lesson.modules[0] : lesson.modules;
+      await refreshProgressSnapshot(sub.student_id, parent.course_id, supabase);
     }
 
     // Complete audit log log entry
@@ -355,7 +324,7 @@ export async function executeAllTestsAndGrade(submissionId: string) {
         log_message: `AUDIT: Pipeline complete. Overall Status: ${overallStatus}. Final Score: ${finalScore}/${maxScore}.`
       });
 
-  } catch (err: any) {
+  } catch (err) {
     console.error("Critical error inside background judge execution:", err);
 
     // Recovery crash fallback
@@ -366,7 +335,7 @@ export async function executeAllTestsAndGrade(submissionId: string) {
         .update({
           status: "failed",
           completed_at: new Date().toISOString(),
-          error_message: err.message || "Background execution crashed unexpectedly."
+          error_message: errorMessage(err, "Judge execution failed") || "Background execution crashed unexpectedly."
         })
         .eq("submission_id", submissionId);
 
@@ -382,7 +351,7 @@ export async function executeAllTestsAndGrade(submissionId: string) {
         .insert({
           submission_id: submissionId,
           log_type: "system",
-          log_message: `CRITICAL CRASH: ${err.message || "Background execution crashed."}`
+          log_message: `CRITICAL CRASH: ${errorMessage(err, "Judge execution failed") || "Background execution crashed."}`
         });
 
       await supabase

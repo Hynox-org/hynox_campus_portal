@@ -1,0 +1,20 @@
+[
+  {
+    "name": "flower.mp4",
+    "status": 206,
+    "range": "bytes 0-1023/1128375",
+    "cache": "public, max-age=3600",
+    "cors": "*",
+    "milliseconds": 1713,
+    "bytes": 1024
+  },
+  {
+    "name": "portrait.pdf",
+    "status": 206,
+    "range": "bytes 0-1023/44301",
+    "cache": "public, max-age=3600",
+    "cors": "*",
+    "milliseconds": 1525,
+    "bytes": 1024
+  }
+]

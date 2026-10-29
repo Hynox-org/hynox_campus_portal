@@ -1,15 +1,13 @@
 import { getCurrentUser } from "@/services/auth";
 import { redirect } from "next/navigation";
-import { Terminal } from "lucide-react";
-import SignOutButton from "@/components/sign-out-button";
 import TeacherConsole from "./teacher-console";
-import { listTeacherCohorts, listCohortEnrollments, listCohortCourseAssignments } from "@/services/delivery";
-import { listCohortActivities, listCohortProjectSubmissions, listCohortChallengeSubmissions } from "@/services/learning";
+import { listTeacherCohorts } from "@/services/delivery";
+import { listTeacherInstitutions } from "@/services/institution";
 
 export const dynamic = "force-dynamic";
 
 export default async function TeacherPage() {
-  const userDetails = await getCurrentUser();
+  const userDetails = await getCurrentUser(true);
 
   if (
     !userDetails ||
@@ -20,25 +18,12 @@ export default async function TeacherPage() {
 
   const { authUser, primaryRole, user } = userDetails;
 
-  let cohorts: any[] = [];
-  try {
-    cohorts = await listTeacherCohorts(user.id, primaryRole === "super_admin");
-  } catch (err) {
-    console.error("Failed to load teacher assigned cohorts:", err);
-  }
-
-  // Set initial cohort ID to the first assigned cohort
+  const [cohorts, assignedInstitutions] = await Promise.all([
+    listTeacherCohorts(user.id, primaryRole === "super_admin"),
+    listTeacherInstitutions(user.id, primaryRole === "super_admin"),
+  ]);
   const resolvedCohortId = cohorts[0]?.id || "";
-  const resolvedTenantId = cohorts[0]?.tenant_id || "";
-
-  // Derive assigned institutions from the teacher's cohorts
-  const instMap = new Map<string, any>();
-  cohorts.forEach(c => {
-    if (c.institution) {
-      instMap.set(c.institution.id, c.institution);
-    }
-  });
-  const assignedInstitutions = Array.from(instMap.values());
+  const resolvedTenantId = cohorts[0]?.tenant_id || assignedInstitutions[0]?.id || "";
 
   return (
     <TeacherConsole

@@ -1,0 +1,22 @@
+{
+  "fillable.pdf": {
+    "pages": 1,
+    "bytes": 45823
+  },
+  "landscape.pdf": {
+    "pages": 1,
+    "bytes": 43394
+  },
+  "multipage.pdf": {
+    "pages": 10,
+    "bytes": 51622
+  },
+  "portrait.pdf": {
+    "pages": 2,
+    "bytes": 44301
+  },
+  "scanned.pdf": {
+    "pages": 1,
+    "bytes": 32538
+  }
+}

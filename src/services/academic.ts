@@ -1,4 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
+import { requireAcademicWrite, requireCampusWrite } from "./academic-access";
+import { validateAcademicInput, validateAssignmentIds } from "@/lib/academic-validation";
 
 export interface ProgramInput {
   title: string;
@@ -39,7 +41,7 @@ export interface LessonInput {
   module_id: string;
   title: string;
   lesson_type_id?: string;
-  content_json?: any;
+  content_json?: unknown;
   video_url?: string;
   duration?: number;
   position?: number;
@@ -63,10 +65,14 @@ export interface LessonResourceInput {
 export async function getAcademicLookups() {
   const supabase = await createClient();
   
-  const { data: courseTypes } = await supabase.schema("academic").from("course_types").select("*").order("code");
-  const { data: lessonTypes } = await supabase.schema("academic").from("lesson_types").select("*").order("code");
-  const { data: statuses } = await supabase.schema("academic").from("statuses").select("*").order("code");
-  const { data: visibilityTypes } = await supabase.schema("academic").from("visibility_types").select("*").order("code");
+  const results = await Promise.all([
+    supabase.schema("academic").from("course_types").select("*").order("code"),
+    supabase.schema("academic").from("lesson_types").select("*").order("code"),
+    supabase.schema("academic").from("statuses").select("*").order("code"),
+    supabase.schema("academic").from("visibility_types").select("*").order("code"),
+  ]);
+  for (const result of results) if (result.error) throw result.error;
+  const [courseTypes, lessonTypes, statuses, visibilityTypes] = results.map(result => result.data);
 
   return {
     courseTypes: courseTypes || [],
@@ -80,29 +86,12 @@ export async function getAcademicLookups() {
 export async function getSessionTenant() {
   const supabase = await createClient();
   
-  // Check auth user status
   const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) {
-    console.error("[Academic Service] supabase.auth.getUser() failed:", authError);
-  } else {
-    console.log("[Academic Service] supabase.auth.getUser() email:", authData?.user?.email, "ID:", authData?.user?.id);
-  }
-
-  // Call database function
+  if (authError || !authData.user) return null;
   const { data, error } = await supabase.schema("core").rpc("get_current_user").maybeSingle();
-  if (error) {
-    console.error("[Academic Service] RPC 'get_current_user' failed:", error);
-    throw new Error(`get_current_user RPC failed: ${error.message} (Code: ${error.code})`);
-  }
-  
-  const cu = data as any;
-  if (!cu) {
-    console.warn("[Academic Service] RPC 'get_current_user' returned no database user mapping. Check if auth.users ID exists in core.users.");
-  } else {
-    console.log("[Academic Service] RPC 'get_current_user' mapped user successfully:", cu);
-  }
-
-  return cu ? { tenantId: cu.tenant_id, userId: cu.user_id, roles: cu.roles } : null;
+  if (error) throw error;
+  const cu = data as { tenant_id: string | null; user_id: string; roles: string[]; status: string } | null;
+  return cu && cu.status === "active" ? { tenantId: cu.tenant_id, userId: cu.user_id, roles: cu.roles } : null;
 }
 
 // List all teachers/trainers for instructor selection
@@ -146,7 +135,7 @@ export async function listPrograms(tenantId: string, userRoleOrFilterActiveOnly?
   }
 
   if (role) {
-    if (role === "super_admin") {
+    if (role === "super_admin" || role === "institution_admin") {
       // Super admin sees all, no status filters
     } else if (role === "teacher" || role === "trainer") {
       // Teachers and trainers see active and draft programs
@@ -206,6 +195,7 @@ export async function getProgram(id: string) {
 }
 
 export async function createProgram(input: ProgramInput) {
+  input = validateAcademicInput(input, ['title', 'slug']) as typeof input;
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
@@ -216,6 +206,9 @@ export async function createProgram(input: ProgramInput) {
   if (!tenantId || !institutionId) {
     throw new Error("Tenant ID and Institution ID are required.");
   }
+
+  await requireCampusWrite(tenantId);
+  if (institutionId !== tenantId) throw new Error("Invalid campus hierarchy.");
 
   const { data, error } = await supabase
     .schema("academic")
@@ -239,6 +232,8 @@ export async function createProgram(input: ProgramInput) {
 }
 
 export async function updateProgram(id: string, input: Partial<ProgramInput>) {
+  input = validateAcademicInput(input, []) as typeof input;
+  await requireAcademicWrite("programs", id, true);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
@@ -255,7 +250,7 @@ export async function updateProgram(id: string, input: Partial<ProgramInput>) {
       updated_by: session.userId,
       updated_at: new Date().toISOString()
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null);
 
   if (session.tenantId) {
     query = query.eq("tenant_id", session.tenantId);
@@ -267,6 +262,7 @@ export async function updateProgram(id: string, input: Partial<ProgramInput>) {
 }
 
 export async function deleteProgram(id: string) {
+  await requireAcademicWrite("programs", id, true);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
@@ -278,13 +274,13 @@ export async function deleteProgram(id: string) {
       deleted_at: new Date().toISOString(),
       updated_by: session.userId
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null);
 
   if (session.tenantId) {
     query = query.eq("tenant_id", session.tenantId);
   }
 
-  const { error } = await query;
+  const { error } = await query.select("id").single();
   if (error) throw error;
   return true;
 }
@@ -338,11 +334,14 @@ export async function getCourse(id: string) {
 }
 
 export async function createCourse(input: CourseInput) {
+  input = validateAcademicInput(input, ['program_id', 'title', 'slug']) as typeof input;
+  const scope = await requireAcademicWrite("programs", input.program_id, true);
+  if ((input.tenant_id && input.tenant_id !== scope.tenantId) || (input.institution_id && input.institution_id !== scope.tenantId)) throw new Error("Invalid campus hierarchy.");
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
 
-  const tenantId = input.tenant_id || session.tenantId;
+  const tenantId = scope.tenantId;
   const institutionId = input.institution_id || tenantId;
 
   if (!tenantId || !institutionId) {
@@ -376,6 +375,8 @@ export async function createCourse(input: CourseInput) {
 }
 
 export async function updateCourse(id: string, input: Partial<CourseInput>) {
+  input = validateAcademicInput(input, []) as typeof input;
+  await requireAcademicWrite("courses", id, true);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
@@ -396,7 +397,7 @@ export async function updateCourse(id: string, input: Partial<CourseInput>) {
       updated_by: session.userId,
       updated_at: new Date().toISOString()
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null);
 
   if (session.tenantId) {
     query = query.eq("tenant_id", session.tenantId);
@@ -408,6 +409,7 @@ export async function updateCourse(id: string, input: Partial<CourseInput>) {
 }
 
 export async function deleteCourse(id: string) {
+  await requireAcademicWrite("courses", id, true);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
@@ -419,13 +421,13 @@ export async function deleteCourse(id: string) {
       deleted_at: new Date().toISOString(),
       updated_by: session.userId
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null);
 
   if (session.tenantId) {
     query = query.eq("tenant_id", session.tenantId);
   }
 
-  const { error } = await query;
+  const { error } = await query.select("id").single();
   if (error) throw error;
   return true;
 }
@@ -454,45 +456,12 @@ export async function getCourseInstructors(courseId: string) {
 }
 
 export async function assignCourseInstructors(courseId: string, instructorIds: string[]) {
+  validateAssignmentIds(courseId, instructorIds);
+  await requireAcademicWrite("courses", courseId, true);
   const supabase = await createClient();
-  const session = await getSessionTenant();
-  if (!session) throw new Error("No active session found.");
-
-  const { data: courseData } = await supabase
-    .schema("academic")
-    .from("courses")
-    .select("tenant_id, institution_id")
-    .eq("id", courseId)
-    .single();
-
-  const tenantId = courseData?.tenant_id || session.tenantId;
-  const institutionId = courseData?.institution_id || tenantId;
-
-  if (!tenantId || !institutionId) {
-    throw new Error("Could not resolve tenant scope for course.");
-  }
-
-  await supabase
-    .schema("academic")
-    .from("course_instructors")
-    .delete()
-    .eq("course_id", courseId);
-
-  if (instructorIds.length === 0) return true;
-
-  const records = instructorIds.map((userId) => ({
-    course_id: courseId,
-    user_id: userId,
-    instructor_role: "primary",
-    tenant_id: tenantId,
-    institution_id: institutionId
-  }));
-
-  const { error } = await supabase
-    .schema("academic")
-    .from("course_instructors")
-    .insert(records);
-
+  const { error } = await supabase.schema("academic").rpc("replace_course_instructors", {
+    p_course_id: courseId, p_instructor_ids: instructorIds,
+  });
   if (error) throw error;
   return true;
 }
@@ -518,11 +487,14 @@ export async function listModules(courseId: string) {
 }
 
 export async function createModule(input: ModuleInput) {
+  input = validateAcademicInput(input, ['course_id', 'title']) as typeof input;
+  const scope = await requireAcademicWrite("courses", input.course_id, false);
+  if ((input.tenant_id && input.tenant_id !== scope.tenantId) || (input.institution_id && input.institution_id !== scope.tenantId)) throw new Error("Invalid campus hierarchy.");
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session found.");
 
-  const tenantId = input.tenant_id || session.tenantId;
+  const tenantId = scope.tenantId;
   const institutionId = input.institution_id || tenantId;
 
   if (!tenantId || !institutionId) {
@@ -538,7 +510,7 @@ export async function createModule(input: ModuleInput) {
       institution_id: institutionId,
       title: input.title,
       description: input.description,
-      position: input.position || 1,
+      position: input.position ?? 1,
       status_id: input.status_id,
       created_by: session.userId,
       updated_by: session.userId
@@ -551,6 +523,8 @@ export async function createModule(input: ModuleInput) {
 }
 
 export async function updateModule(id: string, input: Partial<ModuleInput>) {
+  input = validateAcademicInput(input, []) as typeof input;
+  await requireAcademicWrite("modules", id, false);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
@@ -566,7 +540,7 @@ export async function updateModule(id: string, input: Partial<ModuleInput>) {
       updated_by: session.userId,
       updated_at: new Date().toISOString()
     })
-    .eq("id", id)
+    .eq("id", id).is("deleted_at", null)
     .select()
     .single();
 
@@ -575,6 +549,7 @@ export async function updateModule(id: string, input: Partial<ModuleInput>) {
 }
 
 export async function deleteModule(id: string) {
+  await requireAcademicWrite("modules", id, false);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
@@ -586,7 +561,7 @@ export async function deleteModule(id: string) {
       deleted_at: new Date().toISOString(),
       updated_by: session.userId
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null).select("id").single();
 
   if (error) throw error;
   return true;
@@ -614,11 +589,14 @@ export async function listLessons(moduleId: string) {
 }
 
 export async function createLesson(input: LessonInput) {
+  input = validateAcademicInput(input, ['module_id', 'title']) as typeof input;
+  const scope = await requireAcademicWrite("modules", input.module_id, false);
+  if ((input.tenant_id && input.tenant_id !== scope.tenantId) || (input.institution_id && input.institution_id !== scope.tenantId)) throw new Error("Invalid campus hierarchy.");
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
 
-  const tenantId = input.tenant_id || session.tenantId;
+  const tenantId = scope.tenantId;
   const institutionId = input.institution_id || tenantId;
 
   if (!tenantId || !institutionId) {
@@ -651,7 +629,7 @@ export async function createLesson(input: LessonInput) {
       content_json: input.content_json || {},
       video_url: input.video_url,
       duration: input.duration,
-      position: input.position || 1,
+      position: input.position ?? 1,
       is_preview: input.is_preview || false,
       status_id: input.status_id,
       created_by: session.userId,
@@ -665,6 +643,8 @@ export async function createLesson(input: LessonInput) {
 }
 
 export async function updateLesson(id: string, input: Partial<LessonInput>) {
+  input = validateAcademicInput(input, []) as typeof input;
+  await requireAcademicWrite("lessons", id, false);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
@@ -698,7 +678,7 @@ export async function updateLesson(id: string, input: Partial<LessonInput>) {
       updated_by: session.userId,
       updated_at: new Date().toISOString()
     })
-    .eq("id", id)
+    .eq("id", id).is("deleted_at", null)
     .select()
     .single();
 
@@ -707,6 +687,7 @@ export async function updateLesson(id: string, input: Partial<LessonInput>) {
 }
 
 export async function deleteLesson(id: string) {
+  await requireAcademicWrite("lessons", id, false);
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
@@ -718,7 +699,7 @@ export async function deleteLesson(id: string) {
       deleted_at: new Date().toISOString(),
       updated_by: session.userId
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null).select("id").single();
 
   if (error) throw error;
   return true;
@@ -738,7 +719,7 @@ export async function listLessonResources(lessonId: string) {
     .order("position", { ascending: true });
 
   if (error) throw error;
-  return (data || []).map((res: any) => ({
+  return (data || []).map((res) => ({
     ...res,
     resource_type: res.resource_type_code,
     file_url: res.resource_type_code === "file" ? res.resource_url : undefined,
@@ -747,11 +728,14 @@ export async function listLessonResources(lessonId: string) {
 }
 
 export async function createLessonResource(input: LessonResourceInput) {
+  input = validateAcademicInput(input, ['lesson_id', 'title', 'resource_type']) as typeof input;
+  const scope = await requireAcademicWrite("lessons", input.lesson_id, false);
+  if ((input.tenant_id && input.tenant_id !== scope.tenantId) || (input.institution_id && input.institution_id !== scope.tenantId)) throw new Error("Invalid campus hierarchy.");
   const supabase = await createClient();
   const session = await getSessionTenant();
   if (!session) throw new Error("No active session");
 
-  const tenantId = input.tenant_id || session.tenantId;
+  const tenantId = scope.tenantId;
   const institutionId = input.institution_id || tenantId;
 
   if (!tenantId || !institutionId) {
@@ -768,7 +752,7 @@ export async function createLessonResource(input: LessonResourceInput) {
       resource_type_code: input.resource_type,
       resource_url: input.file_url || input.external_url || "",
       title: input.title,
-      position: input.position || 1,
+      position: input.position ?? 1,
       created_by: session.userId
     })
     .select()
@@ -784,6 +768,7 @@ export async function createLessonResource(input: LessonResourceInput) {
 }
 
 export async function deleteLessonResource(id: string) {
+  await requireAcademicWrite("lesson_resources", id, false);
   const supabase = await createClient();
   const { error } = await supabase
     .schema("academic")
@@ -791,7 +776,7 @@ export async function deleteLessonResource(id: string) {
     .update({
       deleted_at: new Date().toISOString()
     })
-    .eq("id", id);
+    .eq("id", id).is("deleted_at", null).select("id").single();
 
   if (error) throw error;
   return true;
@@ -862,7 +847,8 @@ export async function listLessonsForCourse(courseId: string) {
     .from("modules")
     .select("id")
     .eq("course_id", courseId)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .order("position", { ascending: true }).order("id", { ascending: true });
 
   if (modError) throw modError;
   if (!modules || modules.length === 0) return [];
@@ -879,10 +865,13 @@ export async function listLessonsForCourse(courseId: string) {
     `)
     .in("module_id", moduleIds)
     .is("deleted_at", null)
-    .order("position", { ascending: true });
+    .order("position", { ascending: true }).order("id", { ascending: true });
 
   if (lesError) throw lesError;
-  return lessons || [];
+  const moduleOrder = new Map(moduleIds.map((id, index) => [id, index]));
+  return (lessons || []).sort((left, right) =>
+    (moduleOrder.get(left.module_id) ?? 0) - (moduleOrder.get(right.module_id) ?? 0)
+  );
 }
 
 

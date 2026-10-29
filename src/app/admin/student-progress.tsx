@@ -1,30 +1,16 @@
 "use client";
 
+import { isPassedQuizAttempt } from "@/lib/quiz-result";
 import React, { useState, useEffect } from "react";
-import { 
-  listProgramsAction,
-  listCoursesAction,
-  listLessonsForCourseAction
-} from "@/app/actions/academic-actions";
-import { 
-  listCohortsAction,
-  listEnrollmentsAction,
-  getStudentDeliveryDataAction,
-  listStudentLessonProgressAction
-} from "@/app/actions/delivery-actions";
-import { 
-  listAllActivitiesAction,
-  listQuizAttemptsAction,
-  listProjectSubmissionsAction,
-  listChallengeSubmissionsAction
-} from "@/app/actions/learning-actions";
-import { useQueryClient } from "@tanstack/react-query";
+import { listLessonsForCourseAction } from "@/app/actions/academic-actions";
+import { listStudentLessonProgressAction } from "@/app/actions/delivery-actions";
+import type { Institution, Enrollment, LessonProgress, Lesson } from "@/types/campus";
+import { useInputsChanged } from "@/hooks/use-inputs-changed";
+import { useToast } from "@/components/toast";
+import { errorMessage } from "@/lib/error-message";
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
 import { usePrograms, useCourses } from "@/hooks/use-academics";
 import { 
-  Building, 
-  GraduationCap, 
-  Users, 
   Search, 
   TrendingUp, 
   ChevronDown, 
@@ -37,7 +23,7 @@ import { SecondaryLoader } from "@/components/secondary-loader";
 import { CustomSelect } from "@/components/custom-select";
 
 interface AdminStudentProgressProps {
-  institutions: any[];
+  institutions: Institution[];
 }
 
 export default function AdminStudentProgress({ institutions }: AdminStudentProgressProps) {
@@ -47,7 +33,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
   const [selectedCohortId, setSelectedCohortId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const queryClient = useQueryClient();
+  const { showError } = useToast();
 
   // React Query prefetching hooks
   const { data: deliveryData, isLoading: loadingDelivery } = useDeliveryData(selectedInstId);
@@ -70,20 +56,18 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
   const allCoursesList = acadCourses || [];
 
   const cohorts = selectedProgramId 
-    ? allCohorts.filter((c: any) => c.program_id === selectedProgramId)
+    ? allCohorts.filter((c) => c.program_id === selectedProgramId)
     : [];
     
   const enrollments = selectedCohortId
-    ? allEnrollments.filter((e: any) => e.cohort_id === selectedCohortId)
+    ? allEnrollments.filter((e) => e.cohort_id === selectedCohortId)
     : [];
 
-  const loading = false;
 
   // Selected Student Drawer States
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-  const [activeStudentProgress, setActiveStudentProgress] = useState<any[]>([]);
-  const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<any[]>([]);
-  const [drawerLessonsCache, setDrawerLessonsCache] = useState<Record<string, any[]>>({});
+  const [selectedStudent, setSelectedStudent] = useState<Enrollment | null>(null);
+  const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<LessonProgress[]>([]);
+  const [drawerLessonsCache, setDrawerLessonsCache] = useState<Record<string, Lesson[]>>({});
   const [studentDetailTab, setStudentDetailTab] = useState<"overview" | "syllabus" | "quizzes" | "projects" | "challenges">("overview");
 
   // Accordion inside drawer
@@ -91,44 +75,21 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
   // Reset cohort when program changes
-  useEffect(() => {
-    setSelectedCohortId("");
-  }, [selectedProgramId]);
+  if (useInputsChanged([selectedProgramId])) setSelectedCohortId("");
 
   const [loadingStudentId, setLoadingStudentId] = useState<string | null>(null);
 
-  const handleStudentClick = async (enr: any) => {
+  const handleStudentClick = async (enr: Enrollment) => {
     if (loadingStudentId) return;
     setLoadingStudentId(enr.id);
     try {
-      const studentId = enr.user_id;
-      const [delRes, progressRes, syllabusEntries] = await Promise.all([
-        getStudentDeliveryDataAction(studentId),
-        listStudentLessonProgressAction(studentId),
-        // Prefetch every course's lesson list so the syllabus tab is instant
-        Promise.all(
-          allCoursesList.map(async (c: any) => {
-            if (drawerLessonsCache[c.id]) return [c.id, drawerLessonsCache[c.id]] as const;
-            const res = await listLessonsForCourseAction(c.id);
-            return [c.id, res.success && res.lessons ? res.lessons : []] as const;
-          })
-        ),
-      ]);
-      if (delRes.success && delRes.programs) {
-        setActiveStudentProgress(delRes.programs);
-      } else {
-        setActiveStudentProgress([]);
-      }
-      if (progressRes.success && progressRes.progressList) {
-        setActiveStudentLessonsProgress(progressRes.progressList);
-      } else {
-        setActiveStudentLessonsProgress([]);
-      }
-      setDrawerLessonsCache(prev => ({ ...prev, ...Object.fromEntries(syllabusEntries) }));
+      const result = await listStudentLessonProgressAction(enr.user_id);
+      if (!result.success || !result.progressList) throw new Error(result.error || "Unable to load student progress.");
+      setActiveStudentLessonsProgress(result.progressList);
       setSelectedStudent(enr);
       setStudentDetailTab("overview");
-    } catch (err) {
-      console.error("Error preloading student data:", err);
+    } catch (error) {
+      showError(errorMessage(error, "Unable to load student progress."));
     } finally {
       setLoadingStudentId(null);
     }
@@ -327,9 +288,9 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
             id: q.id,
             title: q.title,
             attempted: !!attempt,
-            passed: attempt ? (attempt.score >= (q.passing_score || 0)) : false,
+            passed: isPassedQuizAttempt(attempt),
             score: attempt ? attempt.score : 0,
-            maxScore: q.max_score || 100,
+            maxScore: attempt?.max_score ?? q.max_score ?? 100,
             submittedAt: attempt ? new Date(attempt.created_at || attempt.updated_at).toLocaleDateString() : ""
           };
         });
@@ -367,7 +328,7 @@ export default function AdminStudentProgress({ institutions }: AdminStudentProgr
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
                         {selectedStudent.cohort?.name || "No group"}
                       </span>
-                      <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {selectedStudent.created_at ? new Date(selectedStudent.created_at).toLocaleDateString() : "Unknown date"}</span>
                     </div>
                   </div>
                 </div>

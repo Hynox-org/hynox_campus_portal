@@ -1,0 +1,58 @@
+BEGIN;
+DO $qa$
+DECLARE student_id uuid; campus_id uuid; admin_id uuid; admin_auth uuid; program_id uuid; blueprint_id uuid; course_id uuid; cohort_id uuid; module_id uuid; lesson_id uuid; modules uuid[]='{}'; i integer;
+BEGIN
+ SELECT id,tenant_id INTO STRICT student_id,campus_id FROM core.users WHERE email='akshaykumar7.m@gmail.com' AND status='active' AND deleted_at IS NULL;
+ SELECT id,auth_user_id INTO STRICT admin_id,admin_auth FROM core.users WHERE email='thehynoxofficial@gmail.com' AND status='active' AND deleted_at IS NULL;
+ IF EXISTS(SELECT 1 FROM academic.programs WHERE slug='qa-module4-formats-20261027') THEN RAISE EXCEPTION 'QA fixture already exists; use its saved manifest instead of duplicating it'; END IF;
+ INSERT INTO academic.programs(tenant_id,institution_id,title,slug,description,status_id,created_by,updated_by)
+ VALUES(campus_id,campus_id,'QA Module 4 - Learning Formats','qa-module4-formats-20261027','User-authorized QA course. Synthetic assets only.',academic.get_status_id_by_code('active'),admin_id,admin_id) RETURNING id INTO program_id;
+ INSERT INTO library.course_templates(title,slug,description,course_type_code,enrollment_mode,is_published,created_by,updated_by)
+ VALUES('QA Module 4 - Every Learning Format','qa-module4-formats-20261027','Synthetic course for playback, PDF and caching checks.','theory','institution_only',true,admin_id,admin_id) RETURNING id INTO blueprint_id;
+ FOR i IN 1..3 LOOP
+ INSERT INTO library.module_templates(course_template_id,title,position,created_by,updated_by)
+ VALUES(blueprint_id,CASE i WHEN 1 THEN 'Text and Video' WHEN 2 THEN 'PDF Formats' ELSE 'Audio and Images' END,i,admin_id,admin_id) RETURNING id INTO module_id;
+ modules:=array_append(modules,module_id);
+ END LOOP;
+ INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[1],'01 Text and downloads','text','{"body":"# Learning assets QA\n\nThis is a synthetic course for rendering and cache verification.\n\n## What to check\n- Text wraps at 320, 375, 390, 768 and desktop widths.\n- **Bold**, *italic*, lists and code are readable.\n- Open a lesson twice: its attachments must remain visible.\n\n```js\nconst formats = [''video'', ''pdf'', ''audio'', ''image''];\nconsole.log(formats.join('', ''));\n```\n\n[MDN video reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video)\n\nNo real student information appears in these assets.","text":"# Learning assets QA\n\nThis is a synthetic course for rendering and cache verification.\n\n## What to check\n- Text wraps at 320, 375, 390, 768 and desktop widths.\n- **Bold**, *italic*, lists and code are readable.\n- Open a lesson twice: its attachments must remain visible.\n\n```js\nconst formats = [''video'', ''pdf'', ''audio'', ''image''];\nconsole.log(formats.join('', ''));\n```\n\n[MDN video reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/video)\n\nNo real student information appears in these assets."}'::jsonb,null,1,1,admin_id,admin_id) RETURNING id INTO lesson_id;
+INSERT INTO library.resource_templates(lesson_template_id,title,resource_type,external_url,position,created_by) VALUES(lesson_id,'QA reference - portrait.pdf','pdf','https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/portrait.pdf',1,admin_id);
+INSERT INTO library.resource_templates(lesson_template_id,title,resource_type,external_url,position,created_by) VALUES(lesson_id,'QA reference - landscape.pdf','pdf','https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/landscape.pdf',2,admin_id);
+INSERT INTO library.resource_templates(lesson_template_id,title,resource_type,external_url,position,created_by) VALUES(lesson_id,'QA reference - scanned.pdf','pdf','https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/scanned.pdf',3,admin_id);
+INSERT INTO library.resource_templates(lesson_template_id,title,resource_type,external_url,position,created_by) VALUES(lesson_id,'QA reference - fillable.pdf','pdf','https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/fillable.pdf',4,admin_id);
+INSERT INTO library.resource_templates(lesson_template_id,title,resource_type,external_url,position,created_by) VALUES(lesson_id,'QA reference - multipage.pdf','pdf','https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/multipage.pdf',5,admin_id);
+INSERT INTO library.resource_templates(lesson_template_id,title,resource_type,external_url,position,created_by) VALUES(lesson_id,'QA reference - notes.txt','doc','https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/notes.txt',6,admin_id);
+INSERT INTO library.resource_templates(lesson_template_id,title,resource_type,external_url,position,created_by) VALUES(lesson_id,'QA reference - reference.zip','zip','https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/reference.zip',7,admin_id);
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[1],'02 YouTube - Blender short','video','{"body":"Blender Foundation: Big Buck Bunny. External YouTube playback may depend on provider availability.","text":"Blender Foundation: Big Buck Bunny. External YouTube playback may depend on provider availability."}'::jsonb,'https://www.youtube.com/watch?v=aqz-KE-bpKQ',1,2,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[1],'03 Uploaded MP4','video','{"body":"CC0 flower video from MDN, uploaded to the QA bucket.","text":"CC0 flower video from MDN, uploaded to the QA bucket."}'::jsonb,'https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/flower.mp4',1,3,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[1],'04 External MP4','video','{"body":"The same CC0 sample served by its external source.","text":"The same CC0 sample served by its external source."}'::jsonb,'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',1,4,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[2],'05 PDF - portrait','pdf','{"body":"Synthetic portrait PDF. Check page navigation, readable content and the full-screen fallback link.","text":"Synthetic portrait PDF. Check page navigation, readable content and the full-screen fallback link."}'::jsonb,'https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/portrait.pdf',1,5,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[2],'06 PDF - landscape','pdf','{"body":"Synthetic landscape PDF. Check page navigation, readable content and the full-screen fallback link.","text":"Synthetic landscape PDF. Check page navigation, readable content and the full-screen fallback link."}'::jsonb,'https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/landscape.pdf',1,6,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[2],'07 PDF - scanned','pdf','{"body":"Synthetic scanned PDF. Check page navigation, readable content and the full-screen fallback link.","text":"Synthetic scanned PDF. Check page navigation, readable content and the full-screen fallback link."}'::jsonb,'https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/scanned.pdf',1,7,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[2],'08 PDF - fillable','pdf','{"body":"Synthetic fillable PDF. Check page navigation, readable content and the full-screen fallback link.","text":"Synthetic fillable PDF. Check page navigation, readable content and the full-screen fallback link."}'::jsonb,'https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/fillable.pdf',1,8,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[2],'09 PDF - multipage','pdf','{"body":"Synthetic multipage PDF. Check page navigation, readable content and the full-screen fallback link.","text":"Synthetic multipage PDF. Check page navigation, readable content and the full-screen fallback link."}'::jsonb,'https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/multipage.pdf',1,9,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[3],'10 Uploaded audio','text','{"body":"One-second synthetic tone. Use the audio controls.","text":"One-second synthetic tone. Use the audio controls."}'::jsonb,'https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/audio.wav',1,10,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+INSERT INTO library.lesson_templates(module_template_id,title,lesson_type_code,content_json,video_url,duration,position,created_by,updated_by) VALUES(modules[3],'11 Uploaded image','text','{"body":"Synthetic reference diagram. The image should fit the viewport.","text":"Synthetic reference diagram. The image should fit the viewport."}'::jsonb,'https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/diagram.png',1,11,admin_id,admin_id) RETURNING id INTO lesson_id;
+
+ PERFORM set_config('request.jwt.claim.sub',admin_auth::text,true);
+ course_id:=library.duplicate_course_template(blueprint_id,program_id,campus_id,campus_id,admin_id);
+ UPDATE academic.courses SET status_id=academic.get_status_id_by_code('active') WHERE id=course_id;
+ INSERT INTO delivery.cohorts(tenant_id,institution_id,program_id,name,code,status_code,created_by)
+ VALUES(campus_id,campus_id,program_id,'QA Formats - Test Student','QA-M4-FORMATS-20261027','active',admin_id) RETURNING id INTO cohort_id;
+ INSERT INTO delivery.course_assignments(cohort_id,course_id,is_required,created_by) VALUES(cohort_id,course_id,true,admin_id);
+ INSERT INTO delivery.enrollments(user_id,cohort_id,status_code,created_by) VALUES(student_id,cohort_id,'active',admin_id);
+END $qa$;
+SELECT p.id as program_id,c.id as course_id,c.source_template_id as blueprint_id,ch.id as cohort_id,e.id as enrollment_id,
+ (SELECT count(*) FROM academic.modules m WHERE m.course_id=c.id) as module_count,
+ (SELECT count(*) FROM academic.lessons l JOIN academic.modules m ON m.id=l.module_id WHERE m.course_id=c.id) as lesson_count
+ FROM academic.programs p JOIN academic.courses c ON c.program_id=p.id JOIN delivery.cohorts ch ON ch.program_id=p.id JOIN delivery.enrollments e ON e.cohort_id=ch.id
+ WHERE p.slug='qa-module4-formats-20261027';
+COMMIT;

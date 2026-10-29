@@ -1,0 +1,137 @@
+
+> hynox-campus@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/app/admin/library-builder.test.tsx (3 tests | 3 failed) 102ms
+     × surfaces load failures and retries the same course 71ms
+     × loads descendants only when expanded and reuses already loaded branches 14ms
+     × offers an explicit publication checkbox 14ms
+ ❯ src/services/institution.test.ts (6 tests | 1 failed) 1060ms
+   × starts independent teacher mappings together and merges duplicate campuses 1032ms
+ ❯ src/app/actions/prefetch-actions.test.ts (2 tests | 1 failed) 21ms
+   × returns only enrolled and assigned curriculum to a student 18ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/services/institution.test.ts > starts independent teacher mappings together and merges duplicate campuses
+AssertionError: expected [] to deeply equal [ 'course_instructors', …(2) ]
+
+- Expected
++ Received
+
+- [
+-   "course_instructors",
+-   "tenant_teachers",
+-   "users",
+- ]
++ []
+
+ ❯ src/services/institution.test.ts:19:52
+     17|   vi.mocked(createClient).mockResolvedValue({schema:()=>({from})} as n…
+     18|   const result=listTeacherInstitutions("teacher",false);
+     19|   await vi.waitFor(()=>expect([...started].sort()).toEqual(["course_in…
+       |                                                    ^
+     20|   release();expect(await result).toEqual([{id:campus}]);
+     21| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/app/actions/prefetch-actions.test.ts > returns only enrolled and assigned curriculum to a student
+AssertionError: expected { success: true, programs: [], …(3) } to match object { success: true, …(4) }
+
+- Expected
++ Received
+
+  {
+-   "courses": [
+-     {
+-       "id": "course-a",
+-     },
+-   ],
+-   "lessons": [
+-     {
+-       "id": "lesson-a",
+-     },
+-   ],
+-   "modules": [
+-     {
+-       "id": "module-a",
+-     },
+-   ],
+-   "programs": [
+-     {
+-       "id": "program-a",
+-     },
+-   ],
++   "courses": [],
++   "lessons": [],
++   "modules": [],
++   "programs": [],
+    "success": true,
+  }
+
+ ❯ src/app/actions/prefetch-actions.test.ts:35:18
+     33| it("returns only enrolled and assigned curriculum to a student", async…
+     34|   const result = await getInstitutionPrefetchDataAction(campus);
+     35|   expect(result).toMatchObject({ success: true, programs: [{ id: "prog…
+       |                  ^
+     36|   expect(academic.listModules).toHaveBeenCalledOnce();
+     37|   expect(academic.listModules).toHaveBeenCalledWith("course-a");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/app/admin/library-builder.test.tsx > blueprint UI recovery > surfaces load failures and retries the same course
+ FAIL  src/app/admin/library-builder.test.tsx > blueprint UI recovery > loads descendants only when expanded and reuses already loaded branches
+ FAIL  src/app/admin/library-builder.test.tsx > blueprint UI recovery > offers an explicit publication checkbox
+TypeError: client.getQueryCache is not a function
+ ❯ src/hooks/use-curriculum-cache-sync.ts:9:26
+      7| export function useCurriculumCacheSync<T>(prefix: string, setCache: Di…
+      8|   const client = useQueryClient();
+      9|   useEffect(() => client.getQueryCache().subscribe(event => {
+       |                          ^
+     10|     if (event.type !== "updated" || event.query.queryKey[0] !== prefix…
+     11|     const id = String(event.query.queryKey[1]);
+ ❯ Object.react_stack_bottom_frame node_modules/react-dom/cjs/react-dom-client.development.js:25989:20
+ ❯ runWithFiberInDEV node_modules/react-dom/cjs/react-dom-client.development.js:874:13
+ ❯ commitHookEffectListMount node_modules/react-dom/cjs/react-dom-client.development.js:13249:29
+ ❯ commitHookPassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:13336:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15484:13
+ ❯ recursivelyTraversePassiveMountEffects node_modules/react-dom/cjs/react-dom-client.development.js:15439:11
+ ❯ commitPassiveMountOnFiber node_modules/react-dom/cjs/react-dom-client.development.js:15519:11
+ ❯ flushPassiveEffects node_modules/react-dom/cjs/react-dom-client.development.js:18432:9
+ ❯ node_modules/react-dom/cjs/react-dom-client.development.js:17923:15
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+TypeError: supabase.schema(...).rpc is not a function
+ ❯ Module.listTeacherInstitutions src/services/institution.ts:113:6
+    111|
+    112|   const { data: campuses, error: scopeError } = await supabase.schema(…
+    113|     .rpc("teacher_campus_ids", { p_user_id: userId });
+       |      ^
+    114|   if (scopeError) throw new Error("Unable to load teacher institutions…
+    115|   const tenantIds = [...new Set((campuses || []) as string[])];
+ ❯ processTicksAndRejections node:internal/process/task_queues:103:5
+
+This error originated in "src/services/institution.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "starts independent teacher mappings together and merges duplicate campuses". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  3 failed | 47 passed (50)
+      Tests  5 failed | 418 passed (423)
+     Errors  1 error
+   Start at  18:46:08
+   Duration  17.23s (transform 6.16s, setup 0ms, import 24.92s, tests 17.34s, environment 51.02s)
+

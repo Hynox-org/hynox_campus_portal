@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { executeAllTestsAndGrade } from "./runner";
 import * as fs from "fs";
 import * as path from "path";
@@ -25,7 +25,7 @@ function loadEnvLocal() {
 }
 
 // Startup recovery function to sweep crashed/hanging executions
-async function recoverHangingJobs(supabase: any) {
+async function recoverHangingJobs(supabase: ReturnType<typeof createAdminClient>) {
   console.log("[worker] [startup] Scanning for hanging jobs...");
   // Clear any jobs marked as running that were started more than 5 minutes ago
   const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -102,15 +102,7 @@ async function recoverHangingJobs(supabase: any) {
 
 async function startWorker() {
   loadEnvLocal();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey) {
-    console.error("[worker] Env variables NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in .env.local!");
-    process.exit(1);
-  }
-
-  const supabase = createClient(url, anonKey);
+  const supabase = createAdminClient();
   console.log("[worker] Decoupled Judge Queue Worker is starting up...");
   
   // Perform worker crash recovery sweep on launch
@@ -142,31 +134,6 @@ async function startWorker() {
 
       const item = queuedItems[0];
       
-      // Optimistic lock: Update status to 'running' ONLY if it's still 'queued'
-      const { data: lockedItem, error: lockError } = await supabase
-        .schema("learning")
-        .from("challenge_execution_queue")
-        .update({ 
-          status: "running", 
-          started_at: new Date().toISOString() 
-        })
-        .eq("id", item.id)
-        .eq("status", "queued")
-        .select();
-
-      if (lockError) {
-        console.error("[worker] Optimistic lock error:", lockError);
-        await sleep(1000);
-        continue;
-      }
-
-      // If lockedItem has no rows, another worker picked it up in this millisecond
-      if (!lockedItem || lockedItem.length === 0) {
-        continue;
-      }
-
-      console.log(`[worker] [processing] Found and locked submission: ${item.submission_id}`);
-
       // Run code compilation and grading
       await executeAllTestsAndGrade(item.submission_id);
 

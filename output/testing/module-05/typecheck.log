@@ -1,0 +1,57 @@
+src/app/admin/admin-navigation.test.tsx(24,65): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/components/career/career-workspace.test.tsx(26,79): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/components/career/career-workspace.test.tsx(28,68): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/components/career/career-workspace.test.tsx(43,79): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/components/career/career-workspace.test.tsx(45,68): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/components/career/career-workspace.test.tsx(59,79): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/components/career/career-workspace.test.tsx(61,68): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/components/career/career-workspace.test.tsx(64,61): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement | null', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+  Overload 2 of 2, '(role: ByRoleMatcher, options?: ByRoleOptions | undefined): HTMLElement | null', gave the following error.
+    Object literal may only specify known properties, and 'exact' does not exist in type 'ByRoleOptions'.
+src/features/newsletter/newsletter.test.ts(129,19): error TS2339: Property 'waiting' does not exist on type '{ state: string; collected: number; accepted: number; waiting: number; } | { state: string; }'.
+  Property 'waiting' does not exist on type '{ state: string; }'.
+src/hooks/use-lesson-resources.test.tsx(9,95): error TS2345: Argument of type '{ resources: never[]; }' is not assignable to parameter of type '{ success: boolean; resources: any[]; error?: undefined; } | { error: any; success?: undefined; resources?: undefined; }'.
+  Property 'success' is missing in type '{ resources: never[]; }' but required in type '{ success: boolean; resources: any[]; error?: undefined; }'.
+src/hooks/use-lesson-resources.test.tsx(35,94): error TS2322: Type '(value: { success: boolean; resources: any[]; error?: undefined; } | { error: any; success?: undefined; resources?: undefined; } | PromiseLike<{ success: boolean; resources: any[]; error?: undefined; } | { error: any; success?: undefined; resources?: undefined; }>) => void' is not assignable to type '(value: { resources: { id: string; title: string; }[]; }) => void'.
+  Types of parameters 'value' and 'value' are incompatible.
+    Type '{ resources: { id: string; title: string; }[]; }' is not assignable to type '{ success: boolean; resources: any[]; error?: undefined; } | { error: any; success?: undefined; resources?: undefined; } | PromiseLike<{ success: boolean; resources: any[]; error?: undefined; } | { error: any; success?: undefined; resources?: undefined; }>'.
+      Type '{ resources: { id: string; title: string; }[]; }' is not assignable to type '{ success: boolean; resources: any[]; error?: undefined; } | PromiseLike<{ success: boolean; resources: any[]; error?: undefined; } | { error: any; success?: undefined; resources?: undefined; }>'.
+        Property 'success' is missing in type '{ resources: { id: string; title: string; }[]; }' but required in type '{ success: boolean; resources: any[]; error?: undefined; }'.
+src/hooks/use-lesson-resources.test.tsx(37,58): error TS2345: Argument of type '{ resources: { id: string; title: string; }[]; }' is not assignable to parameter of type '{ success: boolean; resources: any[]; error?: undefined; } | { error: any; success?: undefined; resources?: undefined; }'.
+  Property 'success' is missing in type '{ resources: { id: string; title: string; }[]; }' but required in type '{ success: boolean; resources: any[]; error?: undefined; }'.
+src/hooks/use-lesson-resources.test.tsx(56,58): error TS2345: Argument of type '{ resources: { id: string; title: string; }[]; }' is not assignable to parameter of type '{ success: boolean; resources: any[]; error?: undefined; } | { error: any; success?: undefined; resources?: undefined; }'.
+  Property 'success' is missing in type '{ resources: { id: string; title: string; }[]; }' but required in type '{ success: boolean; resources: any[]; error?: undefined; }'.
+src/services/academic.ts(280,19): error TS2339: Property 'eq' does not exist on type 'PostgrestBuilder<any, { id: any; }, false>'.
+src/services/academic.ts(283,33): error TS2339: Property 'select' does not exist on type 'PostgrestBuilder<any, { id: any; }, false>'.
+src/services/academic.ts(427,19): error TS2339: Property 'eq' does not exist on type 'PostgrestBuilder<any, { id: any; }, false>'.
+src/services/academic.ts(430,33): error TS2339: Property 'select' does not exist on type 'PostgrestBuilder<any, { id: any; }, false>'.

@@ -1,0 +1,31 @@
+
+> hynox-campus@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/features/newsletter/student-navigation.test.tsx (8 tests | 1 failed) 13799ms
+   × opens field updates in the existing shell and synchronizes its URL without a page navigation 8375ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/newsletter/student-navigation.test.tsx > opens field updates in the existing shell and synchronizes its URL without a page navigation
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/features/newsletter/student-navigation.test.tsx:41:1
+     39| }
+     40|
+     41| it("opens field updates in the existing shell and synchronizes its URL…
+       | ^
+     42|   dashboard();
+     43|   fireEvent.click(screen.getByRole("button", { name: "Daily Field Upda…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 43 passed (44)
+      Tests  1 failed | 384 passed (385)
+   Start at  10:41:38
+   Duration  54.96s (transform 31.11s, setup 0ms, import 101.93s, tests 40.16s, environment 194.24s)
+

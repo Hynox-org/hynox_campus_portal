@@ -1,0 +1,17 @@
+{
+  "ids": {
+    "campus": "5b887eaa-8f3e-4c7a-aa12-06c07138e916",
+    "cohort": "2d5a7ac0-67c2-4c7d-8255-494b718be3ff",
+    "course": "5c8ae97a-479d-4a8e-be97-e88ac95f95ed",
+    "lesson": "68874c58-7204-453f-ac0b-d41c94046195",
+    "module": "3aa44afd-a7ab-4e85-8670-968806123145",
+    "program": "f46fc2ee-393d-4595-a4dd-bdf743870b01"
+  },
+  "purpose": "Retained synthetic Modules 7-9 Brave verification; sandbox execution excluded by user",
+  "activities": {
+    "quiz": "eb5749ad-d7d1-4e91-adb3-5365d3f8856d",
+    "project": "3449b2ff-9e8f-46d3-87ad-9efdf3f9e1a3",
+    "optional": "1b38edfb-33c8-4b2a-ab7a-83b05dc2f9a3"
+  },
+  "teacher_created_optional_activity_id": "74806710-eee2-4ed2-8523-75071accf5a4"
+}

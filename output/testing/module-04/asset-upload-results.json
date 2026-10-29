@@ -1,0 +1,96 @@
+{
+  "bucket": "module04-qa-assets",
+  "source": "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+  "assets": [
+    {
+      "name": "portrait.pdf",
+      "path": "v1/portrait.pdf",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/portrait.pdf",
+      "bytes": 44301,
+      "status": 200,
+      "contentType": "application/pdf",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "landscape.pdf",
+      "path": "v1/landscape.pdf",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/landscape.pdf",
+      "bytes": 43394,
+      "status": 200,
+      "contentType": "application/pdf",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "scanned.pdf",
+      "path": "v1/scanned.pdf",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/scanned.pdf",
+      "bytes": 32538,
+      "status": 200,
+      "contentType": "application/pdf",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "fillable.pdf",
+      "path": "v1/fillable.pdf",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/fillable.pdf",
+      "bytes": 45823,
+      "status": 200,
+      "contentType": "application/pdf",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "multipage.pdf",
+      "path": "v1/multipage.pdf",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/multipage.pdf",
+      "bytes": 51622,
+      "status": 200,
+      "contentType": "application/pdf",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "flower.mp4",
+      "path": "v1/flower.mp4",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/flower.mp4",
+      "bytes": 1128375,
+      "status": 200,
+      "contentType": "video/mp4",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "audio.wav",
+      "path": "v1/audio.wav",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/audio.wav",
+      "bytes": 32044,
+      "status": 200,
+      "contentType": "audio/wav",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "diagram.png",
+      "path": "v1/diagram.png",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/diagram.png",
+      "bytes": 25918,
+      "status": 200,
+      "contentType": "image/png",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "notes.txt",
+      "path": "v1/notes.txt",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/notes.txt",
+      "bytes": 74,
+      "status": 200,
+      "contentType": "text/plain",
+      "cacheControl": "private, no-cache"
+    },
+    {
+      "name": "reference.zip",
+      "path": "v1/reference.zip",
+      "url": "https://ivuxikqspzdjmgoxcnqu.supabase.co/storage/v1/object/public/module04-qa-assets/v1/reference.zip",
+      "bytes": 190,
+      "status": 200,
+      "contentType": "application/zip",
+      "cacheControl": "private, no-cache"
+    }
+  ]
+}

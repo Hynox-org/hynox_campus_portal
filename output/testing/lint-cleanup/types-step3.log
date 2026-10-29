@@ -1,0 +1,267 @@
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(221,30): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(223,21): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(229,23): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(303,32): error TS18047: 'selectedLesson' is possibly 'null'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(312,18): error TS18047: 'selectedLesson' is possibly 'null'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(326,10): error TS18047: 'selectedLesson' is possibly 'null'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(326,40): error TS18047: 'selectedLesson' is possibly 'null'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(342,10): error TS18047: 'selectedLesson' is possibly 'null'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(342,35): error TS18047: 'selectedLesson' is possibly 'null'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(508,37): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/academic/[programSlug]/client-course-list.tsx(63,13): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/[programSlug]/client-course-list.tsx(69,17): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/[programSlug]/client-course-list.tsx(70,21): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/[programSlug]/client-course-list.tsx(104,62): error TS2345: Argument of type '{ program_id: string; title: string; slug: string; description: string; duration_minutes: number; enrollment_mode: any; thumbnail_path: string; course_type_id: string | null; status_id: string; visibility_type_id: string; }' is not assignable to parameter of type 'Partial<CourseInput>'.
+  Types of property 'course_type_id' are incompatible.
+    Type 'string | null' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+src/app/academic/[programSlug]/client-course-list.tsx(114,44): error TS2345: Argument of type '{ program_id: string; title: string; slug: string; description: string; duration_minutes: number; enrollment_mode: any; thumbnail_path: string; course_type_id: string | null; status_id: string; visibility_type_id: string; }' is not assignable to parameter of type 'CourseInput'.
+  Types of property 'course_type_id' are incompatible.
+    Type 'string | null' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+src/app/academic/client-program-list.tsx(55,13): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/client-program-list.tsx(57,17): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/client-program-list.tsx(58,21): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/admin/admin-panel.tsx(255,22): error TS2345: Argument of type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to parameter of type 'SetStateAction<Invitation[]>'.
+  Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to type 'Invitation[]'.
+    Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type 'Invitation'.
+      Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type '{ email?: string | undefined; full_name?: string | undefined; role?: string | undefined; institution_name?: string | undefined; link?: string | undefined; user: Pick<CampusUser, "id" | ... 1 more ... | "full_name"> & { ...; }; }'.
+        Types of property 'user' are incompatible.
+          Type '{ id: any; full_name: any; email: any; status: any; }[]' is not assignable to type 'Pick<CampusUser, "id" | "email" | "full_name"> & { status?: string | undefined; }'.
+            Type '{ id: any; full_name: any; email: any; status: any; }[]' is missing the following properties from type 'Pick<CampusUser, "id" | "email" | "full_name">': id, email, full_name
+src/app/admin/admin-panel.tsx(462,22): error TS2345: Argument of type '(prev: Invitation[]) => (Invitation | { token: any; expires_at: any; status: any; accepted_at: null; user: { status: string; id: string; email: string; full_name: string | null; } | undefined; ... 17 more ...; link?: string | undefined; })[]' is not assignable to parameter of type 'SetStateAction<Invitation[]>'.
+  Type '(prev: Invitation[]) => (Invitation | { token: any; expires_at: any; status: any; accepted_at: null; user: { status: string; id: string; email: string; full_name: string | null; } | undefined; ... 17 more ...; link?: string | undefined; })[]' is not assignable to type '(prevState: Invitation[]) => Invitation[]'.
+    Type '(Invitation | { token: any; expires_at: any; status: any; accepted_at: null; user: { status: string; id: string; email: string; full_name: string | null; } | undefined; id: string; ... 16 more ...; link?: string | undefined; })[]' is not assignable to type 'Invitation[]'.
+      Type 'Invitation | { token: any; expires_at: any; status: any; accepted_at: null; user: { status: string; id: string; email: string; full_name: string | null; } | undefined; id: string; ... 16 more ...; link?: string | undefined; }' is not assignable to type 'Invitation'.
+        Type '{ token: any; expires_at: any; status: any; accepted_at: null; user: { status: string; id: string; email: string; full_name: string | null; } | undefined; id: string; created_at: string; invitation_type: string; ... 14 more ...; link?: string; }' is not assignable to type 'Invitation'.
+          Type '{ token: any; expires_at: any; status: any; accepted_at: null; user: { status: string; id: string; email: string; full_name: string | null; } | undefined; id: string; created_at: string; invitation_type: string; ... 14 more ...; link?: string; }' is not assignable to type '{ email?: string | undefined; full_name?: string | undefined; role?: string | undefined; institution_name?: string | undefined; link?: string | undefined; user: Pick<CampusUser, "id" | ... 1 more ... | "full_name"> & { ...; }; }'.
+            Types of property 'user' are incompatible.
+              Type '{ status: string; id: string; email: string; full_name: string | null; } | undefined' is not assignable to type 'Pick<CampusUser, "id" | "email" | "full_name"> & { status?: string | undefined; }'.
+                Type 'undefined' is not assignable to type 'Pick<CampusUser, "id" | "email" | "full_name"> & { status?: string | undefined; }'.
+                  Type 'undefined' is not assignable to type 'Pick<CampusUser, "id" | "email" | "full_name">'.
+src/app/admin/admin-panel.tsx(657,63): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/admin-panel.tsx(826,21): error TS18047: 'acadSelectedProgram' is possibly 'null'.
+src/app/admin/admin-panel.tsx(853,20): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(865,34): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(911,34): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(936,34): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(946,53): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(1075,24): error TS2345: Argument of type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to parameter of type 'SetStateAction<Invitation[]>'.
+  Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to type 'Invitation[]'.
+    Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type 'Invitation'.
+      Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type '{ email?: string | undefined; full_name?: string | undefined; role?: string | undefined; institution_name?: string | undefined; link?: string | undefined; user: Pick<CampusUser, "id" | ... 1 more ... | "full_name"> & { ...; }; }'.
+        Types of property 'user' are incompatible.
+          Type '{ id: any; full_name: any; email: any; status: any; }[]' is not assignable to type 'Pick<CampusUser, "id" | "email" | "full_name"> & { status?: string | undefined; }'.
+            Type '{ id: any; full_name: any; email: any; status: any; }[]' is missing the following properties from type 'Pick<CampusUser, "id" | "email" | "full_name">': id, email, full_name
+src/app/admin/admin-panel.tsx(1117,26): error TS2345: Argument of type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to parameter of type 'SetStateAction<Invitation[]>'.
+  Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to type 'Invitation[]'.
+    Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type 'Invitation'.
+      Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type '{ email?: string | undefined; full_name?: string | undefined; role?: string | undefined; institution_name?: string | undefined; link?: string | undefined; user: Pick<CampusUser, "id" | ... 1 more ... | "full_name"> & { ...; }; }'.
+        Types of property 'user' are incompatible.
+          Type '{ id: any; full_name: any; email: any; status: any; }[]' is not assignable to type 'Pick<CampusUser, "id" | "email" | "full_name"> & { status?: string | undefined; }'.
+            Type '{ id: any; full_name: any; email: any; status: any; }[]' is missing the following properties from type 'Pick<CampusUser, "id" | "email" | "full_name">': id, email, full_name
+src/app/admin/admin-panel.tsx(1150,26): error TS2345: Argument of type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to parameter of type 'SetStateAction<Invitation[]>'.
+  Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to type 'Invitation[]'.
+    Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type 'Invitation'.
+      Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type '{ email?: string | undefined; full_name?: string | undefined; role?: string | undefined; institution_name?: string | undefined; link?: string | undefined; user: Pick<CampusUser, "id" | ... 1 more ... | "full_name"> & { ...; }; }'.
+        Types of property 'user' are incompatible.
+          Type '{ id: any; full_name: any; email: any; status: any; }[]' is not assignable to type 'Pick<CampusUser, "id" | "email" | "full_name"> & { status?: string | undefined; }'.
+            Type '{ id: any; full_name: any; email: any; status: any; }[]' is missing the following properties from type 'Pick<CampusUser, "id" | "email" | "full_name">': id, email, full_name
+src/app/admin/admin-panel.tsx(1185,26): error TS2345: Argument of type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to parameter of type 'SetStateAction<Invitation[]>'.
+  Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }[]' is not assignable to type 'Invitation[]'.
+    Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type 'Invitation'.
+      Type '{ status: any; institution_name: string; id: any; token: any; expires_at: any; accepted_at: any; invitation_type: any; created_at: any; tenant_id: any; mail_state: any; mail_attempts: any; user: { id: any; full_name: any; email: any; status: any; }[]; }' is not assignable to type '{ email?: string | undefined; full_name?: string | undefined; role?: string | undefined; institution_name?: string | undefined; link?: string | undefined; user: Pick<CampusUser, "id" | ... 1 more ... | "full_name"> & { ...; }; }'.
+        Types of property 'user' are incompatible.
+          Type '{ id: any; full_name: any; email: any; status: any; }[]' is not assignable to type 'Pick<CampusUser, "id" | "email" | "full_name"> & { status?: string | undefined; }'.
+            Type '{ id: any; full_name: any; email: any; status: any; }[]' is missing the following properties from type 'Pick<CampusUser, "id" | "email" | "full_name">': id, email, full_name
+src/app/admin/admin-panel.tsx(1322,94): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/app/admin/admin-panel.tsx(1368,76): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/app/admin/admin-panel.tsx(1992,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/admin-panel.tsx(2091,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/admin-panel.tsx(2812,27): error TS2322: Type 'CampusUser[]' is not assignable to type 'InstitutionUser[]'.
+  Type 'CampusUser' is not assignable to type 'InstitutionUser'.
+    Types of property 'status' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/app/admin/admin-panel.tsx(3064,100): error TS18047: 'acadSelectedProgram' is possibly 'null'.
+src/app/admin/admin-panel.tsx(3165,81): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(3166,77): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(3180,59): error TS7006: Parameter 'teach' implicitly has an 'any' type.
+src/app/admin/admin-panel.tsx(3189,67): error TS2322: Type '{ user: { id: any; full_name: any; email: any; } | null; user_id: any; instructor_role: any; } | { user_id: any; user: any; }' is not assignable to type 'CourseInstructor'.
+  Property 'instructor_role' is missing in type '{ user_id: any; user: any; }' but required in type 'CourseInstructor'.
+src/app/admin/admin-panel.tsx(3189,87): error TS2741: Property 'instructor_role' is missing in type '{ user_id: any; user: any; }' but required in type 'CourseInstructor'.
+src/app/admin/admin-panel.tsx(3281,45): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/admin-panel.tsx(3296,74): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(3347,53): error TS2322: Type 'string | null | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/admin-panel.tsx(3352,53): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/admin-panel.tsx(3367,82): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/admin-panel.tsx(3413,90): error TS18047: 'acadSelectedCourse' is possibly 'null'.
+src/app/admin/delivery-manager.tsx(251,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/delivery-manager.tsx(254,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/delivery-manager.tsx(255,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/delivery-manager.tsx(1188,92): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/app/admin/delivery-manager.tsx(1395,59): error TS7006: Parameter 'q' implicitly has an 'any' type.
+src/app/admin/delivery-manager.tsx(1407,59): error TS7006: Parameter 'opt' implicitly has an 'any' type.
+src/app/admin/library-builder.tsx(58,46): error TS2538: Type 'undefined' cannot be used as an index type.
+src/app/admin/library-builder.tsx(253,29): error TS18047: 'selectedCourse' is possibly 'null'.
+src/app/admin/library-builder.tsx(263,28): error TS18047: 'selectedCourse' is possibly 'null'.
+src/app/admin/library-builder.tsx(618,51): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/app/admin/library-builder.tsx(659,69): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/library-builder.tsx(686,59): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/app/admin/page.tsx(17,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/program-manager.tsx(1068,71): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/admin/program-manager.tsx(1085,66): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/app/institution/analytics-tab.tsx(51,40): error TS2345: Argument of type '{ row: StudentRow; progress: number; count: number; } | { row: Enrollment; progress: number; count: number; }' is not assignable to parameter of type '{ row: StudentRow; progress: number; count: number; }'.
+  Type '{ row: Enrollment; progress: number; count: number; }' is not assignable to type '{ row: StudentRow; progress: number; count: number; }'.
+    The types of 'row.student' are incompatible between these types.
+      Type 'Partial<CampusUser> | null | undefined' is not assignable to type '{ full_name?: string | undefined; email?: string | undefined; } | undefined'.
+        Type 'null' is not assignable to type '{ full_name?: string | undefined; email?: string | undefined; } | undefined'.
+src/app/institution/institution-panel.tsx(258,88): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/app/institution/page.tsx(48,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/student/page.tsx(18,7): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/student/student-console.tsx(387,21): error TS2345: Argument of type '{}' is not assignable to parameter of type 'SetStateAction<Activity[]>'.
+src/app/student/student-console.tsx(402,5): error TS2740: Type '{}' is missing the following properties from type 'Activity[]': length, pop, push, concat, and 35 more.
+src/app/student/student-console.tsx(446,37): error TS18048: 'updatedCohort.courses' is possibly 'undefined'.
+src/app/student/student-console.tsx(524,49): error TS7006: Parameter 'course' implicitly has an 'any' type.
+src/app/student/student-console.tsx(776,27): error TS18047: 'selectedQuizActivity' is possibly 'null'.
+src/app/student/student-console.tsx(777,75): error TS18047: 'selectedQuizActivity' is possibly 'null'.
+src/app/student/student-console.tsx(1129,61): error TS18047: 'activeLesson' is possibly 'null'.
+src/app/student/student-console.tsx(1157,57): error TS18047: 'activeLesson' is possibly 'null'.
+src/app/student/student-console.tsx(1210,9): error TS18047: 'selectedProjectActivity' is possibly 'null'.
+src/app/student/student-console.tsx(1270,9): error TS18047: 'selectedChallengeActivity' is possibly 'null'.
+src/app/student/student-console.tsx(1277,72): error TS18047: 'selectedChallengeActivity' is possibly 'null'.
+src/app/student/student-console.tsx(1297,28): error TS2345: Argument of type '{ submission: { submission_status_code: any; language: any; submitted_at: any; } | null; result: any; testCases: any[]; logs: any[]; } | { error: any; }' is not assignable to parameter of type 'SetStateAction<ChallengeResults | null>'.
+  Type '{ submission: { submission_status_code: any; language: any; submitted_at: any; } | null; result: any; testCases: any[]; logs: any[]; }' is not assignable to type 'SetStateAction<ChallengeResults | null>'.
+    Type '{ submission: { submission_status_code: any; language: any; submitted_at: any; } | null; result: any; testCases: any[]; logs: any[]; }' is not assignable to type 'ChallengeResults'.
+      Types of property 'submission' are incompatible.
+        Type '{ submission_status_code: any; language: any; submitted_at: any; } | null' is not assignable to type 'ChallengeSubmission | undefined'.
+          Type 'null' is not assignable to type 'ChallengeSubmission | undefined'.
+src/app/student/student-console.tsx(1307,77): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/student/student-console.tsx(1867,31): error TS2322: Type 'Lookup | undefined' is not assignable to type 'ReactNode'.
+  Type 'Lookup' is not assignable to type 'ReactNode'.
+src/app/student/student-console.tsx(2191,71): error TS18047: 'lessonProjectReview.review_status' is possibly 'null'.
+src/app/student/student-console.tsx(2221,49): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/app/student/student-console.tsx(2436,97): error TS18048: 'assignment' is possibly 'undefined'.
+src/app/student/student-console.tsx(2436,97): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/app/student/student-console.tsx(2448,89): error TS18047: 'quizDetails.max_attempts' is possibly 'null'.
+src/app/student/student-console.tsx(2548,58): error TS2538: Type 'null' cannot be used as an index type.
+src/app/student/student-console.tsx(2845,61): error TS18047: 'projectReview.review_status' is possibly 'null'.
+src/app/student/student-console.tsx(3137,28): error TS18048: 'submissionResults.logs.length' is possibly 'undefined'.
+src/app/student/student-console.tsx(3141,34): error TS18048: 'submissionResults.logs' is possibly 'undefined'.
+src/app/teacher/teacher-console.tsx(226,31): error TS2345: Argument of type '{ quiz: any; attempt: any; questions: any[]; } | { error: any; }' is not assignable to parameter of type 'SetStateAction<QuizSession | null>'.
+  Type '{ error: any; }' is not assignable to type 'SetStateAction<QuizSession | null>'.
+    Property 'questions' is missing in type '{ error: any; }' but required in type 'QuizSession'.
+src/app/teacher/teacher-console.tsx(385,17): error TS2304: Cannot find name 'CampusUser'.
+src/app/teacher/teacher-console.tsx(1138,48): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/teacher/teacher-console.tsx(1332,28): error TS2345: Argument of type '(prev: Lesson[]) => (Lesson | { title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; ... 15 more ...; module_position?: number | undefined; })[]' is not assignable to parameter of type 'SetStateAction<Lesson[]>'.
+  Type '(prev: Lesson[]) => (Lesson | { title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; ... 15 more ...; module_position?: number | undefined; })[]' is not assignable to type '(prevState: Lesson[]) => Lesson[]'.
+    Type '(Lesson | { title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; position: number; ... 14 more ...; module_position?: number | undefined; })[]' is not assignable to type 'Lesson[]'.
+      Type 'Lesson | { title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; position: number; ... 14 more ...; module_position?: number | undefined; }' is not assignable to type 'Lesson'.
+        Type '{ title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; position: number; is_preview: boolean; ... 13 more ...; module_position?: number; }' is not assignable to type 'Lesson'.
+          Type '{ title: string; video_url: string; duration: number; content_json: { text: string; body: string; } | { text?: undefined; body?: undefined; }; lesson_type_id: string; position: number; is_preview: boolean; ... 13 more ...; module_position?: number; }' is not assignable to type '{ content_json?: { text?: string | undefined; body?: string | undefined; } | null | undefined; resources?: Resource[] | undefined; module_title?: string | undefined; module_position?: number | undefined; lesson_type?: { ...; } | undefined; }'.
+            Types of property 'lesson_type' are incompatible.
+              Type 'Lookup | { code: string; description?: string | undefined; } | undefined' is not assignable to type '{ code: string; description?: string | undefined; } | undefined'.
+                Type 'Lookup' is not assignable to type '{ code: string; description?: string | undefined; }'.
+                  Types of property 'description' are incompatible.
+                    Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+                      Type 'null' is not assignable to type 'string | undefined'.
+src/app/teacher/teacher-console.tsx(1564,64): error TS2339: Property 'starterCodeByLanguage' does not exist on type 'ActivityDetails'.
+src/app/teacher/teacher-console.tsx(1965,88): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number | Date'.
+      Type 'undefined' is not assignable to type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'string | undefined' is not assignable to parameter of type 'string | number'.
+      Type 'undefined' is not assignable to type 'string | number'.
+src/app/teacher/teacher-console.tsx(2488,41): error TS2339: Property 'selectedIndex' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2488,61): error TS2339: Property 'correctIndex' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2492,49): error TS2339: Property 'text' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2500,50): error TS2339: Property 'selectedIndex' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2501,52): error TS2339: Property 'correctIndex' does not exist on type 'QuizQuestion'.
+src/app/teacher/teacher-console.tsx(2523,39): error TS2322: Type 'string | QuizOption' is not assignable to type 'ReactNode'.
+  Type 'QuizOption' is not assignable to type 'ReactNode'.
+src/app/teacher/teacher-console.tsx(2693,126): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.
+src/app/teacher/teacher-console.tsx(2703,84): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.
+src/app/teacher/teacher-console.tsx(2707,85): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.
+src/features/newsletter/student-navigation.test.tsx(92,76): error TS2739: Type '{}' is missing the following properties from type 'User': id, app_metadata, user_metadata, aud, created_at
+src/services/auth.ts(9,9): error TS2304: Cannot find name 'CampusUser'.
+src/services/delivery.ts(58,17): error TS2304: Cannot find name 'Program'.
+src/services/delivery.ts(70,21): error TS2304: Cannot find name 'Institution'.
+src/services/delivery.ts(203,17): error TS2304: Cannot find name 'CampusUser'.
+src/services/delivery.ts(288,16): error TS2339: Property 'end_date' does not exist on type 'Pick<Cohort, "status_code">'.
+src/services/delivery.ts(288,44): error TS2339: Property 'end_date' does not exist on type 'Pick<Cohort, "status_code">'.
+src/services/delivery.ts(316,22): error TS2352: Conversion of type '{ id: any; name: any; program_id: any; status_code: any; start_date: any; end_date: any; }[]' to type 'Cohort' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: any; name: any; program_id: any; status_code: any; start_date: any; end_date: any; }[]' is missing the following properties from type 'Pick<{ id: string; tenant_id: string; institution_id: string; program_id: string; name: string; code: string; start_date: string | null; end_date: string | null; status_code: string; created_by: string | null; created_at: string; updated_at: string; deleted_at: string | null; }, "id" | "name">': id, name
+src/services/delivery.ts(372,27): error TS2352: Conversion of type '{ id: any; name: any; program_id: any; status_code: any; start_date: any; end_date: any; }[]' to type 'Cohort' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: any; name: any; program_id: any; status_code: any; start_date: any; end_date: any; }[]' is missing the following properties from type 'Pick<{ id: string; tenant_id: string; institution_id: string; program_id: string; name: string; code: string; start_date: string | null; end_date: string | null; status_code: string; created_by: string | null; created_at: string; updated_at: string; deleted_at: string | null; }, "id" | "name">': id, name
+src/services/delivery.ts(398,24): error TS2352: Conversion of type '{ id: any; name: any; program_id: any; status_code: any; start_date: any; end_date: any; }[]' to type 'Cohort' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: any; name: any; program_id: any; status_code: any; start_date: any; end_date: any; }[]' is missing the following properties from type 'Pick<{ id: string; tenant_id: string; institution_id: string; program_id: string; name: string; code: string; start_date: string | null; end_date: string | null; status_code: string; created_by: string | null; created_at: string; updated_at: string; deleted_at: string | null; }, "id" | "name">': id, name
+src/services/delivery.ts(477,16): error TS2304: Cannot find name 'Course'.
+src/services/delivery.ts(799,36): error TS2339: Property 'code' does not exist on type '{ code: any; }[]'.
+src/services/delivery.ts(1033,19): error TS2304: Cannot find name 'Program'.
+src/services/delivery.ts(1044,23): error TS2304: Cannot find name 'Institution'.
+src/services/delivery.ts(1083,17): error TS2304: Cannot find name 'Program'.
+src/services/delivery.ts(1094,21): error TS2304: Cannot find name 'Institution'.
+src/services/delivery.ts(1189,17): error TS2304: Cannot find name 'CampusUser'.
+src/services/delivery.ts(1260,21): error TS2304: Cannot find name 'Institution'.
+src/services/institution-access.ts(16,111): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.

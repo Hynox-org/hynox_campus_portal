@@ -1,0 +1,10 @@
+
+D:\hynox_campus\src\app\academic\[programSlug]\[courseSlug]\page.tsx
+  13:10  warning  'BookOpen' is defined but never used  @typescript-eslint/no-unused-vars
+  13:31  warning  'Users' is defined but never used     @typescript-eslint/no-unused-vars
+
+D:\hynox_campus\src\components\lesson-media.tsx
+  38:34  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 3 problems (0 errors, 3 warnings)
+

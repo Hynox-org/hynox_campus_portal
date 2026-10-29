@@ -1,101 +1,111 @@
 "use client";
+import { averageLearningProgress } from "@/lib/learning-progress";
+import { useHydrated,useInputsChanged } from "@/hooks/use-inputs-changed";
+import { errorMessage } from "@/lib/error-message";
+import type { Activity,Challenge,ChallengeExample,ChallengeResults,ChallengeSubmission,Cohort,Course,Institution,Lesson,LessonProgress,Module,Program,Project,ProjectReview,ProjectSubmission,Quiz,QuizAttempt,QuizQuestion } from "@/types/campus";
 
-import React, { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { 
-  listModulesAction, 
-  listLessonsAction, 
-  listLessonResourcesAction 
+import {
+listLessonsAction,
+listModulesAction
 } from "@/app/actions/academic-actions";
-import { 
-  startOrUpdateLessonProgressAction,
-  completeLessonProgressAction,
-  getStudentDeliveryDataAction,
-  listStudentLessonProgressAction
+import { getAttendanceRegisterAction,getStudentAttendanceSummaryAction } from "@/app/actions/attendance-actions";
+import {
+completeLessonProgressAction,
+getStudentDeliveryDataAction,
+listStudentLessonProgressAction,
+startOrUpdateLessonProgressAction
 } from "@/app/actions/delivery-actions";
 import {
-  getStudentAssignedActivitiesAction,
-  getQuizDetailsAction,
-  startQuizAttemptAction,
-  submitQuizAnswersAction,
-  getProjectDetailsAction,
-  submitProjectAction,
-  getProgrammingChallengeDetailsAction,
-  submitChallengeCodeAction,
-  getChallengeSubmissionResultsAction,
-  getActiveQuizAttemptAction,
-  getQuizSessionDetailsAction,
-  ensureLessonProjectActivityAction,
-  forfeitQuizAttemptAction
+ensureLessonProjectActivityAction,
+forfeitQuizAttemptAction,
+getActiveQuizAttemptAction,
+getChallengeSubmissionResultsAction,
+getProgrammingChallengeDetailsAction,
+getProjectDetailsAction,
+getQuizDetailsAction,
+getQuizSessionDetailsAction,
+getStudentAssignedActivitiesAction,
+startQuizAttemptAction,
+submitChallengeCodeAction,
+submitProjectAction,
+submitQuizAnswersAction
 } from "@/app/actions/learning-actions";
-import { getAttendanceRegisterAction, getStudentAttendanceSummaryAction } from "@/app/actions/attendance-actions";
-import Link from "next/link";
-import { MarkdownRenderer } from "@/components/markdown-renderer";
-import { useCache } from "@/components/cache-provider";
-import { useQueryClient } from "@tanstack/react-query";
 import AppShell from "@/components/app-shell";
-import CareerWorkspace, { type CareerView } from "@/components/career/career-workspace";
+import { useCache } from "@/components/cache-provider";
+import CareerWorkspace,{ type CareerView } from "@/components/career/career-workspace";
+import { LessonMedia } from "@/components/lesson-media";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 import StudentNewsletterPreferences from "@/features/newsletter/student-preferences";
-import { seedAcademicListCaches, unwrapActionResult } from "@/lib/dashboard-query";
-import { 
-  Building, 
-  GraduationCap, 
-  BookOpen, 
-  Award, 
-  Calendar,
-  CheckCircle,
-  Circle,
-  Play,
-  ArrowRight, 
-  ChevronRight, 
-  Clock, 
-  File, 
-  ExternalLink,
-  ChevronLeft,
-  ChevronDown,
-  BookOpenCheck,
-  CheckCircle2,
-  FileQuestion,
-  FolderCode,
-  Terminal as TerminalIcon,
-  Send,
-  AlertTriangle,
-  History,
-  Code,
-  Menu,
-  X,
-  ShieldAlert,
-  Maximize2,
-  Lightbulb,
-  Sparkles,
-  BriefcaseBusiness
+import { seedAcademicListCaches,unwrapActionResult } from "@/lib/dashboard-query";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+AlertTriangle,
+ArrowRight,
+Award,
+BookOpen,
+BookOpenCheck,
+BriefcaseBusiness,
+Building,
+Calendar,
+CheckCircle,
+CheckCircle2,
+ChevronDown,
+ChevronLeft,
+ChevronRight,
+Circle,
+Clock,
+Code,
+ExternalLink,
+File,
+FileQuestion,
+FolderCode,
+GraduationCap,
+History,
+Lightbulb,
+Maximize2,
+Menu,
+Play,
+Send,
+ShieldAlert,
+Sparkles,
+Terminal as TerminalIcon,
+X
 } from "lucide-react";
+import React,{ useCallback,useEffect,useEffectEvent,useRef,useState } from "react";
+import { createPortal } from "react-dom";
 
-import { useStudentDeliveryData } from "@/hooks/use-delivery";
-import { useAcademicPrefetchData } from "@/hooks/use-academics";
 import { DashboardLoader } from "@/components/dashboard-loader";
-import { useToast } from "@/components/toast";
 import { QuizResultBadge } from "@/components/quiz-result-badge";
+import { useToast } from "@/components/toast";
+import { useAcademicPrefetchData } from "@/hooks/use-academics";
+import { useStudentDeliveryData } from "@/hooks/use-delivery";
+import { useLessonResources } from "@/hooks/use-lesson-resources";
 
 interface StudentConsoleProps {
   studentEmail: string;
   fullName: string;
   primaryRole: string;
-  institution: any;
+  institution: Institution | null;
   studentId: string;
 }
+
+const EMPTY_PROGRAMS: never[] = [];
 
 export default function StudentConsole({ 
   studentEmail, 
   fullName, 
-  primaryRole, 
   institution, 
   studentId
 }: StudentConsoleProps) {
   const queryClient = useQueryClient();
   const { data: studentDeliveryRes, isLoading: loadingStudentDelivery, error: studentDeliveryError } = useStudentDeliveryData(studentId);
   const { data: academicPrefetch } = useAcademicPrefetchData(institution?.id);
-  const initialPrograms = studentDeliveryRes?.programs || [];
+  const initialPrograms = studentDeliveryRes?.programs?.length ? studentDeliveryRes.programs : EMPTY_PROGRAMS;
+  const hasDeliveryData = !!studentDeliveryRes?.programs;
+  const [initialSelection] = useState(() => {
+    const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+    return { course: params.get("c"), lesson: params.get("l") };
+  });
 
   const [activeTab, setActiveTab] = useState<"overview" | "academics" | "quizzes" | "projects" | "challenges" | "career" | "newsletters">("overview");
   const [activeParentTab, setActiveParentTab] = useState<"overview" | "curriculum" | "assessments" | "career" | "newsletters">("overview");
@@ -104,16 +114,18 @@ export default function StudentConsole({
   const [newsletterVisited, setNewsletterVisited] = useState(false);
   const [navigationReady, setNavigationReady] = useState(false);
 
-  useEffect(() => {
+  const hydrated = useHydrated();
+  if (useInputsChanged([hydrated]) && hydrated) {
+    (() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
       if (tab && ["overview", "academics", "quizzes", "projects", "challenges", "career", "newsletters"].includes(tab)) {
-        setActiveTab(tab as any);
+        setActiveTab(tab as typeof activeTab);
       }
       const parent = params.get("parentTab");
       if (parent && ["overview", "curriculum", "assessments", "career", "newsletters"].includes(parent)) {
-        setActiveParentTab(parent as any);
+        setActiveParentTab(parent as typeof activeParentTab);
       }
       if (parent === "career") {
         setActiveTab("career");
@@ -128,37 +140,26 @@ export default function StudentConsole({
       }
       setNavigationReady(true);
     }
-  }, []);
+  })();
+  }
 
   // Academics exploration state
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [selectedCohort, setSelectedCohort] = useState<any | null>(null);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [selectedCohort, setSelectedCohort] = useState<Cohort | null>(null);
 
-  useEffect(() => {
-    if (initialPrograms.length > 0) {
-      setPrograms(initialPrograms);
-      if (!selectedCohort) {
-        const flat: any[] = [];
-        initialPrograms.forEach(p => {
-          if (p.cohorts) {
-            p.cohorts.forEach((c: any) => {
-              if (!flat.some(item => item.id === c.id)) {
-                flat.push({
-                  ...c,
-                  programId: p.id,
-                  programTitle: p.title,
-                  courses: p.courses ? p.courses.filter((course: any) => course.cohort_id === c.id) : []
-                });
-              }
-            });
-          }
-        });
-        setSelectedCohort(flat[0] || null);
-      }
-    }
-  }, [initialPrograms]);
+  if (useInputsChanged([initialPrograms, hasDeliveryData])) {
+    (() => {
+    if (!hasDeliveryData) return;
+    setPrograms(initialPrograms);
+    const groups = initialPrograms.flatMap(program => (program.cohorts || []).map((cohort) => ({
+      ...cohort, programId: program.id, programTitle: program.title,
+      courses: (program.courses || []).filter((course) => course.cohort_id === cohort.id),
+    })));
+    setSelectedCohort((previous: { id: string } | null) => groups.find(group => group.id === previous?.id) || groups[0] || null);
+  })();
+  }
 
-  const selectedProgram = selectedCohort ? programs.find(p => p.id === selectedCohort.programId) : null;
+
   
   const { get, set } = useCache();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -174,10 +175,35 @@ export default function StudentConsole({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isDropdownOpen]);
-  const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
-  const [modules, setModules] = useState<any[]>([]);
-  const [lessonProgressMap, setLessonProgressMap] = useState<Record<string, any>>({});
-  const [activeLesson, setActiveLesson] = useState<any | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [lessonProgressMap, setLessonProgressMap] = useState<Record<string, LessonProgress>>({});
+  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  if (useInputsChanged([initialPrograms, hasDeliveryData, selectedCourse, selectedCohort?.id])) {
+    (() => {
+    if (!hasDeliveryData || !selectedCourse) return;
+    const current = initialPrograms.flatMap(program => program.courses || []).find(course => course.id === selectedCourse.id && course.cohort_id === selectedCohort?.id);
+    if (!current) {
+      setSelectedCourse(null);
+      setActiveLesson(null);
+      setModules([]);
+    } else setSelectedCourse(current);
+  })();
+  }
+
+  if (useInputsChanged([academicPrefetch, selectedCourse?.id])) {
+    (() => {
+    if (!academicPrefetch || !selectedCourse?.id) return;
+    const curriculum = (academicPrefetch.modules || []).filter(module => module.course_id === selectedCourse.id)
+      .sort((left, right) => left.position - right.position || left.id.localeCompare(right.id))
+      .map(module => ({ ...module, lessons: (academicPrefetch.lessons || []).filter(lesson => lesson.module_id === module.id)
+        .sort((left, right) => left.position - right.position || left.id.localeCompare(right.id)) }));
+    setModules(curriculum);
+    setActiveLesson((previous: { id: string } | null) => previous ? curriculum.flatMap(module => module.lessons).find(lesson => lesson.id === previous.id) || null : null);
+  })();
+  }
+
+  const { data: lessonResources = [], isLoading: resourcesLoading, error: resourcesError, refetch: retryResources } = useLessonResources(activeLesson?.id);
   const [isSyllabusDrawerOpen, setIsSyllabusDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -206,7 +232,7 @@ export default function StudentConsole({
       if (params.has("lessonId")) { params.delete("lessonId"); changed = true; }
 
       if (selectedCourse && selectedCohort && selectedCohort.courses) {
-        const cIdx = selectedCohort.courses.findIndex((c: any) => c.id === selectedCourse.id);
+        const cIdx = selectedCohort.courses.findIndex((c) => c.id === selectedCourse.id);
         if (cIdx !== -1) {
           if (params.get("c") !== String(cIdx)) {
             params.set("c", String(cIdx));
@@ -225,7 +251,7 @@ export default function StudentConsole({
 
       if (activeLesson && modules.length > 0) {
         const flatLessons = modules.flatMap(m => m.lessons || []);
-        const lIdx = flatLessons.findIndex((l: any) => l.id === activeLesson.id);
+        const lIdx = flatLessons.findIndex((l) => l.id === activeLesson.id);
         if (lIdx !== -1) {
           if (params.get("l") !== String(lIdx)) {
             params.set("l", String(lIdx));
@@ -253,7 +279,7 @@ export default function StudentConsole({
   // Guards: restore from URL only once per session to prevent background
   // React Query refetches from overriding the user's active selections.
   const hasRestoredCourse = useRef(false);
-  const hasRestoredLesson = useRef(false);
+  const [restoredLesson, setRestoredLesson] = useState(false);
 
   // Scroll-synced line-number gutter for the challenge code editor.
   const codeEditorGutterRef = useRef<HTMLDivElement>(null);
@@ -263,57 +289,19 @@ export default function StudentConsole({
     }
   };
 
-  // Restore selectedCourse from query params when selectedCohort loads
-  useEffect(() => {
-    if (hasRestoredCourse.current) return;
-    if (selectedCohort && selectedCohort.courses && selectedCohort.courses.length > 0 && typeof window !== "undefined" && !selectedCourse) {
-      const params = new URLSearchParams(window.location.search);
-      const cIdxStr = params.get("c");
-      if (cIdxStr) {
-        const idx = parseInt(cIdxStr, 10);
-        if (!isNaN(idx) && idx >= 0 && idx < selectedCohort.courses.length) {
-          setSelectedCourse(selectedCohort.courses[idx]);
-          hasRestoredCourse.current = true;
-        }
-      } else {
-        // No ?c= in URL — mark as restored so we don't loop
-        hasRestoredCourse.current = true;
-      }
-    }
-  }, [selectedCohort, selectedCourse]);
-
-  // Restore activeLesson from query params when modules load
-  useEffect(() => {
-    if (hasRestoredLesson.current) return;
-    if (modules.length > 0 && typeof window !== "undefined" && !activeLesson) {
-      const params = new URLSearchParams(window.location.search);
-      const lIdxStr = params.get("l");
-      if (lIdxStr) {
-        const idx = parseInt(lIdxStr, 10);
-        const flatLessons = modules.flatMap(m => m.lessons || []);
-        if (!isNaN(idx) && idx >= 0 && idx < flatLessons.length) {
-          setActiveLesson(flatLessons[idx]);
-          hasRestoredLesson.current = true;
-        }
-      } else {
-        // No ?l= in URL — mark as restored so we don't loop
-        hasRestoredLesson.current = true;
-      }
-    }
-  }, [modules, activeLesson]);
-
   // Learning activities state
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
 
   // Active quiz state
-  const [selectedQuizActivity, setSelectedQuizActivity] = useState<any | null>(null);
-  const [quizDetails, setQuizDetails] = useState<any | null>(null);
-  const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
-  const [activeAttempt, setActiveAttempt] = useState<any | null>(null);
+  const [selectedQuizActivity, setSelectedQuizActivity] = useState<Activity | null>(null);
+  const [quizDetails, setQuizDetails] = useState<Quiz | null>(null);
+  const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+  const [activeAttempt, setActiveAttempt] = useState<QuizAttempt | null>(null);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string[]>>({});
-  const [quizSubmittedResult, setQuizSubmittedResult] = useState<any | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [quizSubmittedResult, setQuizSubmittedResult] = useState<QuizAttempt | null>(null);
+  const [timerNow, setTimerNow] = useState(() => Date.now());
+  const timeLeft = activeAttempt && quizDetails?.time_limit_minutes ? Math.max(0, Math.ceil((Date.parse(activeAttempt.started_at) + quizDetails.time_limit_minutes * 60000 - timerNow) / 1000)) : null;
   // Lets the timer's auto-submit read the latest answers without needing
   // selectedAnswers in its effect deps (which would restart the interval on
   // every option click). Also guards against the timer and the manual
@@ -332,35 +320,35 @@ export default function StudentConsole({
   // listeners that fire during our own cleanup (e.g. exitFullscreen after a
   // normal submit) don't register a false violation.
   const attemptActiveRef = useRef(false);
-  const activeAttemptRef = useRef<any>(null);
+  const activeAttemptRef = useRef<QuizAttempt | null>(null);
   useEffect(() => {
     activeAttemptRef.current = activeAttempt;
   }, [activeAttempt]);
 
   // Active project state
-  const [selectedProjectActivity, setSelectedProjectActivity] = useState<any | null>(null);
-  const [projectDetails, setProjectDetails] = useState<any | null>(null);
-  const [projectSubmission, setProjectSubmission] = useState<any | null>(null);
-  const [projectReview, setProjectReview] = useState<any | null>(null);
+  const [selectedProjectActivity, setSelectedProjectActivity] = useState<Activity | null>(null);
+  const [projectDetails, setProjectDetails] = useState<Project | null>(null);
+  const [projectSubmission, setProjectSubmission] = useState<ProjectSubmission | null>(null);
+  const [projectReview, setProjectReview] = useState<ProjectReview | null>(null);
   const [githubUrl, setGithubUrl] = useState("");
   const [submissionNotes, setSubmissionNotes] = useState("");
 
   // Active lesson project state
-  const [lessonProjectDetails, setLessonProjectDetails] = useState<any | null>(null);
-  const [lessonProjectSubmission, setLessonProjectSubmission] = useState<any | null>(null);
-  const [lessonProjectReview, setLessonProjectReview] = useState<any | null>(null);
+  const [lessonProjectDetails, setLessonProjectDetails] = useState<Project | null>(null);
+  const [lessonProjectSubmission, setLessonProjectSubmission] = useState<ProjectSubmission | null>(null);
+  const [lessonProjectReview, setLessonProjectReview] = useState<ProjectReview | null>(null);
   const [lessonGithubUrl, setLessonGithubUrl] = useState("");
   const [lessonSubmissionNotes, setLessonSubmissionNotes] = useState("");
 
   // Active programming challenge state
-  const [selectedChallengeActivity, setSelectedChallengeActivity] = useState<any | null>(null);
-  const [challengeDetails, setChallengeDetails] = useState<any | null>(null);
-  const [challengeExamples, setChallengeExamples] = useState<any[]>([]);
-  const [challengeSubmissions, setChallengeSubmissions] = useState<any[]>([]);
+  const [selectedChallengeActivity, setSelectedChallengeActivity] = useState<Activity | null>(null);
+  const [challengeDetails, setChallengeDetails] = useState<Challenge | null>(null);
+  const [challengeExamples, setChallengeExamples] = useState<ChallengeExample[]>([]);
+  const [challengeSubmissions, setChallengeSubmissions] = useState<ChallengeSubmission[]>([]);
   const [editorLanguage, setEditorLanguage] = useState("javascript");
   const [editorCode, setEditorCode] = useState("");
-  const [selectedSubmissionForResults, setSelectedSubmissionForResults] = useState<any | null>(null);
-  const [submissionResults, setSubmissionResults] = useState<any | null>(null);
+  const [selectedSubmissionForResults, setSelectedSubmissionForResults] = useState<ChallengeSubmission | null>(null);
+  const [submissionResults, setSubmissionResults] = useState<ChallengeResults | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -368,7 +356,7 @@ export default function StudentConsole({
 
   // Attendance states
   const [attendancePercentage, setAttendancePercentage] = useState<number | null>(null);
-  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
+  const [attendanceLogs, setAttendanceLogs] = useState<Array<{date: string; status: string}>>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => {
@@ -396,14 +384,14 @@ export default function StudentConsole({
       setLoadingAttendance(false);
     };
     loadAttendance();
-  }, [selectedCohort, studentId]);
+  }, [selectedCohort, studentId, showError]);
 
   // Load activities on mount or tab change. Returns the freshly fetched list
   // so callers (e.g. after a quiz submit) can re-sync any stale snapshot of
   // an individual activity (like selectedQuizActivity) instead of leaving it
   // pointed at pre-attempt data until the next full re-entry.
-  const loadActivities = async (): Promise<any[]> => {
-    const cachedActivities = get(`student-activities-${studentId}`);
+  const loadActivities = async (): Promise<Activity[]> => {
+    const cachedActivities = get<Activity[]>(`student-activities-${studentId}`);
     if (cachedActivities) {
       setActivities(cachedActivities);
     } else {
@@ -423,10 +411,7 @@ export default function StudentConsole({
     return cachedActivities || [];
   };
 
-  useEffect(() => {
-    refreshStudentData();
 
-  }, [studentId]);
 
   // The academic prefetch hook owns the request. Reuse its result instead of
   // starting a second server action whenever this dashboard mounts.
@@ -438,21 +423,21 @@ export default function StudentConsole({
 
   const refreshStudentData = async () => {
     // Read from client-side memory cache first
-    const cachedData = get(`student-delivery-data-${studentId}`);
-    const applyData = (data: any) => {
+    const cachedData = get<{ programs?: Program[] }>(`student-delivery-data-${studentId}`);
+    const applyData = (data: { programs?: Program[] }) => {
       if (data.programs) {
         setPrograms(data.programs);
         
-        const flat: any[] = [];
-        data.programs.forEach((p: any) => {
+        const flat: Cohort[] = [];
+        data.programs.forEach((p) => {
           if (p.cohorts) {
-            p.cohorts.forEach((c: any) => {
+            p.cohorts.forEach((c) => {
               if (!flat.some(item => item.id === c.id)) {
                 flat.push({
                   ...c,
                   programId: p.id,
                   programTitle: p.title,
-                  courses: p.courses ? p.courses.filter((course: any) => course.cohort_id === c.id) : []
+                  courses: p.courses ? p.courses.filter((course) => course.cohort_id === c.id) : []
                 });
               }
             });
@@ -464,7 +449,7 @@ export default function StudentConsole({
           if (updatedCohort) {
             setSelectedCohort(updatedCohort);
             if (selectedCourse) {
-              const updatedCourse = updatedCohort.courses.find((c: any) => c.id === selectedCourse.id);
+              const updatedCourse = updatedCohort.courses?.find((c) => c.id === selectedCourse.id);
               if (updatedCourse) {
                 setSelectedCourse(updatedCourse);
               }
@@ -502,19 +487,46 @@ export default function StudentConsole({
     await loadLessonProgress();
     return updatedActivities;
   };
-
   const loadLessonProgress = async () => {
     const res = await listStudentLessonProgressAction(studentId);
     if (res.progressList) {
-      const pMap: Record<string, any> = {};
-      res.progressList.forEach((p: any) => {
+      const pMap: Record<string, LessonProgress> = {};
+      res.progressList.forEach((p) => {
         pMap[p.lesson_id] = p;
       });
       setLessonProgressMap(pMap);
     }
   };
 
-  const handleSelectCohort = (cohort: any) => {
+  const refreshFromEffect = useEffectEvent(refreshStudentData);
+  useEffect(() => {
+    const onChange = (event: Event) => {
+      if (event instanceof CustomEvent && event.detail?.some((domain: string) => ["delivery", "academic", "identity"].includes(domain))) {
+        void refreshFromEffect();
+      }
+    };
+    window.addEventListener("hynox:dashboard-change", onChange);
+    return () => window.removeEventListener("hynox:dashboard-change", onChange);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadInitialProgress() {
+      try {
+        const [activityResult, progressResult] = await Promise.all([
+          getStudentAssignedActivitiesAction(studentId), listStudentLessonProgressAction(studentId)
+        ]);
+        if (cancelled) return;
+        if (activityResult.activities) setActivities(activityResult.activities);
+        if (progressResult.progressList) setLessonProgressMap(Object.fromEntries(progressResult.progressList.map(progress => [progress.lesson_id, progress])));
+      } catch (error) { if (!cancelled) showError(errorMessage(error, "Unable to load your progress.")); }
+    }
+    void loadInitialProgress();
+    return () => { cancelled = true; };
+  }, [studentId, showError]);
+
+
+  const handleSelectCohort = useCallback((cohort: Cohort) => {
     setSelectedCohort(cohort);
     setSelectedCourse(null);
     setModules([]);
@@ -528,8 +540,6 @@ export default function StudentConsole({
     setActiveAttempt(null);
     setQuizSubmittedResult(null);
     setQuizViolationWarning(null);
-    attemptActiveRef.current = false;
-    quizViolationCountRef.current = 0;
     setSelectedProjectActivity(null);
     setProjectDetails(null);
     setProjectSubmission(null);
@@ -540,9 +550,9 @@ export default function StudentConsole({
     setChallengeSubmissions([]);
     setSelectedSubmissionForResults(null);
     setSubmissionResults(null);
-  };
+  }, []);
 
-  const handleSelectCourse = async (course: any) => {
+  const handleSelectCourse = useCallback(async (course: Course) => {
     setSelectedCourse(course);
     setActiveLesson(null);
     // Clear immediately so a slow/failed fetch never leaves the previous
@@ -550,22 +560,22 @@ export default function StudentConsole({
     setModules([]);
 
     // Check if we have modules already cached from the initial prefetch
-    const cachedModules: any[] | undefined = queryClient.getQueryData(["course-modules", course.id]);
-    const prefetchModules = academicPrefetch?.modules?.filter((m: any) => m.course_id === course.id);
+    const cachedModules: Module[] | undefined = queryClient.getQueryData(["course-modules", course.id]);
+    const prefetchModules = academicPrefetch?.modules?.filter((m) => m.course_id === course.id);
     const prefetchLessons = academicPrefetch?.lessons;
 
     if ((cachedModules && cachedModules.length > 0) || (prefetchModules && prefetchModules.length > 0)) {
       const modulesToUse = (cachedModules?.length ? cachedModules : prefetchModules) || [];
       // Build modules with lessons from prefetch lessons cache
-      const modulesWithLessons = modulesToUse.map((m: any) => {
-        const moduleLessons = prefetchLessons
-          ? prefetchLessons.filter((l: any) => {
+      const modulesWithLessons = modulesToUse.map((m) => {
+        const moduleLessons = Array.isArray(m.lessons) ? m.lessons : prefetchLessons
+          ? prefetchLessons.filter((l) => {
               if (l.module_id !== m.id) return false;
               const typeCode = (l.lesson_type?.code || "").toLowerCase();
               return typeCode !== "assignment" && typeCode !== "assessment";
             })
           : [];
-        return { ...m, lessons: moduleLessons.map((l: any) => ({ ...l, resources: [] })) };
+        return { ...m, lessons: moduleLessons };
       });
       setModules(modulesWithLessons);
       return;
@@ -581,27 +591,64 @@ export default function StudentConsole({
       }
       if (mRes.modules) {
         const modulesWithLessons = await Promise.all(
-          mRes.modules.map(async (m: any) => {
+          mRes.modules.map(async (m) => {
             const lRes = await listLessonsAction(m.id);
             const lessons = (lRes.lessons || [])
-              .filter((l: any) => {
+              .filter((l) => {
                 const typeCode = (l.lesson_type?.code || "").toLowerCase();
                 return typeCode !== "assignment" && typeCode !== "assessment";
               })
-              .map((l: any) => ({ ...l, resources: [] }));
+              .map((l) => ({ ...l, resources: [] }));
             return { ...m, lessons };
           })
         );
         setModules(modulesWithLessons);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to load course modules.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to load course modules."));
     } finally {
       setLoading(false);
     }
-  };
+  }, [academicPrefetch, queryClient, showError]);
 
-  const handleStartLesson = async (lesson: any) => {
+  // Restore selectedCourse from query params when selectedCohort loads
+  useEffect(() => { async function restoreCourse() {
+    if (hasRestoredCourse.current) return;
+    if (selectedCohort && selectedCohort.courses && selectedCohort.courses.length > 0 && typeof window !== "undefined" && !selectedCourse) {
+      const cIdxStr = initialSelection.course;
+      if (cIdxStr) {
+        const idx = parseInt(cIdxStr, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < selectedCohort.courses.length) {
+          hasRestoredCourse.current = true;
+          await handleSelectCourse(selectedCohort.courses[idx]);
+        }
+      } else {
+        // No ?c= in URL — mark as restored so we don't loop
+        hasRestoredCourse.current = true;
+      }
+    }
+  } void restoreCourse(); }, [selectedCohort, selectedCourse, initialSelection.course, handleSelectCourse]);
+
+  // Restore activeLesson from query params when modules load
+  if (useInputsChanged([modules, activeLesson, initialSelection.lesson])) { (() => {
+    if (restoredLesson) return;
+    if (modules.length > 0 && typeof window !== "undefined" && !activeLesson) {
+      const lIdxStr = initialSelection.lesson;
+      if (lIdxStr) {
+        const idx = parseInt(lIdxStr, 10);
+        const flatLessons = modules.flatMap(m => m.lessons || []);
+        if (!isNaN(idx) && idx >= 0 && idx < flatLessons.length) {
+          setActiveLesson(flatLessons[idx]);
+          setRestoredLesson(true);
+        }
+      } else {
+        // No ?l= in URL — mark as restored so we don't loop
+        setRestoredLesson(true);
+      }
+    }
+  })(); }
+
+  const handleStartLesson = async (lesson: Lesson) => {
     setActiveLesson(lesson);
     if (!selectedCourse) return;
     
@@ -614,14 +661,14 @@ export default function StudentConsole({
           [lesson.id]: res.progress
         }));
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to start lesson.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to start lesson."));
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleCompleteLesson = async (lesson: any) => {
+  const handleCompleteLesson = async (lesson: Lesson) => {
     if (!selectedCourse) return;
     setActionLoading(true);
 
@@ -655,86 +702,15 @@ export default function StudentConsole({
         }));
         showError(res.error);
       }
-    } catch (err: any) {
+    } catch (err) {
       setLessonProgressMap(prev => ({
         ...prev,
         [lesson.id]: previousProgress
       }));
-      showError(err.message || "Failed to complete lesson.");
+      showError(errorMessage(err, "Failed to complete lesson."));
     } finally {
       setActionLoading(false);
     }
-  };
-
-  // Resolves a lesson's video_url into the right embedded media presentation
-  // (YouTube / direct file / PDF / generic external link), with an explicit
-  // fallback so a malformed URL still renders something actionable.
-  const renderLessonMedia = (lesson: any) => {
-    if (!lesson?.video_url) return null;
-    const url: string = lesson.video_url;
-
-    const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i);
-    if (ytMatch && ytMatch[1]) {
-      return (
-        <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-855 shadow-sm mb-4">
-          <iframe
-            src={`https://www.youtube.com/embed/${ytMatch[1]}`}
-            className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title={lesson.title}
-          />
-        </div>
-      );
-    }
-
-    if (url.match(/\.(mp4|webm|ogg)/i) || url.includes("storage.googleapis.com") || url.includes("amazonaws.com")) {
-      return (
-        <div className="bg-black aspect-video rounded-xl overflow-hidden border border-slate-855 shadow-sm mb-4">
-          <video src={url} className="w-full h-full" controls preload="metadata" />
-        </div>
-      );
-    }
-
-    const lowerUrl = url.toLowerCase();
-    const isPdf = lowerUrl.includes(".pdf") || lowerUrl.includes("/object/public/") || lowerUrl.includes("supabase") || lowerUrl.includes("drive.google.com");
-    if (isPdf) {
-      return (
-        <div className="bg-[#131418] border border-[#23252C] rounded-xl overflow-hidden shadow-sm h-[380px] sm:h-[480px] md:h-[600px] w-full flex flex-col mb-4">
-          <div className="bg-[#16171D] border-b border-[#23252C] px-4 py-2.5 flex items-center justify-between text-[10px]">
-            <span className="font-bold text-[#EDEFF5] flex items-center gap-1.5">
-              <File size={13} className="text-[#6E79F4]" /> Embedded PDF Study Material
-            </span>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#6E79F4] hover:underline font-bold flex items-center gap-0.5"
-            >
-              Open in New Tab <ExternalLink size={10} />
-            </a>
-          </div>
-          <iframe src={url} className="w-full h-full border-0" title={lesson.title} />
-        </div>
-      );
-    }
-
-    // Fallback: unrecognized URL shape — still give the student a way in
-    // rather than silently mislabeling it.
-    return (
-      <div className="bg-slate-900 aspect-video rounded-xl flex flex-col items-center justify-center text-white p-6 text-center border border-slate-800 shadow-sm mb-4">
-        <Play size={32} className="text-[#6E79F4] mb-2 fill-[#6E79F4]" />
-        <p className="text-xs font-semibold mb-3">External Video Resource</p>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-[#6E79F4] hover:bg-[#6E79F4]/90 text-white font-bold text-[11px] px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-        >
-          Play Video External Link <ExternalLink size={10} />
-        </a>
-      </div>
-    );
   };
 
   // Shared status pill for assessment list/detail views (quiz, project, challenge,
@@ -766,13 +742,13 @@ export default function StudentConsole({
   // until a teacher rejects it or requests revision — mirrors the server-side
   // gate in submitProject() so the form can't be edited into a state the
   // backend will just reject anyway.
-  const isProjectResubmitLocked = (submission: any, review: any) => {
+  const isProjectResubmitLocked = (submission: ProjectSubmission | null, review: ProjectReview | null) => {
     if (!submission) return false;
     return !(review?.review_status === "rejected" || review?.review_status === "revision_requested");
   };
 
   // Quiz interactive flows
-  const handleEnterQuiz = async (activity: any) => {
+  const handleEnterQuiz = async (activity: Activity) => {
     setSelectedQuizActivity(activity);
     setQuizSubmittedResult(null);
     setActiveAttempt(null);
@@ -798,19 +774,24 @@ export default function StudentConsole({
           if (sessionRes && "questions" in sessionRes) {
             setQuizQuestions(sessionRes.questions);
             setActiveAttempt(sessionRes.attempt);
+            setSelectedAnswers(Object.fromEntries(sessionRes.questions.map(q => [q.id,
+              q.question_type === "short_answer" ? [q.answer_text || ""] : q.selected_option_ids || [],
+            ])));
           }
         }
       } else if (res && "error" in res) {
         showError(res.error);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to load quiz details.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to load quiz details."));
     } finally {
       setLoading(false);
     }
   };
 
   const handleStartQuiz = async () => {
+if (!selectedQuizActivity) return;
+
     if (!quizDetails) return;
 
     // Fullscreen must be requested synchronously within this click-triggered
@@ -856,11 +837,11 @@ export default function StudentConsole({
         }
         showError(res.error);
       }
-    } catch (err: any) {
+    } catch (err) {
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
-      showError(err.message || "Failed to start quiz.");
+      showError(errorMessage(err, "Failed to start quiz."));
     } finally {
       setActionLoading(false);
     }
@@ -870,9 +851,9 @@ export default function StudentConsole({
   // the "Attempts Done" / status display reflects the attempt that was just
   // submitted/forfeited, instead of the stale snapshot captured when the
   // student originally clicked "Enter Quiz".
-  const resyncSelectedQuizActivity = (freshActivities: any[] | undefined) => {
+  const resyncSelectedQuizActivity = (freshActivities: Activity[] | undefined) => {
     if (!freshActivities || !selectedQuizActivity) return;
-    const updated = freshActivities.find((a: any) => a.id === selectedQuizActivity.id);
+    const updated = freshActivities.find((a) => a.id === selectedQuizActivity.id);
     if (updated) setSelectedQuizActivity(updated);
   };
 
@@ -906,10 +887,8 @@ export default function StudentConsole({
     setActionLoading(true);
     try {
       const payload = Object.entries(selectedAnswers).flatMap(([qId, optIds]) =>
-        optIds.map(optId => ({
-          questionId: qId,
-          selectedOptionId: optId
-        }))
+        optIds.map(optId => quizQuestions.find(q => q.id === qId)?.question_type === "short_answer"
+          ? { questionId: qId, answerText: optId } : { questionId: qId, selectedOptionId: optId })
       );
 
       const res = await submitQuizAnswersAction(activeAttempt.id, payload);
@@ -926,8 +905,8 @@ export default function StudentConsole({
       } else if (res.error) {
         showError(res.error);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to submit quiz.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to submit quiz."));
     } finally {
       setActionLoading(false);
       isSubmittingQuizRef.current = false;
@@ -957,8 +936,8 @@ export default function StudentConsole({
       } else if (res.error) {
         showError(res.error);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to forfeit quiz attempt.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to forfeit quiz attempt."));
     } finally {
       setActionLoading(false);
       isSubmittingQuizRef.current = false;
@@ -975,6 +954,9 @@ export default function StudentConsole({
     }
   };
 
+  const forfeitFromEffect = useEffectEvent(forfeitAttempt);
+  const violationFromEffect = useEffectEvent(registerViolation);
+  const resyncFromEffect = useEffectEvent(resyncSelectedQuizActivity);
   // Grace-period countdown: once a warning is shown, either the student
   // returns to fullscreen + a visible tab before the deadline (dismiss, no
   // reset — the one warning stays used), or the deadline passes and the
@@ -989,7 +971,7 @@ export default function StudentConsole({
         return;
       }
       if (Date.now() >= quizViolationWarning.deadline) {
-        forfeitAttempt("grace_period_expired");
+        forfeitFromEffect("grace_period_expired");
         return;
       }
       setViolationTick(t => t + 1);
@@ -1008,17 +990,17 @@ export default function StudentConsole({
 
     const onFullscreenChange = () => {
       if (!document.fullscreenElement) {
-        registerViolation("fullscreen_exit");
+        violationFromEffect("fullscreen_exit");
       }
     };
     const onVisibilityChange = () => {
       if (document.hidden) {
-        registerViolation("tab_switch");
+        violationFromEffect("tab_switch");
       }
     };
     const onPopState = () => {
       window.history.pushState(null, "", window.location.href);
-      registerViolation("back_navigation");
+      violationFromEffect("back_navigation");
     };
     const onPageHide = () => {
       if (attemptActiveRef.current && activeAttemptRef.current) {
@@ -1052,7 +1034,6 @@ export default function StudentConsole({
   // Countdown Timer logic for quizzes
   useEffect(() => {
     if (!activeAttempt || !quizDetails || !quizDetails.time_limit_minutes) {
-      setTimeLeft(null);
       return;
     }
 
@@ -1064,11 +1045,10 @@ export default function StudentConsole({
     };
 
     // Initialize
-    setTimeLeft(calculateTimeLeft());
 
     const interval = setInterval(() => {
       const remaining = calculateTimeLeft();
-      setTimeLeft(remaining);
+      setTimerNow(Date.now());
       if (remaining <= 0) {
         clearInterval(interval);
         if (isSubmittingQuizRef.current) return;
@@ -1076,10 +1056,8 @@ export default function StudentConsole({
         // Auto-submit when timer expires
         setActionLoading(true);
         const payload = Object.entries(selectedAnswersRef.current).flatMap(([qId, optIds]) =>
-          optIds.map(optId => ({
-            questionId: qId,
-            selectedOptionId: optId
-          }))
+          optIds.map(optId => quizQuestions.find(q => q.id === qId)?.question_type === "short_answer"
+            ? { questionId: qId, answerText: optId } : { questionId: qId, selectedOptionId: optId })
         );
         submitQuizAnswersAction(activeAttempt.id, payload)
           .then(async (res) => {
@@ -1092,14 +1070,14 @@ export default function StudentConsole({
                 try { await document.exitFullscreen(); } catch {}
               }
               showSuccess("Time limit reached. Quiz automatically submitted.");
-              resyncSelectedQuizActivity(await refreshStudentData());
+              resyncFromEffect(await refreshFromEffect());
             } else if (res.error) {
               showError(res.error);
               setActiveAttempt(null);
             }
           })
-          .catch((err: any) => {
-            showError(err.message || "Failed to auto-submit quiz.");
+          .catch((err) => {
+            showError(errorMessage(err, "Failed to auto-submit quiz."));
           })
           .finally(() => {
             setActionLoading(false);
@@ -1109,7 +1087,7 @@ export default function StudentConsole({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeAttempt, quizDetails]);
+  }, [activeAttempt, quizDetails, quizQuestions, showError, showSuccess]);
 
   // Load associated activity and project details when active lesson changes
   useEffect(() => {
@@ -1126,7 +1104,7 @@ export default function StudentConsole({
       const typeCode = activeLesson.lesson_type?.code?.toLowerCase() || "";
       const isAssignmentType = typeCode === "assignment" || typeCode === "assessment";
 
-      let assocAct = activities.find((a: any) => a.lesson_id === activeLesson.id);
+      let assocAct = activities.find((a) => a.lesson_id === activeLesson.id);
 
       // Dynamically auto-provision activity/project if it's an assignment/assessment but has no learning activity yet
       if (!assocAct && isAssignmentType && selectedCourse) {
@@ -1138,7 +1116,7 @@ export default function StudentConsole({
             const reloadRes = await getStudentAssignedActivitiesAction(studentId);
             if (reloadRes.activities) {
               setActivities(reloadRes.activities);
-              assocAct = reloadRes.activities.find((a: any) => a.lesson_id === activeLesson.id);
+              assocAct = reloadRes.activities.find((a) => a.lesson_id === activeLesson.id);
             }
           }
         } catch (err) {
@@ -1181,7 +1159,9 @@ export default function StudentConsole({
   }, [activeLesson, activities, studentId, selectedCourse]);
 
   const handleLessonSubmitProjectUrl = async () => {
-    const assocAct = activities.find((a: any) => a.lesson_id === activeLesson.id);
+if (!activeLesson) return;
+
+    const assocAct = activities.find((a) => a.lesson_id === activeLesson.id);
     if (!assocAct || !lessonGithubUrl.trim() || !lessonProjectDetails) return;
     
     if (!lessonGithubUrl.trim().startsWith("https://github.com/")) {
@@ -1217,15 +1197,15 @@ export default function StudentConsole({
       } else if (res.error) {
         showError(res.error);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to submit assignment.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to submit assignment."));
     } finally {
       setActionLoading(false);
     }
   };
 
   // Project interactive flows
-  const handleEnterProject = async (activity: any) => {
+  const handleEnterProject = async (activity: Activity) => {
     setSelectedProjectActivity(activity);
     setProjectDetails(null);
     setProjectSubmission(null);
@@ -1244,14 +1224,16 @@ export default function StudentConsole({
       } else if (res && "error" in res) {
         showError(res.error);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to load project details.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to load project details."));
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubmitProjectUrl = async () => {
+if (!selectedProjectActivity) return;
+
     if (!projectDetails) return;
     if (!githubUrl.trim().startsWith("https://github.com/")) {
       showError("Please provide a valid GitHub repository URL (starts with https://github.com/).");
@@ -1277,15 +1259,15 @@ export default function StudentConsole({
       } else if (res.error) {
         showError(res.error);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to submit project.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to submit project."));
     } finally {
       setActionLoading(false);
     }
   };
 
   // Programming challenge flows
-  const handleEnterChallenge = async (activity: any) => {
+  const handleEnterChallenge = async (activity: Activity) => {
     setSelectedChallengeActivity(activity);
     setSelectedSubmissionForResults(null);
     setSubmissionResults(null);
@@ -1304,14 +1286,16 @@ export default function StudentConsole({
       } else if (res && "error" in res) {
         showError(res.error);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to load challenge details.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to load challenge details."));
     } finally {
       setLoading(false);
     }
   };
 
   const handleSubmitChallenge = async () => {
+if (!selectedChallengeActivity) return;
+
     if (!challengeDetails) return;
     if (!editorCode.trim()) {
       showError("Source code cannot be blank.");
@@ -1337,21 +1321,21 @@ export default function StudentConsole({
       } else if (res.error) {
         showError(res.error);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to submit challenge code.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to submit challenge code."));
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleViewSubmissionResults = async (sub: any) => {
+  const handleViewSubmissionResults = async (sub: ChallengeSubmission) => {
     setSelectedSubmissionForResults(sub);
     setLoading(true);
     try {
       const res = await getChallengeSubmissionResultsAction(sub.id);
       setSubmissionResults(res);
-    } catch (err: any) {
-      showError(err.message || "Failed to load submission results.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to load submission results."));
     } finally {
       setLoading(false);
     }
@@ -1359,12 +1343,12 @@ export default function StudentConsole({
 
   // Quick stats calculations
   const activeCohortIds = selectedCohort ? [selectedCohort.id] : [];
-  const programActivities = activities.filter(a => activeCohortIds.includes(a.assignment?.cohort_id));
+  const programActivities = activities.filter(a => !!a.assignment?.cohort_id && activeCohortIds.includes(a.assignment.cohort_id));
   const activeCoursesList = selectedCohort?.courses || [];
 
   const totalEnrolledCourses = activeCoursesList.length;
-  const inProgressCourses = activeCoursesList.filter((c: any) => c.progress?.status_code === "in_progress").length;
-  const completedCourses = activeCoursesList.filter((c: any) => c.progress?.status_code === "completed").length;
+  const inProgressCourses = activeCoursesList.filter((c) => c.progress?.status_code === "in_progress").length;
+
 
   const quizCount = programActivities.filter(a => a.activity_type_code === "quiz").length;
   const projectCount = programActivities.filter(a => a.activity_type_code === "project" || a.activity_type_code === "assignment").length;
@@ -1374,31 +1358,43 @@ export default function StudentConsole({
   const pendingActivities = programActivities.length - completedActivities;
 
   // Programming challenges specific stats
-  const challengeActivities = programActivities.filter(a => a.activity_type_code === "programming_challenge" || a.activity_type_code === "programming");
-  const assignedChallengesCount = challengeActivities.length;
-  const completedChallengesCount = challengeActivities.filter(a => a.progress?.status_code === "completed" || a.progress?.status_code === "reviewed").length;
-  const pendingChallengesCount = assignedChallengesCount - completedChallengesCount;
   
-  const challengeScores = challengeActivities.map(a => a.progress?.score).filter(s => s !== null && s !== undefined).map(Number);
-  const averageChallengeScore = challengeScores.length > 0 ? (challengeScores.reduce((a, b) => a + b, 0) / challengeScores.length).toFixed(1) : "0.0";
+
+
+
+
+
+
   
   // Recent submissions/updates from activities
-  const recentSubmissions = [...challengeActivities]
-    .filter(a => a.progress?.status_code !== "assigned")
-    .sort((a, b) => new Date(b.progress?.updated_at || b.progress?.submitted_at || 0).getTime() - new Date(a.progress?.updated_at || a.progress?.submitted_at || 0).getTime())
-    .slice(0, 3);
+
 
   // Best candidate course to resume: prefer one already in progress, then any
   // partially completed course, then the first untouched course.
   const continueCourse =
-    activeCoursesList.find((c: any) => c.progress?.status_code === "in_progress") ||
-    activeCoursesList.find((c: any) => {
+    activeCoursesList.find((c) => c.progress?.status_code === "in_progress") ||
+    activeCoursesList.find((c) => {
       const pct = c.progress?.progress_percentage || 0;
       return pct > 0 && pct < 100;
     }) ||
-    activeCoursesList.find((c: any) => (c.progress?.progress_percentage || 0) === 0) ||
+    activeCoursesList.find((c) => (c.progress?.progress_percentage || 0) === 0) ||
     null;
 
+const flatCohorts: Cohort[] = [];
+programs.forEach(p => {
+                      if (p.cohorts) {
+                        p.cohorts.forEach((c) => {
+                          if (!flatCohorts.some(item => item.id === c.id)) {
+                            flatCohorts.push({
+                              ...c,
+                              programId: p.id,
+                              programTitle: p.title,
+                              courses: p.courses ? p.courses.filter((course) => course.cohort_id === c.id) : []
+                            });
+                          }
+                        });
+                      }
+                    });
   if (studentDeliveryError) {
     return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">Unable to load your student dashboard. {studentDeliveryError.message}</div>;
   }
@@ -1415,7 +1411,7 @@ export default function StudentConsole({
               <p className="text-[#C2C6D1] text-xs mt-2 leading-relaxed">
                 You left fullscreen mode or switched away from the quiz. Return within{" "}
                 <span className="font-mono font-bold text-[#F0555D]">
-                  {Math.max(0, Math.ceil((quizViolationWarning.deadline - Date.now()) / 1000))}s
+                  {Math.max(0, Math.ceil((quizViolationWarning.deadline - timerNow) / 1000))}s
                 </span>{" "}
                 or your attempt will be forfeited with a score of 0. This is your only warning.
               </p>
@@ -1527,28 +1523,12 @@ export default function StudentConsole({
                   Switch Active Group / Cohort
                 </div>
                 <div className="max-h-60 overflow-y-auto">
-                  {(() => {
-                    const flatCohorts: any[] = [];
-                    programs.forEach(p => {
-                      if (p.cohorts) {
-                        p.cohorts.forEach((c: any) => {
-                          if (!flatCohorts.some(item => item.id === c.id)) {
-                            flatCohorts.push({
-                              ...c,
-                              programId: p.id,
-                              programTitle: p.title,
-                              courses: p.courses ? p.courses.filter((course: any) => course.cohort_id === c.id) : []
-                            });
-                          }
-                        });
-                      }
-                    });
-
-                    if (flatCohorts.length > 0) {
-                      return flatCohorts.map((coh) => (
+                  {flatCohorts.length > 0 ? flatCohorts.map((coh) => (
                         <button
                           key={coh.id}
                           onClick={() => {
+                            attemptActiveRef.current = false;
+                            quizViolationCountRef.current = 0;
                             handleSelectCohort(coh);
                             setIsDropdownOpen(false);
                           }}
@@ -1562,10 +1542,7 @@ export default function StudentConsole({
                           </div>
                           <span className="text-[9px] text-[#A3A9B6] truncate font-medium">Program: {coh.programTitle}</span>
                         </button>
-                      ));
-                    }
-                    return <div className="px-4 py-3 text-xs text-[#C2C6D1]">No groups available.</div>;
-                  })()}
+                      )) : <div className="px-4 py-3 text-xs text-[#C2C6D1]">No groups available.</div>}
                 </div>
               </div>
             )}
@@ -1657,7 +1634,7 @@ export default function StudentConsole({
                   icon: BookOpen,
                   color: "#6E79F4",
                   value: activeCoursesList.length > 0
-                    ? `${Math.round(activeCoursesList.reduce((acc: number, c: any) => acc + (c.progress?.progress_percentage || 0), 0) / activeCoursesList.length)}%`
+                    ? `${averageLearningProgress(activeCoursesList.map(course => course.progress?.progress_percentage || 0))}%`
                     : "0%",
                   caption: "Overall Completion Rate",
                 },
@@ -1764,7 +1741,7 @@ export default function StudentConsole({
                     </div>
 
                     <div className="space-y-3">
-                      {activeCoursesList.map((course: any) => {
+                      {activeCoursesList.map((course) => {
                         const pct = course.progress?.progress_percentage || 0;
                         return (
                           <button
@@ -1886,7 +1863,7 @@ export default function StudentConsole({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {activeCoursesList.length > 0 ? (
-                    activeCoursesList.map((course: any) => {
+                    activeCoursesList.map((course) => {
                       const pct = course.progress?.progress_percentage || 0;
                       return (
                       <div
@@ -1919,7 +1896,7 @@ export default function StudentConsole({
                               </span>
                             </div>
                             <span className="px-2 py-0.5 rounded-full text-[9px] font-bold border bg-[#16171D] text-[#C2C6D1] border-[#23252C]">
-                              {course.course_type}
+                              {typeof course.course_type === "string" ? course.course_type : course.course_type?.code}
                             </span>
                           </div>
 
@@ -1948,13 +1925,13 @@ export default function StudentConsole({
                 </div>
               </div>
             ) : (() => {
-              const flatCourseLessons = modules.flatMap((m: any) => m.lessons || []);
-              const totalCourseLessons = flatCourseLessons.length;
-              const completedCourseLessons = flatCourseLessons.filter((l: any) => lessonProgressMap[l.id]?.status_code === "completed").length;
-              const currentLessonIdx = activeLesson ? flatCourseLessons.findIndex((l: any) => l.id === activeLesson.id) : -1;
+              const flatCourseLessons = modules.flatMap((m) => m.lessons || []);
+              const totalCourseLessons = selectedCourse.progress?.total_lessons ?? 0;
+              const completedCourseLessons = selectedCourse.progress?.completed_lessons ?? 0;
+              const currentLessonIdx = activeLesson ? flatCourseLessons.findIndex((l) => l.id === activeLesson.id) : -1;
               const prevLesson = currentLessonIdx > 0 ? flatCourseLessons[currentLessonIdx - 1] : null;
               const nextLesson = currentLessonIdx >= 0 && currentLessonIdx < flatCourseLessons.length - 1 ? flatCourseLessons[currentLessonIdx + 1] : null;
-              const coursePct = totalCourseLessons > 0 ? Math.round((completedCourseLessons / totalCourseLessons) * 100) : (selectedCourse.progress?.progress_percentage || 0);
+              const coursePct = selectedCourse.progress?.progress_percentage ?? 0;
 
               const syllabusPanel = (
                 <>
@@ -1973,6 +1950,9 @@ export default function StudentConsole({
                       <span>{totalCourseLessons > 0 ? `${completedCourseLessons}/${totalCourseLessons} lessons` : "No lessons yet"}</span>
                       <span>{coursePct}%</span>
                     </div>
+                    {!!selectedCourse.progress?.total_activities && <p className="mt-1 text-[9px] text-[#C2C6D1]">
+                      {selectedCourse.progress.completed_activities ?? 0}/{selectedCourse.progress.total_activities} required activities completed
+                    </p>}
                     <div className="w-full bg-[#23252C] h-1 rounded-full overflow-hidden mt-1.5">
                       <div className="bg-[#6E79F4] h-full rounded-full transition-all duration-300" style={{ width: `${coursePct}%` }} />
                     </div>
@@ -1993,7 +1973,7 @@ export default function StudentConsole({
                           </p>
                           <div className="space-y-1">
                             {mod.lessons && mod.lessons.length > 0 ? (
-                              mod.lessons.map((les: any) => {
+                              mod.lessons.map((les) => {
                                 const progState = lessonProgressMap[les.id];
                                 const isCompleted = progState?.status_code === "completed";
                                 const isInProgress = progState?.status_code === "in_progress";
@@ -2125,14 +2105,14 @@ export default function StudentConsole({
 
                         <div className="p-4 sm:p-6 pt-5 space-y-5">
 
-                        {renderLessonMedia(activeLesson)}
+                        <LessonMedia url={activeLesson.video_url} title={activeLesson.title} />
 
                         {!activeLesson.video_url &&
                           !(activeLesson.content_json?.body || activeLesson.content_json?.text) &&
-                          !(activeLesson.resources && activeLesson.resources.length > 0) &&
+                          !resourcesLoading && !resourcesError && lessonResources.length === 0 &&
                           !["assignment", "assessment"].includes((activeLesson.lesson_type?.code || "").toLowerCase()) && (
                           <div className="bg-[#16171D]/50 border border-dashed border-[#23252C] rounded-xl p-6 text-center text-[#C2C6D1] font-medium text-xs">
-                            No study material has been attached to this lesson yet. You can still mark it as completed once you've covered it with your instructor.
+                            No study material has been attached to this lesson yet. You can still mark it as completed once you&apos;ve covered it with your instructor.
                           </div>
                         )}
 
@@ -2172,7 +2152,7 @@ export default function StudentConsole({
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                                   </span>
-                                  <span>Your assignment has been submitted and is awaiting mentor review. Resubmission is locked until it's reviewed.</span>
+                                  <span>Your assignment has been submitted and is awaiting mentor review. Resubmission is locked until it&apos;s reviewed.</span>
                                 </div>
                               )}
 
@@ -2243,7 +2223,7 @@ export default function StudentConsole({
                                     <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
                                       <div>
                                         <span className="text-[9px] text-[#C2C6D1] block">Status</span>
-                                        <span className="capitalize">{lessonProjectReview.review_status.replace(/_/g, " ")}</span>
+                                        <span className="capitalize">{(lessonProjectReview.review_status || "").replace(/_/g, " ")}</span>
                                       </div>
                                       <div>
                                         <span className="text-[9px] text-[#C2C6D1] block">Score</span>
@@ -2262,7 +2242,7 @@ export default function StudentConsole({
                             </div>
                           ) : (
                             <div className="bg-[#16171D]/50 border border-dashed border-[#23252C] rounded-xl p-6 text-center text-[#C2C6D1] font-medium text-xs">
-                              Preparing this assignment's submission form...
+                              Preparing this assignment&apos;s submission form...
                             </div>
                           )
                         )}
@@ -2278,18 +2258,20 @@ export default function StudentConsole({
                           </div>
                         )}
 
-                        {activeLesson.resources && activeLesson.resources.length > 0 && (
+                        {resourcesLoading && <p role="status" className="text-xs text-[#C2C6D1]">Loading lesson attachments...</p>}
+                        {resourcesError && <div role="alert" className="text-xs text-red-400">Could not load lesson attachments. <button type="button" onClick={() => retryResources()} className="underline">Retry attachments</button></div>}
+                        {lessonResources.length > 0 && (
                           <div className="bg-[#131418] border border-[#23252C] rounded-xl p-4 space-y-3 shadow-2xs">
                             <p className="text-[9px] font-bold uppercase tracking-wider text-[#C2C6D1] flex items-center gap-1">
                               <File size={11} className="text-[#A3A9B6]" /> Attached Reference Documents & Code blue prints
                             </p>
                             <div className="divide-y divide-[#23252C] text-xs">
-                              {activeLesson.resources.map((res: any) => {
+                              {lessonResources.map((res) => {
                                 const downloadUrl = res.external_url || res.file_url || res.resource_url;
                                 return (
-                                  <div key={res.id} className="py-2.5 flex items-center justify-between">
+                                  <div key={res.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
                                     <div className="flex items-center gap-2">
-                                      <span className="font-semibold text-[#EDEFF5]">{res.title}</span>
+                                      <span className="font-semibold text-[#EDEFF5] break-words min-w-0">{res.title}</span>
                                       <span className="px-1.5 py-0.2 bg-[#1A1C22] rounded text-[8px] text-[#C2C6D1] uppercase font-mono font-bold shrink-0">{res.resource_type || "File"}</span>
                                     </div>
                                     {downloadUrl && (
@@ -2455,8 +2437,8 @@ export default function StudentConsole({
                       (() => {
                         const assignment = selectedQuizActivity.assignment;
                         const now = new Date();
-                        const isNotOpenYet = assignment?.available_from ? new Date(assignment.available_from) > now : false;
-                        const isPastDue = assignment?.available_until ? new Date(assignment.available_until) < now : false;
+                        const isNotOpenYet = assignment?.available_from ? new Date(assignment?.available_from || "") > now : false;
+                        const isPastDue = assignment?.available_until ? new Date(assignment?.available_until || "") < now : false;
 
                         return (
                           <div className="space-y-4">
@@ -2467,7 +2449,7 @@ export default function StudentConsole({
                               </div>
                               <div className="bg-[#131418] p-3 rounded-lg border border-[#23252C]">
                                 <span className="text-[9px] text-[#C2C6D1] font-bold block uppercase tracking-wide">Attempts Done</span>
-                                <span className="font-bold text-[#EDEFF5] text-xs font-mono">{selectedQuizActivity.progress?.attempt_number || 0} / {quizDetails.max_attempts ?? "—"}</span>
+                                <span className="font-bold text-[#EDEFF5] text-xs font-mono">{selectedQuizActivity.progress?.attempt_number || 0} / {quizDetails.allowed_attempts ?? quizDetails.max_attempts ?? "—"}</span>
                               </div>
                               {assignment?.available_from && (
                                 <div className="bg-[#131418] p-3 rounded-lg border border-[#23252C]">
@@ -2486,7 +2468,7 @@ export default function StudentConsole({
                             {isNotOpenYet ? (
                               <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
                                 <AlertTriangle size={15} className="text-amber-600" />
-                                <span>This quiz is not available yet. It will open on {new Date(assignment.available_from).toLocaleString()}.</span>
+                                <span>This quiz is not available yet. It will open on {new Date((assignment?.available_from ?? "")).toLocaleString()}.</span>
                               </div>
                             ) : isPastDue ? (
                               <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
@@ -2496,9 +2478,9 @@ export default function StudentConsole({
                             ) : selectedQuizActivity.progress?.status_code === "completed" ? (
                               <div className="bg-[#2FBF71]/5 border border-[#2FBF71]/20 text-[#2FBF71] rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
                                 <CheckCircle2 size={15} />
-                                <span>You've already passed this quiz — no further attempts are needed.</span>
+                                <span>You&apos;ve already passed this quiz — no further attempts are needed.</span>
                               </div>
-                            ) : (selectedQuizActivity.progress?.attempt_number || 0) >= quizDetails.max_attempts ? (
+                            ) : (selectedQuizActivity.progress?.attempt_number || 0) >= (quizDetails.allowed_attempts ?? quizDetails.max_attempts ?? 1) ? (
                               <div className="bg-[#F0555D]/5 border border-[#F0555D]/20 text-[#F0555D] rounded-lg p-3.5 text-xs font-semibold flex items-center gap-2">
                                 <AlertTriangle size={15} />
                                 <span>You have reached the maximum allowed attempts limit for this quiz. Retakes are locked.</span>
@@ -2547,8 +2529,14 @@ export default function StudentConsole({
                                 <span className="font-mono text-[9px] text-[#C2C6D1] bg-[#1A1C22] px-1.5 py-0.5 rounded">({q.points} pts)</span>
                               </h4>
 
+                              {q.question_type === "short_answer" && (
+                                <input aria-label={`Answer to question ${idx + 1}`} type="text" maxLength={10000}
+                                  value={selectedAnswers[q.id]?.[0] || ""}
+                                  onChange={event => setSelectedAnswers(previous => ({ ...previous, [q.id]: [event.target.value] }))}
+                                  className="w-full min-w-0 rounded-lg border border-[#23252C] bg-[#131418] p-3 text-[#EDEFF5]" />
+                              )}
                               <div className="grid grid-cols-1 gap-2.5">
-                                {q.options?.map((opt: any) => {
+                                {q.options?.map((opt) => {
                                   const isSelected = selectedAnswers[q.id]?.includes(opt.id) || false;
                                   return (
                                     <label
@@ -2567,7 +2555,7 @@ export default function StudentConsole({
                                         onChange={() => handleOptionSelect(q.id, opt.id, q.question_type)}
                                         className="accent-[#6E79F4]"
                                       />
-                                      <span>{opt.option_text}</span>
+                                      <span className="min-w-0 break-words">{opt.option_text}</span>
                                     </label>
                                   );
                                 })}
@@ -2598,7 +2586,7 @@ export default function StudentConsole({
                               grace_period_expired: "You did not return to the quiz environment within the warning period.",
                               left_quiz_environment: "You left the quiz environment without submitting.",
                               tab_closed: "The quiz tab was closed before submitting."
-                            } as Record<string, string>)[quizSubmittedResult.forfeit_reason] || "This attempt was ended for leaving the quiz environment."}
+                            } as Record<string, string>)[quizSubmittedResult.forfeit_reason || ""] || "This attempt was ended for leaving the quiz environment."}
                           </p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto text-xs pt-2">
@@ -2686,7 +2674,7 @@ export default function StudentConsole({
                   </div>
                 ) : (
                   <div className="text-center py-10 bg-red-50/50 rounded-xl border border-dashed border-red-200 text-red-700 font-medium text-xs space-y-2">
-                    <p>This quiz's details couldn't be loaded.</p>
+                    <p>This quiz&apos;s details couldn&apos;t be loaded.</p>
                     <button
                       onClick={() => handleEnterQuiz(selectedQuizActivity)}
                       className="text-[#6E79F4] font-bold hover:underline cursor-pointer"
@@ -2822,7 +2810,7 @@ export default function StudentConsole({
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                           </span>
-                          <span>Your project has been submitted and is awaiting mentor review. Resubmission is locked until it's reviewed.</span>
+                          <span>Your project has been submitted and is awaiting mentor review. Resubmission is locked until it&apos;s reviewed.</span>
                         </div>
                       )}
 
@@ -2895,7 +2883,7 @@ export default function StudentConsole({
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
                             <div>
                               <span className="text-[9px] text-[#C2C6D1] block">Review Status</span>
-                              <span className="capitalize">{projectReview.review_status.replace(/_/g, " ")}</span>
+                              <span className="capitalize">{(projectReview.review_status || "").replace(/_/g, " ")}</span>
                             </div>
                             <div>
                               <span className="text-[9px] text-[#C2C6D1] block">Score Awarded</span>
@@ -2983,7 +2971,7 @@ export default function StudentConsole({
                   <TerminalIcon className="mx-auto text-amber-600" size={28} />
                   <p className="text-sm font-bold text-[#EDEFF5]">Desktop Required</p>
                   <p className="text-xs text-amber-800 leading-relaxed max-w-xs mx-auto">
-                    Coding challenges need a full code editor that isn't available on mobile yet. Please switch to a laptop or desktop to attempt this challenge.
+                    Coding challenges need a full code editor that isn&apos;t available on mobile yet. Please switch to a laptop or desktop to attempt this challenge.
                   </p>
                   <button
                     onClick={() => {
@@ -3187,11 +3175,11 @@ export default function StudentConsole({
                           )}
 
                           {/* Logs list */}
-                          {submissionResults.logs?.length > 0 && (
+                          {(submissionResults.logs?.length || 0) > 0 && (
                             <div className="space-y-2">
                               <span className="font-bold text-[#EDEFF5] block">Execution Output Logs</span>
                               <div className="bg-[#0E0F13] border border-[#23252C] text-[#C2C6D1] p-3 rounded-xl font-mono text-[9px] max-h-32 overflow-y-auto space-y-1">
-                                {submissionResults.logs.map((log: any) => (
+                                {submissionResults.logs?.map((log) => (
                                   <div key={log.id}>
                                     <span className="text-amber-400">[{log.log_type}]</span> {log.log_message}
                                   </div>

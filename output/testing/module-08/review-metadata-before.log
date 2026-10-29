@@ -1,0 +1,38 @@
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/services/learning-review-metadata.test.ts (2 tests | 2 failed) 18ms
+   × preserves the actual project passing score in the campus review list 13ms
+   × preserves the actual project passing score in the cohort review list 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/services/learning-review-metadata.test.ts > preserves the actual project passing score in the campus review list
+ FAIL  src/services/learning-review-metadata.test.ts > preserves the actual project passing score in the cohort review list
+AssertionError: expected { id: 'submission', …(6) } to match object { max_score: 100, passing_score: 60 }
+(6 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "max_score": 100,
+-   "passing_score": 60,
+  }
+
+ ❯ src/services/learning-review-metadata.test.ts:19:19
+     17|   } }) } as never);
+     18|   const rows = scope === "campus" ? await listProjectSubmissions("camp…
+     19|   expect(rows[0]).toMatchObject({ max_score: 100, passing_score: 60 });
+       |                   ^
+     20| });
+     21|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  15:44:27
+   Duration  837ms (transform 207ms, setup 0ms, import 401ms, tests 18ms, environment 0ms)
+

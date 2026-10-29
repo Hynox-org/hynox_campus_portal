@@ -8,7 +8,7 @@ import { listOnboardingInvitations } from "@/services/onboarding";
 import { listInstitutions, listInstitutionUsers } from "@/services/institution";
 import { requireInstitutionAccess } from "@/services/institution-access";
 import { getCurrentUser } from "@/services/auth";
-import { createClient } from "@/utils/supabase/server";
+import { assignedCourseIds } from "@/services/academic-access";
 
 export async function getInstitutionPrefetchDataAction(institutionId: string) {
   try {
@@ -17,23 +17,19 @@ export async function getInstitutionPrefetchDataAction(institutionId: string) {
       academicService.listPrograms(institutionId, current.primaryRole),
       academicService.listTenantCourses(institutionId)
     ]);
-    if (current.primaryRole === "student") {
-      const supabase = await createClient();
-      const { data: enrollments, error: enrollmentError } = await supabase.schema("delivery").from("enrollments")
-        .select("cohort_id").eq("user_id", current.user.id).eq("status_code", "active").is("deleted_at", null);
-      if (enrollmentError) throw enrollmentError;
-      const cohortIds = (enrollments || []).map(enrollment => enrollment.cohort_id);
-      const assignments = cohortIds.length
-        ? await supabase.schema("delivery").from("course_assignments").select("course_id")
-          .in("cohort_id", cohortIds).is("deleted_at", null)
-        : { data: [], error: null };
-      if (assignments.error) throw assignments.error;
-      const assignedCourseIds = new Set((assignments.data || []).map(assignment => assignment.course_id));
-      courses = courses.filter(course => assignedCourseIds.has(course.id));
-      const assignedProgramIds = new Set(courses.map(course => course.program_id));
-      programs = programs.filter(program => assignedProgramIds.has(program.id));
+    if (["student", "teacher", "trainer"].includes(current.primaryRole)) {
+      const assigned = await assignedCourseIds(current.user.id, current.primaryRole);
+      courses = courses.filter(course => assigned.has(course.id));
+      if (current.primaryRole === "student") {
+        courses = courses.filter(course => course.status?.code === "active" && course.visibility?.code !== "private");
+        programs = programs.filter(program => program.status?.code === "active" && program.visibility?.code !== "private");
+      }
+      const programIds = new Set(courses.map(course => course.program_id));
+      programs = programs.filter(program => programIds.has(program.id));
+      const visiblePrograms = new Set(programs.map(program => program.id));
+      courses = courses.filter(course => visiblePrograms.has(course.program_id));
     }
-    
+
     const courseIds = courses.map(c => c.id);
     let modules: Awaited<ReturnType<typeof academicService.listModules>> = [];
     let lessons: Awaited<ReturnType<typeof academicService.listLessons>> = [];
@@ -43,7 +39,7 @@ export async function getInstitutionPrefetchDataAction(institutionId: string) {
       const modulesResults = await Promise.all(
         courseIds.map((cId: string) => academicService.listModules(cId))
       );
-      modules = modulesResults.flat();
+      modules = modulesResults.flat().filter(module => current.primaryRole !== "student" || module.status?.code === "active");
 
       const moduleIds = modules.map(m => m.id);
       if (moduleIds.length > 0) {
@@ -51,7 +47,7 @@ export async function getInstitutionPrefetchDataAction(institutionId: string) {
         const lessonsResults = await Promise.all(
           moduleIds.map((mId: string) => academicService.listLessons(mId))
         );
-        lessons = lessonsResults.flat();
+        lessons = lessonsResults.flat().filter(lesson => current.primaryRole !== "student" || lesson.status?.code === "active");
       }
     }
 
@@ -63,7 +59,7 @@ export async function getInstitutionPrefetchDataAction(institutionId: string) {
 
 export async function getDeliveryPrefetchDataAction(institutionId: string) {
   try {
-    await requireInstitutionAccess(institutionId, true);
+    const current = await requireInstitutionAccess(institutionId, true);
     const [cohorts, enrollments, assignments, users] = await Promise.all([
       deliveryService.listCohorts(institutionId),
       deliveryService.listEnrollments(institutionId),
@@ -71,8 +67,10 @@ export async function getDeliveryPrefetchDataAction(institutionId: string) {
       listInstitutionUsers(institutionId)
     ]);
 
-    const students = users.filter(u => u.roles.includes("student"));
-    const instructors = users.filter(u => u.roles.some(r => ["teacher", "trainer"].includes(r)));
+    const enrolledIds = new Set(enrollments.map(enrollment => enrollment.user_id));
+    const teacher = ["teacher", "trainer"].includes(current.primaryRole);
+    const students = users.filter(u => u.roles.includes("student") && (!teacher || enrolledIds.has(u.id)));
+    const instructors = users.filter(u => u.roles.some(r => ["teacher", "trainer"].includes(r)) && (!teacher || u.id === current.user.id));
 
     return {
       success: true,
@@ -112,7 +110,7 @@ export async function getLearningPrefetchDataAction(institutionId: string) {
 
 export async function getAdminPrefetchDataAction() {
   try {
-    if ((await getCurrentUser())?.primaryRole !== "super_admin") return { error: "Access denied." };
+    if ((await getCurrentUser(true))?.primaryRole !== "super_admin") return { error: "Access denied." };
     const [institutions, invitations] = await Promise.all([
       listInstitutions(),
       listOnboardingInvitations()

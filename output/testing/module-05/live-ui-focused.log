@@ -1,0 +1,9 @@
+
+ RUN  v4.1.9 D:/hynox_campus
+
+
+ Test Files  3 passed (3)
+      Tests  7 passed (7)
+   Start at  18:51:18
+   Duration  3.11s (transform 579ms, setup 0ms, import 1.52s, tests 851ms, environment 2.62s)
+

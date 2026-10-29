@@ -13,7 +13,7 @@ interface PageProps {
 
 export default async function ChallengeWorkspacePage({ params }: PageProps) {
   const { challengeId } = await params;
-  const userDetails = await getCurrentUser();
+  const userDetails = await getCurrentUser(true);
 
   if (!userDetails || userDetails.primaryRole !== "student") {
     redirect("/login");

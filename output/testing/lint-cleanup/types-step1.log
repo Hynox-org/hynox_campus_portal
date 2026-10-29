@@ -1,0 +1,45 @@
+src/app/admin/admin-panel.tsx(716,70): error TS2339: Property 'errorMessage' does not exist on type 'QueryObserverRefetchErrorResult<NoInfer<any[]>, Error> | QueryObserverLoadingErrorResult<NoInfer<any[]>, Error> | QueryObserverRefetchErrorResult<...> | QueryObserverLoadingErrorResult<...>'.
+  Property 'errorMessage' does not exist on type 'QueryObserverRefetchErrorResult<NoInfer<any[]>, Error>'.
+src/app/admin/admin-panel.tsx(716,83): error TS2552: Cannot find name 'error'. Did you mean 'Error'?
+src/app/admin/admin-panel.tsx(3178,59): error TS7006: Parameter 'teach' implicitly has an 'any' type.
+src/app/admin/admin-panel.tsx(3313,109): error TS2339: Property 'title' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3315,56): error TS2339: Property 'lesson_type' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3319,64): error TS2339: Property 'position' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3344,64): error TS2339: Property 'title' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3345,73): error TS2339: Property 'lesson_type_id' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3346,71): error TS2339: Property 'content_json' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3346,97): error TS2339: Property 'content_json' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3347,68): error TS2339: Property 'video_url' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3348,67): error TS2339: Property 'duration' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3349,67): error TS2339: Property 'position' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3350,68): error TS2339: Property 'status_id' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3376,48): error TS2339: Property 'video_url' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3380,60): error TS2339: Property 'video_url' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/admin-panel.tsx(3381,54): error TS2339: Property 'video_url' does not exist on type '{ resources: any[]; id: string; }'.
+src/app/admin/delivery-manager.tsx(1394,59): error TS7006: Parameter 'q' implicitly has an 'any' type.
+src/app/admin/delivery-manager.tsx(1406,59): error TS7006: Parameter 'opt' implicitly has an 'any' type.
+src/app/student/student-console.tsx(225,56): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(424,32): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/student/student-console.tsx(426,32): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(432,58): error TS7006: Parameter 'course' implicitly has an 'any' type.
+src/app/student/student-console.tsx(444,65): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(522,49): error TS7006: Parameter 'course' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1309,55): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1310,54): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1337,29): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1338,29): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1342,29): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1477,44): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1483,70): error TS7006: Parameter 'course' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1603,76): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1710,47): error TS7006: Parameter 'course' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1832,44): error TS7006: Parameter 'course' implicitly has an 'any' type.
+src/app/student/student-console.tsx(1939,48): error TS7006: Parameter 'les' implicitly has an 'any' type.
+src/app/student/student-console.tsx(2496,50): error TS7006: Parameter 'opt' implicitly has an 'any' type.
+src/app/student/student-console.tsx(3139,62): error TS7006: Parameter 'log' implicitly has an 'any' type.
+src/app/teacher/teacher-console.tsx(1136,48): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/app/teacher/teacher-console.tsx(1670,58): error TS7006: Parameter 'ex' implicitly has an 'any' type.
+src/app/teacher/teacher-console.tsx(2485,54): error TS7006: Parameter 'q' implicitly has an 'any' type.
+src/app/teacher/teacher-console.tsx(2497,43): error TS7006: Parameter 'opt' implicitly has an 'any' type.
+src/services/delivery.ts(797,36): error TS2339: Property 'code' does not exist on type '{ code: any; }[]'.
+src/types/campus.ts(15,30): error TS2344: Type '"core.onboarding_invitations"' does not satisfy the constraint 'keyof DatabaseRows'.

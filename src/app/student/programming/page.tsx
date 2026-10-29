@@ -7,7 +7,7 @@ import { Terminal, Calendar, Code2, ShieldAlert, Award, ChevronRight } from "luc
 export const dynamic = "force-dynamic";
 
 export default async function ProgrammingChallengesPage() {
-  const userDetails = await getCurrentUser();
+  const userDetails = await getCurrentUser(true);
 
   if (!userDetails || userDetails.primaryRole !== "student") {
     redirect("/login");

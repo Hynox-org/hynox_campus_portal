@@ -1,0 +1,13 @@
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(150,23): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(286,9): error TS2464: A computed property name must be of type 'string', 'number', 'symbol', or 'any'.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(286,32): error TS2538: Type 'undefined' cannot be used as an index type.
+src/app/academic/[programSlug]/[courseSlug]/course-space-console.tsx(286,55): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/app/institution/analytics-tab.tsx(1,34): error TS2300: Duplicate identifier 'ChallengeSubmission'.
+src/app/institution/analytics-tab.tsx(4,45): error TS2300: Duplicate identifier 'ChallengeSubmission'.
+src/app/institution/institution-panel.tsx(128,13): error TS2322: Type 'AttendanceStats' is not assignable to type 'CohortReport'.
+  Types of property 'students' are incompatible.
+    Type 'StudentAttendanceStats[]' is not assignable to type '{ user_id: string; progress_percentage: number; completed_lessons?: number | undefined; total_lessons?: number | undefined; }[]'.
+      Type 'StudentAttendanceStats' is missing the following properties from type '{ user_id: string; progress_percentage: number; completed_lessons?: number | undefined; total_lessons?: number | undefined; }': user_id, progress_percentage
+src/app/student/student-console.tsx(624,9): error TS2552: Cannot find name 'hasRestoredLesson'. Did you mean 'restoredLesson'?
+src/app/teacher/teacher-console.tsx(2695,85): error TS18048: 'selectedProjectSub.max_score' is possibly 'undefined'.

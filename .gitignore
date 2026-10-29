@@ -53,6 +53,7 @@ CLAUDE.md
 *.md
 *.txt
 !README.md
+!output/testing/**/*.md
 
 # Standalone sandbox-engine now lives in its own separate project
 /sandbox-engine/

@@ -10,7 +10,7 @@ import {
 } from "@/services/academic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpen, ArrowLeft, Users, FolderKanban } from "lucide-react";
+import {  ArrowLeft, FolderKanban } from "lucide-react";
 import CourseSpaceConsole from "./course-space-console";
 
 import { getCourseTemplateMetadata } from "@/services/library";
@@ -31,28 +31,21 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
   const { primaryRole, tenantId } = userDetails;
 
-  // Resolve program and course
-  const program = await getProgramBySlug(programSlug, tenantId || "");
+  const [program, course] = await Promise.all([
+    getProgramBySlug(programSlug, tenantId || ""),
+    getCourseBySlug(courseSlug, tenantId || ""),
+  ]);
   if (!program) redirect("/academic");
+  if (!course || course.program_id !== program.id) redirect(`/academic/${programSlug}`);
 
-  const course = await getCourseBySlug(courseSlug, tenantId || "");
-  if (!course) redirect(`/academic/${programSlug}`);
-
-  // Fetch blueprint/traceability metadata if instantiated
-  let sourceTemplateInfo = null;
-  if (course.source_template_id) {
-    sourceTemplateInfo = await getCourseTemplateMetadata(course.source_template_id);
-  }
-
-  // Fetch instructors for the course
-  const courseInstructors = await getCourseInstructors(course.id);
-  const tenantInstructors = await listTenantInstructors(tenantId || "");
-
-  // Fetch course curriculum modules
-  const modulesList = await listModules(course.id);
-
-  // Fetch database lookup fields
-  const lookups = await getAcademicLookups();
+  // Independent reads need one round of requests, rather than a serial waterfall.
+  const [sourceTemplateInfo, courseInstructors, tenantInstructors, modulesList, lookups] = await Promise.all([
+    course.source_template_id ? getCourseTemplateMetadata(course.source_template_id) : Promise.resolve(null),
+    getCourseInstructors(course.id),
+    listTenantInstructors(tenantId || ""),
+    listModules(course.id),
+    getAcademicLookups(),
+  ]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 text-[#EDEFF5]">

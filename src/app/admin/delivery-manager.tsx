@@ -1,4 +1,9 @@
 "use client";
+import { isPassedQuizAttempt } from "@/lib/quiz-result";
+import { useInputsChanged } from "@/hooks/use-inputs-changed";
+import type { QuizAttempt } from "@/types/campus";
+import type { Institution, Lookup, Cohort, Enrollment, Program, LessonProgress, Lesson } from "@/types/campus";
+import { errorMessage } from "@/lib/error-message";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -10,18 +15,14 @@ import {
   removeEnrollmentAction,
   assignCourseAction,
   removeCourseAssignmentAction,
-  listCohortsAction,
-  listEnrollmentsAction,
-  listCourseAssignmentsAction,
-  listInstitutionStudentsAction,
   getDeliveryLookupsAction,
   getStudentDeliveryDataAction,
   listStudentLessonProgressAction
 } from "@/app/actions/delivery-actions";
-import { listProgramsAction, listCoursesAction, listLessonsForCourseAction } from "@/app/actions/academic-actions";
+import { listLessonsForCourseAction } from "@/app/actions/academic-actions";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
-import { usePrograms } from "@/hooks/use-academics";
+import { usePrograms, useCourses } from "@/hooks/use-academics";
 import { useToast } from "@/components/toast";
 import { 
   Building, 
@@ -31,10 +32,7 @@ import {
   Plus, 
   Trash2, 
   Edit,
-  Check,
-  FileText,
   TrendingUp,
-  Award,
   Clock,
   ExternalLink,
   ChevronDown,
@@ -46,23 +44,28 @@ import { SecondaryLoader } from "@/components/secondary-loader";
 import { CustomSelect } from "@/components/custom-select";
 
 interface DeliveryManagerProps {
-  institutions: any[];
+  institutions: Institution[];
   initialTab: "cohorts" | "enrollments" | "assignments";
   isTeacherMode?: boolean;
 }
 
 export default function DeliveryManager({ institutions, initialTab, isTeacherMode = false }: DeliveryManagerProps) {
-  const [selectedInstId, setSelectedInstId] = useState(institutions[0]?.id || "");
-  const [activeSubTab, setActiveSubTab] = useState<"cohorts" | "enrollments" | "assignments">(initialTab as any);
+  const [requestedInstId, setSelectedInstId] = useState<string>(institutions[0]?.id || "");
+  // Resolve late-arriving institutions in the same render as the query inputs.
+  const selectedInstId = institutions.some(institution => institution.id === requestedInstId) ? requestedInstId : institutions[0]?.id || "";
+  const [activeSubTab, setActiveSubTab] = useState<"cohorts" | "enrollments" | "assignments">(initialTab === "enrollments" || initialTab === "assignments" ? initialTab : "cohorts");
 
-  useEffect(() => {
+
+  if (useInputsChanged([initialTab])) {
+    (() => {
     setActiveSubTab(initialTab);
-  }, [initialTab]);
+  })();
+  }
 
   const queryClient = useQueryClient();
 
   // React Query prefetching hooks
-  const { data: deliveryData } = useDeliveryData(selectedInstId);
+  const { data: deliveryData, isLoading: loadingDelivery, error: deliveryError, refetch: retryDelivery } = useDeliveryData(selectedInstId);
   const { data: learningData } = useLearningData(selectedInstId);
   const { data: acadPrograms } = usePrograms(selectedInstId);
 
@@ -78,20 +81,18 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
   const challengeSubmissions = learningData?.challengeSubmissions || [];
 
   const programs = acadPrograms || [];
-  // For assignments, we need all courses in the institution. We can get them from acadPrograms or prefetch.
-  // Actually we can just leave allCourses empty if not strictly required, or fetch on demand.
-  const [allCourses, setAllCourses] = useState<any[]>([]);
 
   // Lookup structures
-  const [cohortStatuses, setCohortStatuses] = useState<any[]>([]);
-  const [enrollmentStatuses, setEnrollmentStatuses] = useState<any[]>([]);
+  const [cohortStatuses, setCohortStatuses] = useState<Lookup[]>([]);
+  const [enrollmentStatuses, setEnrollmentStatuses] = useState<Lookup[]>([]);
 
-  const [loading, setLoading] = useState(false);
+  const [mutationLoading, setLoading] = useState(false);
+  const loading = mutationLoading || loadingDelivery;
   const { showSuccess, showError } = useToast();
 
   // Modals & Form states
   const [cohortModalOpen, setCohortModalOpen] = useState(false);
-  const [editingCohort, setEditingCohort] = useState<any | null>(null);
+  const [editingCohort, setEditingCohort] = useState<Cohort | null>(null);
   const [cohortForm, setCohortForm] = useState({
     name: "",
     code: "",
@@ -119,12 +120,14 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
     due_date: "",
     is_required: true
   });
+  const assignmentProgramId = cohorts.find(cohort => cohort.id === assignForm.cohort_id)?.program_id;
+  const { data: assignmentCourses = [], isLoading: loadingAssignmentCourses, error: assignmentError, refetch: retryAssignmentCourses } = useCourses(assignModalOpen ? assignmentProgramId || "" : "");
 
   // Selected Student Drawer States
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-  const [activeStudentProgress, setActiveStudentProgress] = useState<any[]>([]);
-  const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<any[]>([]);
-  const [drawerLessonsCache, setDrawerLessonsCache] = useState<Record<string, any[]>>({});
+  const [selectedStudent, setSelectedStudent] = useState<Enrollment | null>(null);
+  const [activeStudentProgress, setActiveStudentProgress] = useState<Program[]>([]);
+  const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<LessonProgress[]>([]);
+  const [drawerLessonsCache, setDrawerLessonsCache] = useState<Record<string, Lesson[]>>({});
   const [studentDetailTab, setStudentDetailTab] = useState<"overview" | "syllabus" | "quizzes" | "projects" | "challenges">("overview");
 
   // Accordion drawer selection states
@@ -159,9 +162,6 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         if (res.success && res.progressList) setActiveStudentLessonsProgress(res.progressList);
         else setActiveStudentLessonsProgress([]);
       });
-    } else {
-      setActiveStudentProgress([]);
-      setActiveStudentLessonsProgress([]);
     }
   }, [selectedStudent]);
 
@@ -232,22 +232,22 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
           await refreshLists();
         }
       }
-    } catch (err: any) {
-      showError(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      showError(errorMessage(err, "An unexpected error occurred."));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditCohortClick = (cohort: any) => {
+  const handleEditCohortClick = (cohort: Cohort) => {
     setEditingCohort(cohort);
     setCohortForm({
       name: cohort.name,
-      code: cohort.code,
+      code: (cohort.code ?? ""),
       start_date: cohort.start_date ? cohort.start_date.substring(0, 10) : "",
       end_date: cohort.end_date ? cohort.end_date.substring(0, 10) : "",
-      status_code: cohort.status_code,
-      program_id: cohort.program_id
+      status_code: (cohort.status_code ?? ""),
+      program_id: (cohort.program_id ?? "")
     });
     setCohortModalOpen(true);
   };
@@ -290,8 +290,8 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         showSuccess(`Successfully enrolled ${selectedStudentIds.length} student(s) into the group!`);
         setEnrollModalOpen(false);
       }
-    } catch (err: any) {
-      showError(err.message || "Failed to enroll students.");
+    } catch (err) {
+      showError(errorMessage(err, "Failed to enroll students."));
     } finally {
       setLoading(false);
       await refreshLists();
@@ -347,8 +347,8 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
         setAssignModalOpen(false);
         await refreshLists();
       }
-    } catch (err: any) {
-      showError(err.message || "An unexpected error occurred.");
+    } catch (err) {
+      showError(errorMessage(err, "An unexpected error occurred."));
     } finally {
       setLoading(false);
     }
@@ -429,12 +429,15 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       </div>
 
       {/* Loading state */}
+      {deliveryError && <div role="alert" className="rounded-xl border border-red-900 p-4 text-sm">
+        Unable to load delivery records. <button type="button" onClick={() => retryDelivery()} className="underline">Retry</button>
+      </div>}
       {loading && (
         <SecondaryLoader variant="spinner" message="Syncing delivery records..." />
       )}
 
       {/* cohorts view */}
-      {!loading && activeSubTab === "cohorts" && (
+      {!loading && !deliveryError && activeSubTab === "cohorts" && (
         <div className="space-y-4">
           <div className="flex flex-wrap justify-between items-center gap-2">
             <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider">Active Groups</h4>
@@ -509,7 +512,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       )}
 
       {/* enrollments view */}
-      {!loading && activeSubTab === "enrollments" && (
+      {!loading && !deliveryError && activeSubTab === "enrollments" && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-[#16171D] p-4 border border-[#23252C] rounded-xl shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
@@ -602,13 +605,13 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
       )}
 
       {/* course assignments view */}
-      {!loading && activeSubTab === "assignments" && (
+      {!loading && !deliveryError && activeSubTab === "assignments" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h4 className="font-bold text-xs text-[#EDEFF5] uppercase tracking-wider">Assigned Courses to Groups</h4>
             <button
               onClick={() => {
-                setAssignForm({ cohort_id: cohorts[0]?.id || "", course_id: allCourses[0]?.id || "", start_date: "", due_date: "", is_required: true });
+                setAssignForm({ cohort_id: cohorts[0]?.id || "", course_id: "", start_date: "", due_date: "", is_required: true });
                 setAssignModalOpen(true);
               }}
               className="bg-[#6E79F4] text-white px-3 py-1.5 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 transition-all flex items-center gap-1"
@@ -1027,10 +1030,11 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                   <>
                     <div className="p-6 space-y-5 flex-1 overflow-y-auto">
                       <div className="space-y-1">
-                        <label className="block font-bold text-[#C2C6D1]">Select Group *</label>
+                        <label htmlFor="assign-cohort" className="block font-bold text-[#C2C6D1]">Select Group *</label>
                         <select
+                          id="assign-cohort"
                           value={assignForm.cohort_id}
-                          onChange={(e) => setAssignForm({ ...assignForm, cohort_id: e.target.value, start_date: "", due_date: "" })}
+                          onChange={(e) => setAssignForm({ ...assignForm, cohort_id: e.target.value, course_id: "", start_date: "", due_date: "" })}
                           className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-medium"
                           required
                         >
@@ -1054,15 +1058,16 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                       </div>
 
                       <div className="space-y-1">
-                        <label className="block font-bold text-[#C2C6D1]">Select Academic Course *</label>
+                        <label htmlFor="assign-course" className="block font-bold text-[#C2C6D1]">Select Academic Course *</label>
                         <select
+                          id="assign-course" disabled={loadingAssignmentCourses || !!assignmentError}
                           value={assignForm.course_id}
                           onChange={(e) => setAssignForm({ ...assignForm, course_id: e.target.value })}
                           className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-medium"
                           required
                         >
-                          <option value="">-- Choose Course --</option>
-                          {allCourses.map(course => {
+                          <option value="">{loadingAssignmentCourses ? "Loading courses…" : "-- Choose Course --"}</option>
+                          {assignmentCourses.map(course => {
                             const isAlreadyAssigned = assignments.some(
                               ass => ass.cohort_id === assignForm.cohort_id && ass.course_id === course.id
                             );
@@ -1073,6 +1078,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                             );
                           })}
                         </select>
+                        {assignmentError && <p role="alert">Unable to load courses. <button type="button" onClick={() => retryAssignmentCourses()} className="underline">Retry</button></p>}
                       </div>
 
 
@@ -1100,7 +1106,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                       </button>
                        <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || loadingAssignmentCourses || !!assignmentError || !assignForm.course_id}
                         className="bg-[#6E79F4] text-white px-5 py-2 rounded-lg shadow-sm font-semibold hover:bg-[#6E79F4]/95 disabled:opacity-50 transition-colors"
                       >
                         {loading ? "Assigning..." : "Assign Course"}
@@ -1133,15 +1139,15 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
             id: q.id,
             title: q.title,
             attempted: !!attempt,
-            passed: attempt ? (attempt.score >= (q.passing_score || 0)) : false,
+            passed: isPassedQuizAttempt(attempt),
             score: attempt ? attempt.score : 0,
-            maxScore: q.max_score || 100,
+            maxScore: attempt?.max_score ?? q.max_score ?? 100,
             submittedAt: attempt ? new Date(attempt.created_at || attempt.updated_at).toLocaleDateString() : "",
-            questions: (attempt as any)?.questions || []
+            questions: (attempt as QuizAttempt | undefined)?.questions || []
           };
         });
 
-        const studentSyllabus = allCourses.map((course) => {
+        const studentSyllabus = activeStudentProgress.flatMap(program => program.courses || []).map((course) => {
           const courseLessons = drawerLessonsCache[course.id] || [];
           return {
             id: course.id,
@@ -1174,7 +1180,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
                         {selectedStudent.cohort?.name || "No group"}
                       </span>
-                      <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date((selectedStudent.created_at ?? "")).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
@@ -1381,7 +1387,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                               <div className="p-5 border-t border-[#23252C] space-y-4 bg-[#16171D]/30">
                                 <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block">Auditing Answers:</span>
                                 <div className="space-y-3">
-                                  {attempt.questions.map((q: any, qIdx: number) => {
+                                  {attempt.questions.map((q, qIdx: number) => {
                                     const isCorrect = q.selectedIndex === q.correctIndex;
                                     return (
                                       <div key={qIdx} className="p-3.5 bg-[#131418] border border-[#23252C] rounded-xl text-xs space-y-2">
@@ -1393,7 +1399,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                                         </div>
                                         
                                         <div className="grid grid-cols-1 gap-1.5 pt-1.5">
-                                          {q.options.map((opt: any, oIdx: number) => {
+                                          {q.options.map((opt, oIdx: number) => {
                                             const isSelected = q.selectedIndex === oIdx;
                                             const isAnsCorrect = q.correctIndex === oIdx;
                                             
@@ -1417,7 +1423,7 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                                                 }`}>
                                                   {oIdx === 0 ? "A" : oIdx === 1 ? "B" : oIdx === 2 ? "C" : "D"}
                                                 </div>
-                                                <span>{opt.option_text || opt}</span>
+                                                <span>{typeof opt === "string" ? opt : opt.option_text}</span>
                                                 {isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#2FBF71]/20 px-1.5 py-0.5 rounded text-[#2FBF71]">Correct Option</span>}
                                                 {isSelected && !isAnsCorrect && <span className="ml-auto text-[9px] font-bold uppercase bg-[#F0555D]/20 px-1.5 py-0.5 rounded text-[#F0555D]">Submitted Answer</span>}
                                               </div>

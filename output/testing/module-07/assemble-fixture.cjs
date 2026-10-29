@@ -1,0 +1,1 @@
+const fs=require('fs');const base=fs.readFileSync('output/testing/module-05/database-integration.sql','utf8').split('create function pg_temp.must_reject')[0]; const body=fs.readFileSync('output/testing/module-07/progress-fixture-body.sql','utf8');fs.writeFileSync('output/testing/module-07/database-integration.sql','begin;\n'+base+'\n'+body+'\nrollback;\n');

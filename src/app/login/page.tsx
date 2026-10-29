@@ -1,18 +1,23 @@
 "use client";
 
-import React, { useRef, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { signInWithGoogle } from "@/app/actions/auth-actions";
 import { Terminal, ShieldCheck, AlertCircle } from "lucide-react";
 import ParticleField from "@/components/particle-field";
 
 const subscribeToNavigation = (listener: () => void) => {
   window.addEventListener("popstate", listener);
-  return () => window.removeEventListener("popstate", listener);
+  window.addEventListener("hashchange", listener);
+  return () => {
+    window.removeEventListener("popstate", listener);
+    window.removeEventListener("hashchange", listener);
+  };
 };
 const callbackErrors: Record<string, string> = {
   AccountMismatch: "This account cannot be linked. Please contact your campus administrator.",
   AccountUnavailable: "This account is unavailable. Please contact your campus administrator.",
   OAuthExchangeFailed: "Google authentication failed. Please try again.",
+  OAuthAccessDenied: "Google sign-in was denied or cancelled. Start sign-in again and complete Google's prompts. If it is still denied, contact your administrator.",
 };
 const GoogleIcon = () => (
     <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -40,9 +45,21 @@ export default function LoginPage() {
   const busy = useRef(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const search = useSyncExternalStore(subscribeToNavigation, () => window.location.search, () => "");
+  useEffect(() => {
+    // Back from Google can restore the page with its old disabled-button state.
+    const restored = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      busy.current = false;
+      setLoading(false);
+    };
+    window.addEventListener("pageshow", restored);
+    return () => window.removeEventListener("pageshow", restored);
+  }, []);
+  const location = useSyncExternalStore(subscribeToNavigation, () => window.location.search + window.location.hash, () => "");
+  const [search, fragment] = location.split("#", 2);
   const params = new URLSearchParams(search);
-  const displayError = errorMessage || (!loading ? callbackErrors[params.get("error") || ""] : "");
+  const denied = new URLSearchParams(fragment).get("error") === "access_denied";
+  const displayError = errorMessage || (!loading ? callbackErrors[denied ? "OAuthAccessDenied" : params.get("error") || ""] : "");
   const successMessage = params.get("message") === "AlreadyActivated"
     ? "Your account is already activated. Please sign in with Google directly." : "";
 

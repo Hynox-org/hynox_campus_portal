@@ -1,8 +1,11 @@
 "use client";
 
+import { isPassedQuizAttempt } from "@/lib/quiz-result";
+import { useInputsChanged, useHydrated } from "@/hooks/use-inputs-changed";
+import type { Institution, Enrollment, Program, LessonProgress, Lesson, CohortReport } from "@/types/campus";
 import React, { useState, useEffect } from "react";
 import {
-  Building,
+
   Users,
   Search,
   CheckCircle,
@@ -10,7 +13,6 @@ import {
   X,
   ExternalLink,
   TrendingUp,
-  Award,
   ChevronDown,
   Loader2
 } from "lucide-react";
@@ -18,7 +20,6 @@ import { CustomSelect } from "@/components/custom-select";
 import { getStudentDeliveryDataAction, listStudentLessonProgressAction } from "@/app/actions/delivery-actions";
 import { listLessonsForCourseAction } from "@/app/actions/academic-actions";
 import { getAttendanceStatsAction } from "@/app/actions/attendance-actions";
-import { AlertTriangle } from "lucide-react";
 
 import { useDeliveryData, useLearningData } from "@/hooks/use-delivery";
 import { useAcademicPrefetchData } from "@/hooks/use-academics";
@@ -26,9 +27,11 @@ import AppShell from "@/components/app-shell";
 import { DashboardLoader } from "@/components/dashboard-loader";
 import AnalyticsTab from "./analytics-tab";
 
+const EMPTY_COHORTS: never[] = [];
+
 interface InstitutionPanelProps {
   adminEmail: string;
-  institution: any;
+  institution: Institution;
   tenantId: string;
   primaryRole: string;
 }
@@ -36,8 +39,7 @@ interface InstitutionPanelProps {
 export default function InstitutionPanel({ 
   adminEmail, 
   institution, 
-  tenantId,
-  primaryRole
+  tenantId
 }: InstitutionPanelProps) {
   // Navigation states
   const [activeTab, setActiveTab] = useState<"roster" | "analytics">(() => {
@@ -47,14 +49,17 @@ export default function InstitutionPanel({
   // Hydrate the active tab from the URL after mount. Reading
   // window.location during the initial render causes an SSR/client
   // hydration mismatch, so it must happen in an effect.
-  useEffect(() => {
+  const hydrated = useHydrated();
+  if (useInputsChanged([hydrated]) && hydrated) {
+    (() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
     if (tab && ["roster", "analytics"].includes(tab)) {
       setActiveTab(tab as "roster" | "analytics");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+  })();
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -74,48 +79,50 @@ export default function InstitutionPanel({
   const { data: academicData, isLoading: loadingAcademic, error: academicError } = useAcademicPrefetchData(tenantId);
 
   // Default fallbacks during initial hydration
-  const initialCohorts = deliveryData?.cohorts || [];
+  const initialCohorts = deliveryData?.cohorts || EMPTY_COHORTS;
   const enrollments = deliveryData?.enrollments || [];
-  const instructors = deliveryData?.instructors || [];
+
   const activities = learningData?.activities || [];
   const projectSubmissions = learningData?.projectSubmissions || [];
   const challengeSubmissions = learningData?.challengeSubmissions || [];
   const quizAttempts = learningData?.quizAttempts || [];
-  const programs = academicData?.programs || [];
+
   const coursesList = academicData?.courses || [];
 
   // Roster and Drawer states
   const [selectedCohortId, setSelectedCohortId] = useState<string>("");
 
-  useEffect(() => {
+  if (useInputsChanged([initialCohorts, selectedCohortId])) {
+    (() => {
     if (initialCohorts.length > 0 && !selectedCohortId) {
       setSelectedCohortId(initialCohorts[0].id);
     }
-  }, [initialCohorts, selectedCohortId]);
+  })();
+  }
 
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-  const [activeStudentProgress, setActiveStudentProgress] = useState<any[]>([]);
-  const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<any[]>([]);
-  const [drawerLessonsCache, setDrawerLessonsCache] = useState<Record<string, any[]>>({});
+  const [selectedStudent, setSelectedStudent] = useState<Enrollment | null>(null);
+  const [, setActiveStudentProgress] = useState<Program[]>([]);
+  const [activeStudentLessonsProgress, setActiveStudentLessonsProgress] = useState<LessonProgress[]>([]);
+  const [drawerLessonsCache, setDrawerLessonsCache] = useState<Record<string, Lesson[]>>({});
   const [studentDetailTab, setStudentDetailTab] = useState<"overview" | "syllabus" | "quizzes" | "projects" | "challenges">("overview");
   const [rosterSearch, setRosterSearch] = useState("");
 
   // Collapsible accordion states in drawer
   const [expandedCourseId, setExpandedCourseId] = useState<string | null>(null);
-  const [expandedQuizId, setExpandedQuizId] = useState<string | null>(null);
+
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
   // Derived datasets
   const cohorts = initialCohorts;
   const currentCohortEnrollments = enrollments.filter(e => e.cohort_id === selectedCohortId);
 
-  const [cohortReports, setCohortReports] = useState<Record<string, any>>({});
-  const [loadingReports, setLoadingReports] = useState(false);
+  const [cohortReports, setCohortReports] = useState<Record<string, CohortReport>>({});
+  const [, setLoadingReports] = useState(false);
 
   useEffect(() => {
     const loadReports = async () => {
       setLoadingReports(true);
-      const reports: Record<string, any> = {};
+      const reports: Record<string, CohortReport> = {};
       for (const c of cohorts) {
         try {
           const res = await getAttendanceStatsAction(c.id);
@@ -145,7 +152,7 @@ export default function InstitutionPanel({
   const [openingStudentId, setOpeningStudentId] = useState<string | null>(null);
 
   // Load ALL of a student's data first, then open the drawer
-  const openStudentDrawer = async (enr: any) => {
+  const openStudentDrawer = async (enr: Enrollment) => {
     if (openingStudentId) return;
     setOpeningStudentId(enr.id);
     setStudentDetailTab("overview");
@@ -155,7 +162,7 @@ export default function InstitutionPanel({
         listStudentLessonProgressAction(enr.user_id),
         // Prefetch every course's lesson list so the syllabus tab is instant
         Promise.all(
-          coursesList.map(async (c: any) => {
+          coursesList.map(async (c) => {
             if (drawerLessonsCache[c.id]) return [c.id, drawerLessonsCache[c.id]] as const;
             const res = await listLessonsForCourseAction(c.id);
             return [c.id, res.success && res.lessons ? res.lessons : []] as const;
@@ -172,12 +179,7 @@ export default function InstitutionPanel({
   };
 
   // Clear cached progress when the drawer closes
-  useEffect(() => {
-    if (!selectedStudent) {
-      setActiveStudentProgress([]);
-      setActiveStudentLessonsProgress([]);
-    }
-  }, [selectedStudent]);
+
 
   // Lazy load lessons for courses expanded inside the student detail drawer
   useEffect(() => {
@@ -206,18 +208,7 @@ export default function InstitutionPanel({
     const challenges = activities.filter(a => a.activity_type_code === "programming");
 
     // Real student quiz attempts mapper
-    const studentQuizAttempts = quizzes.map(q => {
-      const attempt = studentQuizAttemptsList.find(att => att.activity_id === q.id);
-      return {
-        id: q.id,
-        title: q.title,
-        attempted: !!attempt,
-        passed: attempt ? (attempt.score >= (q.passing_score || 0)) : false,
-        score: attempt ? attempt.score : 0,
-        maxScore: q.max_score || 100,
-        submittedAt: attempt ? new Date(attempt.created_at || attempt.updated_at).toLocaleDateString() : ""
-      };
-    });
+
 
     // Real syllabus lessons mapper using lazy loaded drawerLessonsCache and activeStudentLessonsProgress
     const studentSyllabus = coursesList.map((course) => {
@@ -254,7 +245,7 @@ export default function InstitutionPanel({
                   <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
                     {selectedStudent.cohort?.name || "No cohort"}
                   </span>
-                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date(selectedStudent.created_at).toLocaleDateString()}</span>
+                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date((selectedStudent.created_at ?? "")).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
@@ -426,9 +417,9 @@ export default function InstitutionPanel({
                   quizzes.map(quiz => {
                     const attempts = studentQuizAttemptsList.filter(a => a.activity_id === quiz.id);
                     const sortedAttempts = [...attempts].sort((a, b) => new Date(b.submitted_at || b.created_at || b.updated_at || 0).getTime() - new Date(a.submitted_at || a.created_at || a.updated_at || 0).getTime());
-                    const passedAttempt = sortedAttempts.find(att => att.score >= (quiz.passing_score || 0));
+                    const passedAttempt = sortedAttempts.find(isPassedQuizAttempt);
                     const attempt = passedAttempt || sortedAttempts[0];
-                    const isPassed = attempt ? (attempt.score >= (quiz.passing_score || 0)) : false;
+                    const isPassed = isPassedQuizAttempt(attempt);
 
                     return (
                       <div key={quiz.id} className="bg-[#131418] border border-[#23252C] rounded-2xl shadow-sm overflow-hidden text-xs">
@@ -522,7 +513,7 @@ export default function InstitutionPanel({
                               <div>
                                 <span className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wide block mb-1">Student Notes</span>
                                 <p className="p-3 bg-[#131418] border border-[#23252C] rounded-xl text-[#EDEFF5] italic">
-                                  "{sub.submission_notes}"
+                                  &quot;{sub.submission_notes}&quot;
                                 </p>
                               </div>
                             )}
@@ -641,7 +632,7 @@ export default function InstitutionPanel({
                 <p className="text-[11px] text-[#C2C6D1] mt-0.5">Monitor, search, and view performance logs of enrolled candidates.</p>
               </div>
               
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto min-w-0">
                 <span className="text-xs font-bold text-[#C2C6D1] shrink-0">Cohort:</span>
                 <CustomSelect
                   options={cohorts}
@@ -686,7 +677,7 @@ export default function InstitutionPanel({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#23252C]">
-                          {filteredEnrollments.map((enr: any) => {
+                          {filteredEnrollments.map((enr) => {
                             const progVal = enr.progress_percentage || 0;
 
                             return (
