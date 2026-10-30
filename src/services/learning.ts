@@ -1,3 +1,4 @@
+import { readAllPages, readByIds } from "./query-pages";
 import { saveActivity, assignActivity } from "./learning-editor";
 import { requireStudentRead, academicScope } from "./academic-access";
 import { requireInstitutionAccess } from "./institution-access";
@@ -252,7 +253,7 @@ export async function getProjectDetails(activityId: string, studentId: string) {
   if (projError) throw projError;
   if (!project) throw new Error("Project details not found.");
 
-  const { data: submission } = await supabase
+  const { data: submission, error: submissionError } = await supabase
     .schema("learning")
     .from("project_submissions")
     .select("*")
@@ -260,14 +261,16 @@ export async function getProjectDetails(activityId: string, studentId: string) {
     .eq("student_id", studentId)
     .maybeSingle();
 
+  if (submissionError) throw submissionError;
   let review = null;
   if (submission) {
-    const { data: revData } = await supabase
+    const { data: revData, error: reviewError } = await supabase
       .schema("learning")
       .from("project_reviews")
       .select("*")
       .eq("submission_id", submission.id)
       .maybeSingle();
+    if (reviewError) throw reviewError;
     review = revData;
   }
 
@@ -620,18 +623,18 @@ export async function getChallengeSubmissionResults(submissionId: string) {
 export async function listAllActivities(tenantId: string) {
   await requireInstitutionAccess(tenantId, true);
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const data = await readAllPages((from, to) => supabase
     .schema("learning")
     .from("activities")
-    .select("*, activity_assignments(cohort_id)")
+    .select("*, activity_assignments(cohort_id,deleted_at)")
     .eq("tenant_id", tenantId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }).order("id").range(from, to));
 
-  if (error) throw error;
+
   return (data || []).map((act) => ({
     ...act,
-    cohort_ids: (act.activity_assignments || []).map((a: { cohort_id: string }) => a.cohort_id),
+    cohort_ids: (act.activity_assignments || []).filter((a: { deleted_at: string | null }) => !a.deleted_at).map((a: { cohort_id: string }) => a.cohort_id),
   }));
 }
 
@@ -801,7 +804,7 @@ export async function listProjectSubmissions(tenantId: string) {
   await requireInstitutionAccess(tenantId, true);
   const supabase = await createClient();
 
-  const { data: projects, error: projError } = await supabase
+  const projects = await readAllPages((from, to) => supabase
     .schema("learning")
     .from("projects")
     .select(`
@@ -815,44 +818,48 @@ export async function listProjectSubmissions(tenantId: string) {
         tenant_id
       )
     `)
-    .eq("activities.tenant_id", tenantId);
+    .eq("activities.tenant_id", tenantId).order("id").range(from, to));
 
-  if (projError) throw projError;
+
   if (!projects || projects.length === 0) return [];
 
   const projectIds = projects.map(p => p.id);
 
-  const { data: submissions, error: subError } = await supabase
+  const submissions = await readByIds(projectIds, (group, from, to) => supabase
     .schema("learning")
     .from("project_submissions")
-    .select("*")
-    .in("project_id", projectIds)
-    .order("submitted_at", { ascending: false });
+    .select("*, progress:student_activity_progress_id(assignment:activity_assignment_id(cohort_id))")
+    .in("project_id", group)
+    .order("submitted_at", { ascending: false }).order("id").range(from, to));
 
-  if (subError) throw subError;
+
   if (!submissions || submissions.length === 0) return [];
 
   const submissionIds = submissions.map(s => s.id);
-  const { data: reviews } = await supabase
+  const reviews = await readByIds(submissionIds, (group, from, to) => supabase
     .schema("learning")
     .from("project_reviews")
     .select("*")
-    .in("submission_id", submissionIds);
+    .in("submission_id", group).order("id").range(from, to));
+
+
 
   const studentIds = [...new Set(submissions.map(s => s.student_id))];
-  const { data: students } = await supabase
+  const students = await readByIds(studentIds, (group, from, to) => supabase
     .schema("core")
     .from("users")
     .select("id, full_name, email")
-    .in("id", studentIds);
+    .in("id", group).order("id").range(from, to));
 
-  return submissions.map(sub => {
+  return submissions.sort((a, b) => Date.parse(b.submitted_at) - Date.parse(a.submitted_at)).map(sub => {
     const project = projects.find(p => p.id === sub.project_id);
     const review = reviews?.find(r => r.submission_id === sub.id) || null;
     const student = students?.find(s => s.id === sub.student_id) || null;
 
     return {
       ...sub,
+      activity_id: project?.activity_id,
+      cohort_id: one(one(sub.progress)?.assignment)?.cohort_id,
       project_title: one(project?.activities)?.title || "Unknown Project",
       max_score: Number(project?.max_score ?? 100),
       passing_score: Number(one(project?.activities)?.passing_score ?? 0),
@@ -957,19 +964,19 @@ export async function ensureLessonProjectActivity(lessonId: string, studentId: s
 export async function listCohortProjectSubmissions(cohortId: string) {
   const supabase = await createClient();
 
-  const { data: assignments, error: assignError } = await supabase
+  const assignments = await readAllPages((from, to) => supabase
     .schema("learning")
     .from("activity_assignments")
     .select("activity_id")
     .eq("cohort_id", cohortId)
-    .is("deleted_at", null);
+    .is("deleted_at", null).order("id").range(from, to));
 
-  if (assignError) throw assignError;
+
   if (!assignments || assignments.length === 0) return [];
 
   const activityIds = assignments.map(a => a.activity_id);
 
-  const { data: projects, error: projError } = await supabase
+  const projects = await readByIds(activityIds, (group, from, to) => supabase
     .schema("learning")
     .from("projects")
     .select(`
@@ -982,44 +989,48 @@ export async function listCohortProjectSubmissions(cohortId: string) {
         passing_score
       )
     `)
-    .in("activity_id", activityIds);
+    .in("activity_id", group).order("id").range(from, to));
 
-  if (projError) throw projError;
+
   if (!projects || projects.length === 0) return [];
 
   const projectIds = projects.map(p => p.id);
 
-  const { data: submissions, error: subError } = await supabase
+  const submissions = await readByIds(projectIds, (group, from, to) => supabase
     .schema("learning")
     .from("project_submissions")
-    .select("*")
-    .in("project_id", projectIds)
-    .order("submitted_at", { ascending: false });
+    .select("*, progress:student_activity_progress_id(assignment:activity_assignment_id(cohort_id))")
+    .in("project_id", group)
+    .order("submitted_at", { ascending: false }).order("id").range(from, to));
 
-  if (subError) throw subError;
+
   if (!submissions || submissions.length === 0) return [];
 
   const submissionIds = submissions.map(s => s.id);
-  const { data: reviews } = await supabase
+  const reviews = await readByIds(submissionIds, (group, from, to) => supabase
     .schema("learning")
     .from("project_reviews")
     .select("*")
-    .in("submission_id", submissionIds);
+    .in("submission_id", group).order("id").range(from, to));
+
+
 
   const studentIds = [...new Set(submissions.map(s => s.student_id))];
-  const { data: students } = await supabase
+  const students = await readByIds(studentIds, (group, from, to) => supabase
     .schema("core")
     .from("users")
     .select("id, full_name, email")
-    .in("id", studentIds);
+    .in("id", group).order("id").range(from, to));
 
-  return submissions.map(sub => {
+  return submissions.sort((a, b) => Date.parse(b.submitted_at) - Date.parse(a.submitted_at)).map(sub => {
     const project = projects.find(p => p.id === sub.project_id);
     const review = reviews?.find(r => r.submission_id === sub.id) || null;
     const student = students?.find(s => s.id === sub.student_id) || null;
 
     return {
       ...sub,
+      activity_id: project?.activity_id,
+      cohort_id: one(one(sub.progress)?.assignment)?.cohort_id,
       project_title: one(project?.activities)?.title || "Unknown Project",
       max_score: Number(project?.max_score ?? 100),
       passing_score: Number(one(project?.activities)?.passing_score ?? 0),

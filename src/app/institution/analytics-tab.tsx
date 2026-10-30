@@ -1,4 +1,6 @@
 "use client";
+import { learningAnalyticsScope } from "@/lib/learning-analytics";
+import { isPassedQuizAttempt } from "@/lib/quiz-result";
 import { averageLearningProgress } from "@/lib/learning-progress";
 import type { ProjectSubmission, QuizAttempt } from "@/types/campus";
 
@@ -15,7 +17,7 @@ interface AnalyticsTabProps {
   quizAttempts: QuizAttempt[];
   projectSubmissions: ProjectSubmission[];
   challengeSubmissions: ChallengeSubmission[];
-  cohortReports: Record<string, CohortReport>;
+  cohortReports?: Record<string, CohortReport>;
 }
 
 const SCORE_BUCKETS = [
@@ -35,11 +37,9 @@ export default function AnalyticsTab({
 }: AnalyticsTabProps) {
   const [selectedCohortFilter, setSelectedCohortFilter] = useState<string>("all");
 
-  const scopedEnrollments = useMemo(
-    () => (selectedCohortFilter === "all" ? enrollments : enrollments.filter((e) => e.cohort_id === selectedCohortFilter)),
-    [enrollments, selectedCohortFilter]
-  );
-
+  const scope = useMemo(() => learningAnalyticsScope(enrollments, activities, quizAttempts, projectSubmissions, selectedCohortFilter),
+    [enrollments, activities, quizAttempts, projectSubmissions, selectedCohortFilter]);
+  const scopedEnrollments = scope.enrollments;
   // One person may have enrollments in several programs. Give each person one
   // ranking row and equal weight, averaging their cohort progress first.
   const scopedStudents = useMemo(() => {
@@ -59,21 +59,15 @@ export default function AnalyticsTab({
     [scopedEnrollments]
   );
 
-  const scopedQuizAttempts = useMemo(
-    () => quizAttempts.filter((a) => scopedStudentIds.has(a.student_id)),
-    [quizAttempts, scopedStudentIds]
-  );
-  const scopedProjectSubs = useMemo(
-    () => projectSubmissions.filter((s) => scopedStudentIds.has(s.student_id)),
-    [projectSubmissions, scopedStudentIds]
-  );
+  const scopedQuizAttempts = scope.outcomes.filter(a => a.submitted_at !== null);
+  const scopedProjectSubs = scope.submissions;
   const scopedChallengeSubs = useMemo(
     () => challengeSubmissions.filter((s) => scopedStudentIds.has(s.student_id)),
     [challengeSubmissions, scopedStudentIds]
   );
 
   const quizzes = activities.filter((a) => a.activity_type_code === "quiz");
-  const projects = activities.filter((a) => a.activity_type_code === "project");
+
   const challenges = activities.filter((a) => a.activity_type_code === "programming");
 
   // KPIs -----------------------------------------------------------------
@@ -83,7 +77,7 @@ export default function AnalyticsTab({
     ? averageLearningProgress(scopedStudents.map(e => e.progress_percentage || 0))
     : 0;
 
-  const passedAttempts = scopedQuizAttempts.filter((a) => a.passed).length;
+  const passedAttempts = scopedQuizAttempts.filter(isPassedQuizAttempt).length;
   const quizPassRate = scopedQuizAttempts.length > 0 ? Math.round((passedAttempts / scopedQuizAttempts.length) * 100) : 0;
 
   const avgQuizScorePct = useMemo(() => {
@@ -99,14 +93,14 @@ export default function AnalyticsTab({
   const acceptedChallenges = scopedChallengeSubs.filter((s) => s.submission_status_code === "accepted").length;
   const challengeAcceptRate = scopedChallengeSubs.length > 0 ? Math.round((acceptedChallenges / scopedChallengeSubs.length) * 100) : 0;
 
-  const forfeitedAttempts = scopedQuizAttempts.filter((a) => a.forfeited).length;
+  const forfeitedAttempts = scope.attempts.filter((a) => a.forfeited).length;
 
   // Cohort performance -----------------------------------------------------
   const cohortPerformance: HBarDatum[] = useMemo(() => {
     return cohorts
       .filter((c) => selectedCohortFilter === "all" || c.id === selectedCohortFilter)
       .map((c) => {
-        const cEnrollments = enrollments.filter((e) => e.cohort_id === c.id);
+        const cEnrollments = scopedEnrollments.filter((e) => e.cohort_id === c.id);
         const avg = cEnrollments.length > 0
           ? averageLearningProgress(cEnrollments.map(e => e.progress_percentage || 0))
           : 0;
@@ -119,7 +113,7 @@ export default function AnalyticsTab({
         };
       })
       .sort((a, b) => b.value - a.value);
-  }, [cohorts, enrollments, selectedCohortFilter]);
+  }, [cohorts, scopedEnrollments, selectedCohortFilter]);
 
   // Quiz score distribution -------------------------------------------------
   const scoreDistribution: VBarDatum[] = useMemo(() => {
@@ -135,28 +129,29 @@ export default function AnalyticsTab({
 
   // Pass / Fail / Not attempted donut ---------------------------------------
   const quizStatusDonut: DonutDatum[] = useMemo(() => {
-    const totalPossible = totalStudents * quizzes.length;
-    const attempted = scopedQuizAttempts.length;
+    const totalPossible = scope.eligibleQuizCount;
+    const attempted = scope.outcomes.length;
     const notAttempted = Math.max(0, totalPossible - attempted);
-    const failed = attempted - passedAttempts;
+    const failed = scopedQuizAttempts.length - passedAttempts;
     return [
       { id: "passed", label: "Passed", value: passedAttempts, color: "var(--success)" },
       { id: "failed", label: "Failed", value: Math.max(0, failed), color: "var(--error)" },
       { id: "not_attempted", label: "Not Attempted", value: notAttempted, color: "#A6ACBB" },
+      { id: "in_progress", label: "In Progress", value: attempted - scopedQuizAttempts.length, color: "var(--accent)" },
     ];
-  }, [scopedQuizAttempts, passedAttempts, totalStudents, quizzes.length]);
+  }, [scopedQuizAttempts, passedAttempts, scope.eligibleQuizCount, scope.outcomes]);
 
   // Engagement across activity types ----------------------------------------
   const engagementChart: HBarDatum[] = useMemo(() => {
-    const quizEligible = totalStudents * quizzes.length;
-    const projectEligible = totalStudents * projects.length;
+    const quizEligible = scope.eligibleQuizCount;
+    const projectEligible = scope.eligibleProjectCount;
     const challengeEligible = totalStudents * challenges.length;
     return [
       {
         id: "quizzes",
         label: "Quiz Engagement",
-        sublabel: `${scopedQuizAttempts.length}/${quizEligible}`,
-        value: quizEligible > 0 ? Math.round((scopedQuizAttempts.length / quizEligible) * 100) : 0,
+        sublabel: `${scope.outcomes.length}/${quizEligible}`,
+        value: quizEligible > 0 ? Math.round((scope.outcomes.length / quizEligible) * 100) : 0,
         color: "var(--primary)",
       },
       {
@@ -174,7 +169,7 @@ export default function AnalyticsTab({
         color: "var(--accent)",
       },
     ];
-  }, [totalStudents, quizzes.length, projects.length, challenges.length, scopedQuizAttempts, scopedProjectSubs, scopedChallengeSubs]);
+  }, [totalStudents, scope.eligibleQuizCount, scope.eligibleProjectCount, scope.outcomes.length, challenges.length, scopedProjectSubs, scopedChallengeSubs]);
 
   // Per-student composite ranking -------------------------------------------
   const studentRankings = useMemo(() => {

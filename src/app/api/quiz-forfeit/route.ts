@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { forfeitQuizAttempt } from "@/services/learning";
+import { institutionIdPattern } from "@/lib/institution-validation";
 
 // Dedicated endpoint for navigator.sendBeacon — fired from a pagehide handler
 // when a student closes/navigates away from an active strict-mode quiz.
@@ -8,16 +9,22 @@ import { forfeitQuizAttempt } from "@/services/learning";
 // mechanism for that specific case.
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const origin = request.headers.get("origin");
+    if (origin && origin !== new URL(request.url).origin) return NextResponse.json({ error: "Access denied." }, { status: 403 });
+    const text = await request.text();
+    if (text.length > 2048) return NextResponse.json({ error: "Request is too large." }, { status: 413 });
+    let body;
+    try { body = JSON.parse(text); } catch { return NextResponse.json({ error: "Invalid JSON." }, { status: 400 }); }
     const { attemptId, reason } = body || {};
 
-    if (!attemptId || typeof attemptId !== "string") {
+    if (typeof attemptId !== "string" || !institutionIdPattern.test(attemptId) ||
+      (reason !== undefined && (typeof reason !== "string" || !reason.trim() || reason.length > 200))) {
       return NextResponse.json({ error: "attemptId is required" }, { status: 400 });
     }
 
     await forfeitQuizAttempt(attemptId, typeof reason === "string" ? reason : "tab_closed");
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to forfeit quiz attempt." }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Unable to confirm quiz forfeit. Retry when connected." }, { status: 500 });
   }
 }

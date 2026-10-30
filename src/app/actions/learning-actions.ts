@@ -1,5 +1,6 @@
 "use server";
 
+import { readAllPages, readByIds } from "@/services/query-pages";
 import { errorMessage } from "@/lib/error-message";
 import { requireActivityEditor } from "@/services/learning-editor";
 import { requireInstitutionAccess } from "@/services/institution-access";
@@ -439,7 +440,7 @@ export async function listQuizAttemptsAction(tenantId: string) {
   try {
     await requireInstitutionAccess(tenantId, true);
     const supabase = await createClient();
-    const { data: quizzes, error: qError } = await supabase
+    const quizzes = await readAllPages((from, to) => supabase
       .schema("learning")
       .from("quizzes")
       .select(`
@@ -452,37 +453,38 @@ export async function listQuizAttemptsAction(tenantId: string) {
           max_score
         )
       `)
-      .eq("activities.tenant_id", tenantId);
+      .eq("activities.tenant_id", tenantId).order("id").range(from, to));
 
-    if (qError) throw qError;
+
     if (!quizzes || quizzes.length === 0) return { attempts: [] };
 
     const quizIds = quizzes.map(q => q.id);
 
-    const { data: attempts, error: attError } = await supabase
+    const attempts = await readByIds(quizIds, (group, from, to) => supabase
       .schema("learning")
       .from("quiz_attempts")
-      .select("*")
-      .in("quiz_id", quizIds)
-      .order("submitted_at", { ascending: false });
+      .select("*, progress:student_activity_progress_id(assignment:activity_assignment_id(cohort_id))")
+      .in("quiz_id", group)
+      .order("submitted_at", { ascending: false }).order("id").range(from, to));
 
-    if (attError) throw attError;
+
     if (!attempts || attempts.length === 0) return { attempts: [] };
 
     const studentIds = [...new Set(attempts.map(a => a.student_id))];
-    const { data: students } = await supabase
+    const students = await readByIds(studentIds, (group, from, to) => supabase
       .schema("core")
       .from("users")
       .select("id, full_name, email")
-      .in("id", studentIds);
+      .in("id", group).order("id").range(from, to));
 
     return {
-      attempts: attempts.map(att => {
+      attempts: attempts.sort((a, b) => Date.parse(b.submitted_at || b.started_at) - Date.parse(a.submitted_at || a.started_at)).map(att => {
         const quiz = quizzes.find(q => q.id === att.quiz_id);
         const student = students?.find(s => s.id === att.student_id) || null;
 
         return {
           ...att,
+          cohort_id: att.progress?.assignment?.cohort_id,
           quiz_title: (Array.isArray(quiz?.activities) ? quiz.activities[0] : quiz?.activities)?.title || "Unknown Quiz",
           activity_max_score: Number((Array.isArray(quiz?.activities) ? quiz.activities[0] : quiz?.activities)?.max_score || 100),
           student,
@@ -625,4 +627,3 @@ export async function updateQuizQuestionAndOptionsAction(
     return { error: errorMessage(error, "Failed to update question.") };
   }
 }
-

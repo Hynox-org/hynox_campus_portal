@@ -8,7 +8,8 @@ import {
 listLessonsAction,
 listModulesAction
 } from "@/app/actions/academic-actions";
-import { getAttendanceRegisterAction,getStudentAttendanceSummaryAction } from "@/app/actions/attendance-actions";
+import { attendanceToday, summarizeAttendance } from "@/lib/attendance";
+import { getAttendanceRegisterAction } from "@/app/actions/attendance-actions";
 import {
 completeLessonProgressAction,
 getStudentDeliveryDataAction,
@@ -16,7 +17,6 @@ listStudentLessonProgressAction,
 startOrUpdateLessonProgressAction
 } from "@/app/actions/delivery-actions";
 import {
-ensureLessonProjectActivityAction,
 forfeitQuizAttemptAction,
 getActiveQuizAttemptAction,
 getChallengeSubmissionResultsAction,
@@ -316,6 +316,8 @@ export default function StudentConsole({
   const [quizViolationWarning, setQuizViolationWarning] = useState<{ deadline: number } | null>(null);
   const [, setViolationTick] = useState(0);
   const quizViolationCountRef = useRef(0);
+  const quizWarningActiveRef = useRef(false);
+  const [pendingQuizForfeit, setPendingQuizForfeit] = useState<string | null>(null);
   // Flips off the instant an attempt ends (submit/forfeit), so lockdown
   // listeners that fire during our own cleanup (e.g. exitFullscreen after a
   // normal submit) don't register a false violation.
@@ -333,6 +335,7 @@ export default function StudentConsole({
   const [githubUrl, setGithubUrl] = useState("");
   const [submissionNotes, setSubmissionNotes] = useState("");
 
+  const lessonProjectDraftKey = useRef<string | null>(null);
   // Active lesson project state
   const [lessonProjectDetails, setLessonProjectDetails] = useState<Project | null>(null);
   const [lessonProjectSubmission, setLessonProjectSubmission] = useState<ProjectSubmission | null>(null);
@@ -354,12 +357,30 @@ export default function StudentConsole({
   const [actionLoading, setActionLoading] = useState(false);
   const { showSuccess, showError } = useToast();
 
+  useEffect(() => {
+    if (!selectedProjectActivity) return;
+    let disposed = false;
+    let sequence = 0;
+    const refresh = async () => {
+      const request = ++sequence;
+      const result = await getProjectDetailsAction(selectedProjectActivity.id, studentId);
+      if (disposed || request !== sequence) return;
+      if ("project" in result) {
+        setProjectDetails(result.project);
+        setProjectSubmission(result.submission);
+        setProjectReview(result.review);
+      } else if (result.error) showError(result.error);
+    };
+    window.addEventListener("hynox:dashboard-change", refresh);
+    return () => { disposed = true; window.removeEventListener("hynox:dashboard-change", refresh); };
+  }, [selectedProjectActivity, studentId, showError]);
   // Attendance states
   const [attendancePercentage, setAttendancePercentage] = useState<number | null>(null);
   const [attendanceLogs, setAttendanceLogs] = useState<Array<{date: string; status: string}>>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => {
+    let disposed = false;
     const loadAttendance = async () => {
       const cohortId = selectedCohort?.id;
       if (!cohortId) {
@@ -368,22 +389,22 @@ export default function StudentConsole({
         return;
       }
       setLoadingAttendance(true);
-      const [registerRes, summaryRes] = await Promise.all([
-        getAttendanceRegisterAction(cohortId),
-        getStudentAttendanceSummaryAction(cohortId, studentId),
-      ]);
+      const registerRes = await getAttendanceRegisterAction(cohortId, studentId);
+      if (disposed) return;
       if (registerRes.register) {
         const logs = registerRes.register.dates
-          .filter((d) => !d.isHoliday && registerRes.register!.records[studentId]?.[d.date])
+          .filter((d) => d.date <= attendanceToday() && !d.isHoliday && registerRes.register!.records[studentId]?.[d.date])
           .map((d) => ({ date: d.date, status: registerRes.register!.records[studentId][d.date] }));
         setAttendanceLogs(logs);
-        setAttendancePercentage(summaryRes.summary ? summaryRes.summary.percentage : 100);
+        setAttendancePercentage(summarizeAttendance(registerRes.register).students.find(s => s.studentId === studentId)?.percentage ?? 0);
       } else if (registerRes.error) {
         showError(registerRes.error);
       }
       setLoadingAttendance(false);
     };
-    loadAttendance();
+    void loadAttendance();
+    window.addEventListener("hynox:dashboard-change", loadAttendance);
+    return () => { disposed = true; window.removeEventListener("hynox:dashboard-change", loadAttendance); };
   }, [selectedCohort, studentId, showError]);
 
   // Load activities on mount or tab change. Returns the freshly fetched list
@@ -824,6 +845,7 @@ if (!selectedQuizActivity) return;
 
         if (quizDetails.strict_mode) {
           quizViolationCountRef.current = 0;
+          quizWarningActiveRef.current = false;
           attemptActiveRef.current = true;
           // Trap a history entry so the very next Back press can be caught
           // by the popstate listener instead of navigating away.
@@ -882,7 +904,7 @@ if (!selectedQuizActivity) return;
   };
 
   const handleSubmitQuiz = async () => {
-    if (!activeAttempt || isSubmittingQuizRef.current) return;
+    if (!activeAttempt || isSubmittingQuizRef.current || pendingQuizForfeit) return;
     isSubmittingQuizRef.current = true;
     setActionLoading(true);
     try {
@@ -894,6 +916,7 @@ if (!selectedQuizActivity) return;
       const res = await submitQuizAnswersAction(activeAttempt.id, payload);
       if (res.attempt) {
         attemptActiveRef.current = false;
+        quizWarningActiveRef.current = false;
         setQuizViolationWarning(null);
         setQuizSubmittedResult(res.attempt);
         setActiveAttempt(null);
@@ -921,11 +944,14 @@ if (!selectedQuizActivity) return;
     if (!activeAttemptRef.current || isSubmittingQuizRef.current) return;
     isSubmittingQuizRef.current = true;
     attemptActiveRef.current = false;
+    quizWarningActiveRef.current = false;
     setQuizViolationWarning(null);
+    setPendingQuizForfeit(reason);
     setActionLoading(true);
     try {
       const res = await forfeitQuizAttemptAction(activeAttemptRef.current.id, reason);
       if (res.attempt) {
+        setPendingQuizForfeit(null);
         setQuizSubmittedResult(res.attempt);
         setActiveAttempt(null);
         if (document.fullscreenElement) {
@@ -945,9 +971,10 @@ if (!selectedQuizActivity) return;
   };
 
   const registerViolation = (reason: string) => {
-    if (!attemptActiveRef.current || isSubmittingQuizRef.current) return;
+    if (!attemptActiveRef.current || isSubmittingQuizRef.current || quizWarningActiveRef.current) return;
     if (quizViolationCountRef.current === 0) {
       quizViolationCountRef.current = 1;
+      quizWarningActiveRef.current = true;
       setQuizViolationWarning({ deadline: Date.now() + 15000 });
     } else {
       forfeitAttempt(reason);
@@ -957,6 +984,15 @@ if (!selectedQuizActivity) return;
   const forfeitFromEffect = useEffectEvent(forfeitAttempt);
   const violationFromEffect = useEffectEvent(registerViolation);
   const resyncFromEffect = useEffectEvent(resyncSelectedQuizActivity);
+  // A failed write leaves the attempt locked; retry instead of allowing answers
+  // to be submitted after the local violation was already detected.
+  useEffect(() => {
+    if (!pendingQuizForfeit || !activeAttempt) return;
+    const retry = () => forfeitFromEffect(pendingQuizForfeit);
+    const timer = setInterval(retry, 5000);
+    window.addEventListener("online", retry);
+    return () => { clearInterval(timer); window.removeEventListener("online", retry); };
+  }, [pendingQuizForfeit, activeAttempt]);
   // Grace-period countdown: once a warning is shown, either the student
   // returns to fullscreen + a visible tab before the deadline (dismiss, no
   // reset — the one warning stays used), or the deadline passes and the
@@ -967,6 +1003,7 @@ if (!selectedQuizActivity) return;
     const check = () => {
       const cleared = typeof document !== "undefined" && !!document.fullscreenElement && !document.hidden;
       if (cleared) {
+        quizWarningActiveRef.current = false;
         setQuizViolationWarning(null);
         return;
       }
@@ -1003,7 +1040,7 @@ if (!selectedQuizActivity) return;
       violationFromEffect("back_navigation");
     };
     const onPageHide = () => {
-      if (attemptActiveRef.current && activeAttemptRef.current) {
+      if ((attemptActiveRef.current || pendingQuizForfeit) && activeAttemptRef.current) {
         const blob = new Blob(
           [JSON.stringify({ attemptId: activeAttemptRef.current.id, reason: "tab_closed" })],
           { type: "application/json" }
@@ -1029,11 +1066,11 @@ if (!selectedQuizActivity) return;
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("beforeunload", onBeforeUnload);
     };
-  }, [activeAttempt, quizDetails]);
+  }, [activeAttempt, quizDetails, pendingQuizForfeit]);
 
   // Countdown Timer logic for quizzes
   useEffect(() => {
-    if (!activeAttempt || !quizDetails || !quizDetails.time_limit_minutes) {
+    if (!activeAttempt || !quizDetails || !quizDetails.time_limit_minutes || pendingQuizForfeit) {
       return;
     }
 
@@ -1063,6 +1100,7 @@ if (!selectedQuizActivity) return;
           .then(async (res) => {
             if (res.attempt) {
               attemptActiveRef.current = false;
+              quizWarningActiveRef.current = false;
               setQuizViolationWarning(null);
               setQuizSubmittedResult(res.attempt);
               setActiveAttempt(null);
@@ -1087,77 +1125,32 @@ if (!selectedQuizActivity) return;
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeAttempt, quizDetails, quizQuestions, showError, showSuccess]);
+  }, [activeAttempt, quizDetails, quizQuestions, showError, showSuccess, pendingQuizForfeit]);
 
-  // Load associated activity and project details when active lesson changes
+  // Refresh review state without replacing an unsent draft on background updates.
   useEffect(() => {
-    async function loadLessonActivity() {
-      if (!activeLesson) {
-        setLessonProjectDetails(null);
-        setLessonProjectSubmission(null);
-        setLessonProjectReview(null);
-        setLessonGithubUrl("");
-        setLessonSubmissionNotes("");
+    let disposed = false;
+    const load = async () => {
+      const activity = activities.find(a => a.lesson_id === activeLesson?.id && a.activity_type_code === "project");
+      if (!activity || !activeLesson) {
+        setLessonProjectDetails(null); setLessonProjectSubmission(null); setLessonProjectReview(null);
+        setLessonGithubUrl(""); setLessonSubmissionNotes(""); lessonProjectDraftKey.current = null;
         return;
       }
-
-      const typeCode = activeLesson.lesson_type?.code?.toLowerCase() || "";
-      const isAssignmentType = typeCode === "assignment" || typeCode === "assessment";
-
-      let assocAct = activities.find((a) => a.lesson_id === activeLesson.id);
-
-      // Dynamically auto-provision activity/project if it's an assignment/assessment but has no learning activity yet
-      if (!assocAct && isAssignmentType && selectedCourse) {
-        setActionLoading(true);
-        try {
-          const provisionRes = await ensureLessonProjectActivityAction(activeLesson.id, studentId, selectedCourse.id);
-          if (provisionRes && !("error" in provisionRes)) {
-            // Reload the activities from database
-            const reloadRes = await getStudentAssignedActivitiesAction(studentId);
-            if (reloadRes.activities) {
-              setActivities(reloadRes.activities);
-              assocAct = reloadRes.activities.find((a) => a.lesson_id === activeLesson.id);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to provision assignment/assessment activity on the fly:", err);
-        } finally {
-          setActionLoading(false);
+      const result = await getProjectDetailsAction(activity.id, studentId);
+      if (disposed) return;
+      if ("project" in result) {
+        setLessonProjectDetails(result.project); setLessonProjectSubmission(result.submission); setLessonProjectReview(result.review);
+        if (lessonProjectDraftKey.current !== activeLesson.id) {
+          lessonProjectDraftKey.current = activeLesson.id;
+          setLessonGithubUrl(result.submission?.github_url ?? "");
+          setLessonSubmissionNotes(result.submission?.submission_notes ?? "");
         }
-      }
-
-      if (assocAct && (assocAct.activity_type_code === "project" || assocAct.activity_type_code === "assignment")) {
-        setActionLoading(true);
-        try {
-          const pRes = await getProjectDetailsAction(assocAct.id, studentId);
-          if (pRes && "project" in pRes) {
-            setLessonProjectDetails(pRes.project);
-            setLessonProjectSubmission(pRes.submission);
-            setLessonProjectReview(pRes.review);
-            if (pRes.submission) {
-              setLessonGithubUrl(pRes.submission.github_url || "");
-              setLessonSubmissionNotes(pRes.submission.submission_notes || "");
-            } else {
-              setLessonGithubUrl("");
-              setLessonSubmissionNotes("");
-            }
-          }
-        } catch (err) {
-          console.error("Failed to load project details for active lesson:", err);
-        } finally {
-          setActionLoading(false);
-        }
-      } else {
-        setLessonProjectDetails(null);
-        setLessonProjectSubmission(null);
-        setLessonProjectReview(null);
-        setLessonGithubUrl("");
-        setLessonSubmissionNotes("");
-      }
-    }
-    loadLessonActivity();
-  }, [activeLesson, activities, studentId, selectedCourse]);
-
+      } else if (result.error) showError(result.error);
+    };
+    void load();
+    return () => { disposed = true; };
+  }, [activeLesson, activities, studentId, showError]);
   const handleLessonSubmitProjectUrl = async () => {
 if (!activeLesson) return;
 
@@ -1402,6 +1395,9 @@ programs.forEach(p => {
   return (
     <>
       <DashboardLoader loading={loadingStudentDelivery} message="Setting up your Student Hub..." />
+      {pendingQuizForfeit && <div role="alert" className="fixed inset-0 z-[10000] bg-black/90 flex items-center justify-center p-6 text-center text-white">
+        Your quiz is locked while the violation is recorded. Reconnect to finish; this page retries automatically.
+      </div>}
       {quizViolationWarning && (
         <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#131418] rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 border-4 border-[#F0555D]">
@@ -1529,6 +1525,7 @@ programs.forEach(p => {
                           onClick={() => {
                             attemptActiveRef.current = false;
                             quizViolationCountRef.current = 0;
+                            quizWarningActiveRef.current = false;
                             handleSelectCohort(coh);
                             setIsDropdownOpen(false);
                           }}

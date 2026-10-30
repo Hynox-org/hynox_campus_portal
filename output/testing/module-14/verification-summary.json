@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-30",
+  "modules": [10, 12, 13, 14],
+  "excluded": ["coding challenges", "execution", "challenge strict mode"],
+  "tests": { "passed": 554, "files": 78 },
+  "build": "passed",
+  "typescript": "passed",
+  "lint": { "files": 27, "errors": 0, "warnings": 0 },
+  "diffCheck": "passed",
+  "databaseFixtures": { "projects": "passed and rolled back", "quizForfeits": "passed and rolled back", "attendance": "passed and rolled back" },
+  "attendanceCapacity": { "studentsReturned": 1002, "marksSaved": 1001, "saveMs": 563.877, "readMs": 667.842, "scope": "single synthetic database run; rolled back" },
+  "manualVerification": "owner handoff; not run by Codex today",
+  "remainingDeliveryTablesWithoutRls": 9,
+  "productionApproved": false
+}

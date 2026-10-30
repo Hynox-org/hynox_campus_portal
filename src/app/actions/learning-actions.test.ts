@@ -26,6 +26,8 @@ vi.mock("@/services/learning", () => ({
 const quizQueryMock = {
   select: vi.fn().mockReturnThis(),
   eq: vi.fn().mockReturnThis(),
+  order: vi.fn().mockReturnThis(),
+  range: vi.fn().mockResolvedValue({ data: [], error: null }),
   maybeSingle: vi.fn().mockResolvedValue({ data: { id: "quiz-1", activity_id: "act-1", shuffle_questions: true }, error: null })
 };
 

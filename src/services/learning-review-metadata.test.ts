@@ -11,7 +11,7 @@ it.each(["campus", "cohort"])("preserves the actual project passing score in the
     project_submissions: [{ id: "submission", project_id: "project", student_id: "student" }], project_reviews: [], users: [],
   };
   vi.mocked(createClient).mockResolvedValue({ schema: () => ({ from: (table: string) => {
-    const query = { select: () => query, eq: () => query, in: () => query, is: () => query, order: () => query,
+    const query = { select: () => query, eq: () => query, in: () => query, is: () => query, order: () => query, range: () => query,
       then: (resolve: (value: unknown) => void) => resolve({ data: data[table] || [], error: null }) };
     return query;
   } }) } as never);

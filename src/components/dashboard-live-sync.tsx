@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 
 export const dashboardQueryDomains: Record<string, string[]> = {
   academic: ["academic-prefetch", "programs", "courses", "course-modules", "course-instructors", "academic-modules", "academic-lessons", "academic-resources", "student-delivery"],
-  delivery: ["delivery-prefetch", "tenant-cohorts", "teacher-cohorts", "all-cohorts", "student-delivery", "academic-prefetch", "learning-prefetch", "all-activities", "cohort-activities", "quiz-attempts", "project-submissions", "challenge-submissions"],
+  delivery: ["student-lesson-progress", "attendance-register", "delivery-prefetch", "tenant-cohorts", "teacher-cohorts", "all-cohorts", "student-delivery", "academic-prefetch", "learning-prefetch", "all-activities", "cohort-activities", "quiz-attempts", "project-submissions", "challenge-submissions"],
   library: ["course-templates", "module-templates", "lesson-templates", "resource-templates"],
   identity: ["admin-prefetch", "institutions", "institution-users", "all-teachers", "teacher-cohorts", "delivery-prefetch", "academic-prefetch", "student-delivery"],
 };

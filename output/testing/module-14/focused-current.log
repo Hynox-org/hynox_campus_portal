@@ -1,0 +1,26 @@
+
+ RUN  v4.1.9 D:/hynox_campus
+
+ ❯ src/app/actions/learning-actions.test.ts (7 tests | 1 failed) 10ms
+       × should return empty attempts when database is mocked to return nothing 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/app/actions/learning-actions.test.ts > learning-actions > listQuizAttemptsAction > should return empty attempts when database is mocked to return nothing
+AssertionError: expected { Object (error) } to have property "attempts"
+ ❯ src/app/actions/learning-actions.test.ts:179:22
+    177|     it("should return empty attempts when database is mocked to return…
+    178|       const result = await listQuizAttemptsAction("tenant-123");
+    179|       expect(result).toHaveProperty("attempts");
+       |                      ^
+    180|     });
+    181|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 15 passed (16)
+   Start at  15:38:55
+   Duration  5.23s (transform 572ms, setup 0ms, import 1.33s, tests 3.15s, environment 1.46s)
+

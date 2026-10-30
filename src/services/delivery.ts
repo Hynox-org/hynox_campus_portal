@@ -1,3 +1,4 @@
+import { readByIds } from "./query-pages";
 import { averageLearningProgress } from "@/lib/learning-progress";
 import { readProgressSnapshots, refreshProgressSnapshot, setLessonProgress } from "./course-progress";
 import type { Program, Institution, CampusUser, Course } from "@/types/campus";
@@ -176,7 +177,7 @@ export async function listEnrollments(tenantId: string) {
   const allowedCohorts = await deliveryCohortIds(tenantId);
   if (!allowedCohorts.length) return [];
   const supabase = await createClient();
-  const { data: enrollments, error } = await supabase
+  const enrollments = await readByIds(allowedCohorts, (group, from, to) => supabase
     .schema("delivery")
     .from("enrollments")
     .select(`
@@ -189,28 +190,23 @@ export async function listEnrollments(tenantId: string) {
       )
     `)
     .eq("cohort.tenant_id", tenantId)
-    .in("cohort_id", allowedCohorts)
+    .in("cohort_id", group)
     .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }).order("id").range(from, to));
 
-  if (error) throw error;
+
   if (!enrollments) return [];
   
   // Filter enrollments belonging to the user's institution
-  const filtered = enrollments.filter((e) => e.cohort?.tenant_id === tenantId);
+  const filtered = enrollments.filter((e) => e.cohort?.tenant_id === tenantId).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   if (filtered.length === 0) return [];
 
   // Fetch student details from core.users (cross-schema)
   const studentIds = [...new Set(filtered.map((e) => e.user_id).filter(Boolean))];
-  const [userResult, assignmentResult] = await Promise.all([
-    supabase.schema("core").from("users").select("id, full_name, email").in("id", studentIds),
-    supabase.schema("delivery").from("course_assignments").select("*").in("cohort_id", [...new Set(filtered.map(enrollment => enrollment.cohort_id))]).is("deleted_at", null),
+  const [students, assignments] = await Promise.all([
+    readByIds(studentIds, (group, from, to) => supabase.schema("core").from("users").select("id, full_name, email").in("id", group).order("id").range(from, to)),
+    readByIds(filtered.map(e => e.cohort_id), (group, from, to) => supabase.schema("delivery").from("course_assignments").select("*").in("cohort_id", group).is("deleted_at", null).order("id").range(from, to)),
   ]);
-  if (userResult.error) throw userResult.error;
-  if (assignmentResult.error) throw assignmentResult.error;
-  const students: CampusUser[] = userResult.data || [];
-  const assignments = assignmentResult.data || [];
-
   const progressRecords = await readProgressSnapshots(studentIds, assignments.map(assignment => assignment.course_id), supabase);
 
   return filtered.map((e) => {

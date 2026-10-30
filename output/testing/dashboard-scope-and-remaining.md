@@ -1,5 +1,13 @@
 # Dashboard testing scope and remaining work
 
+## 30 October Projects Strict mode Attendance and Analytics
+
+Modules 10, 12, 13 and 14 were traced through UI, actions, services and Supabase. Module 11 coding challenges and challenge Strict mode were completely excluded. The owner performs manual checks from this date onward; no new Brave verification is claimed. See testing-report-2026-10-30.md, manual-verification-2026-10-30.md and the module-10/module-12/module-13/module-14 reports.
+
+Final suite: 554 tests in 78 files. Production build and standalone types passed. Focused lint covers 27 changed TypeScript files with zero errors and warnings. Targeted Project, quiz forfeit and Attendance SQL fixtures passed with rollback. A 1,002-student Attendance fixture returned the full roster and saved 1,001 marks without truncation. These are targeted code/database results, not an exhaustive production certification.
+
+Attendance sessions and records now have scoped RLS and checked transactional writes. Nine other delivery tables still lack RLS and remain release blockers; older references to eleven tables below describe earlier checkpoints. No production release approval is given.
+
 ## 29 October learning module verification
 
 Modules 7 to 9 fixes and rolled-back database integration passed. Final results and remaining manual limits are in module-07/report.md, module-08/report.md, module-09/report.md and the Word report under output/reports. Student completion verified 100% with optional work unfinished; Teacher review, retake and activity publication verified; Admin activity catalog and quiz performance verified; Institution Admin cohort analytics verified. Final suite: 519 tests / 70 files; build/types passed and focused lint is clean. Eleven delivery tables without RLS remain release blockers. Sandbox execution was excluded by the user. Older counts below are historical.
@@ -31,5 +39,3 @@ Student follow-up: Google role routing, Overview/Syllabus no-enrollment states a
 ## Latest status — 27 October 2026
 
 Read [current-verification.md](module-04/current-verification.md) first. It supersedes the older counts and Teacher/Student setup blockers above: 423 tests / 50 files passed; Teacher browser verification now exercises the assigned QA course, media and representative mobile layouts. Existing lint failures and the eleven delivery tables without RLS remain open. Module 4 is not approved for production; the latest report distinguishes passed, failed/open, blocked and untested work.
-
-
