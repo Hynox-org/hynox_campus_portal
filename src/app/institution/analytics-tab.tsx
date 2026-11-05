@@ -33,7 +33,6 @@ export default function AnalyticsTab({
   activities,
   quizAttempts,
   projectSubmissions,
-  challengeSubmissions,
 }: AnalyticsTabProps) {
   const [selectedCohortFilter, setSelectedCohortFilter] = useState<string>("all");
 
@@ -54,21 +53,11 @@ export default function AnalyticsTab({
     return [...students.values()].map(entry => ({ ...entry.row, progress_percentage: entry.progress / entry.count }));
   }, [scopedEnrollments]);
 
-  const scopedStudentIds = useMemo(
-    () => new Set(scopedEnrollments.map((e) => e.user_id)),
-    [scopedEnrollments]
-  );
-
   const scopedQuizAttempts = scope.outcomes.filter(a => a.submitted_at !== null);
   const scopedProjectSubs = scope.submissions;
-  const scopedChallengeSubs = useMemo(
-    () => challengeSubmissions.filter((s) => scopedStudentIds.has(s.student_id)),
-    [challengeSubmissions, scopedStudentIds]
-  );
 
   const quizzes = activities.filter((a) => a.activity_type_code === "quiz");
 
-  const challenges = activities.filter((a) => a.activity_type_code === "programming");
 
   // KPIs -----------------------------------------------------------------
   const totalStudents = scopedStudents.length;
@@ -90,8 +79,6 @@ export default function AnalyticsTab({
   const approvedProjects = scopedProjectSubs.filter((s) => s.review?.review_status === "approved").length;
   const projectApprovalRate = scopedProjectSubs.length > 0 ? Math.round((approvedProjects / scopedProjectSubs.length) * 100) : 0;
 
-  const acceptedChallenges = scopedChallengeSubs.filter((s) => s.submission_status_code === "accepted").length;
-  const challengeAcceptRate = scopedChallengeSubs.length > 0 ? Math.round((acceptedChallenges / scopedChallengeSubs.length) * 100) : 0;
 
   const forfeitedAttempts = scope.attempts.filter((a) => a.forfeited).length;
 
@@ -145,7 +132,6 @@ export default function AnalyticsTab({
   const engagementChart: HBarDatum[] = useMemo(() => {
     const quizEligible = scope.eligibleQuizCount;
     const projectEligible = scope.eligibleProjectCount;
-    const challengeEligible = totalStudents * challenges.length;
     return [
       {
         id: "quizzes",
@@ -161,15 +147,8 @@ export default function AnalyticsTab({
         value: projectEligible > 0 ? Math.round((scopedProjectSubs.length / projectEligible) * 100) : 0,
         color: "var(--warning)",
       },
-      {
-        id: "challenges",
-        label: "Coding Challenge Runs",
-        sublabel: `${scopedChallengeSubs.length}/${challengeEligible}`,
-        value: challengeEligible > 0 ? Math.round((scopedChallengeSubs.length / challengeEligible) * 100) : 0,
-        color: "var(--accent)",
-      },
     ];
-  }, [totalStudents, scope.eligibleQuizCount, scope.eligibleProjectCount, scope.outcomes.length, challenges.length, scopedProjectSubs, scopedChallengeSubs]);
+  }, [scope.eligibleQuizCount, scope.eligibleProjectCount, scope.outcomes.length, scopedProjectSubs]);
 
   // Per-student composite ranking -------------------------------------------
   const studentRankings = useMemo(() => {
@@ -225,7 +204,6 @@ export default function AnalyticsTab({
         <StatTile label="Quiz Pass Rate" value={`${quizPassRate}%`} color="var(--success)" progressPct={quizPassRate} />
         <StatTile label="Avg Quiz Score" value={`${avgQuizScorePct}%`} color="var(--accent)" progressPct={avgQuizScorePct} />
         <StatTile label="Project Approval" value={`${projectApprovalRate}%`} color="var(--warning)" progressPct={projectApprovalRate} />
-        <StatTile label="Challenge Accept" value={`${challengeAcceptRate}%`} color="var(--accent)" progressPct={challengeAcceptRate} />
       </div>
 
       {forfeitedAttempts > 0 && (

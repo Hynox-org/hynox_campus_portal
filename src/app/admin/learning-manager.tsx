@@ -1075,7 +1075,6 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                         options={[
                           { id: "quiz", name: "Quiz Engine Assessment" },
                           { id: "project", name: "Project Work (GitHub URL)" },
-                          { id: "programming", name: "Programming Challenge (Judge Engine)" },
                         ]}
                         value={activityType}
                         onChange={(val) => setActivityType(val as typeof activityType)}
@@ -1830,7 +1829,6 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                         { id: "all", name: "All Activity Types" },
                         { id: "quiz", name: "Quizzes only" },
                         { id: "project", name: "Projects only" },
-                        { id: "programming", name: "Coding challenges only" },
                       ]}
                       value={typeFilter}
                       onChange={setTypeFilter}
@@ -1862,7 +1860,6 @@ export default function LearningManager({ institutions, mode = "create", lockIns
                       { id: "all", name: "All Activity Types" },
                       { id: "quiz", name: "Quizzes only" },
                       { id: "project", name: "Projects only" },
-                      { id: "programming", name: "Coding challenges only" },
                     ]}
                     value={typeFilter}
                     onChange={setTypeFilter}

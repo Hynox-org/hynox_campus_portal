@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { forfeitChallengeSubmission } from "@/services/learning";
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
 
 // Dedicated endpoint for navigator.sendBeacon — fired from a pagehide handler
 // when a student closes/navigates away from an active strict-mode coding
@@ -7,6 +8,7 @@ import { forfeitChallengeSubmission } from "@/services/learning";
 // normal fetch is unreliable during unload, so this plain route is the
 // delivery mechanism for that specific case. Mirrors /api/quiz-forfeit.
 export async function POST(request: Request) {
+  if (!CODING_CHALLENGES_ENABLED) return NextResponse.json({ error: "Not found" }, { status: 404 });
   try {
     const body = await request.json();
     const { progressId, studentId, reason } = body || {};
@@ -20,7 +22,7 @@ export async function POST(request: Request) {
 
     await forfeitChallengeSubmission(progressId, studentId, typeof reason === "string" ? reason : "tab_closed");
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to forfeit challenge attempt." }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to forfeit challenge attempt." }, { status: 500 });
   }
 }

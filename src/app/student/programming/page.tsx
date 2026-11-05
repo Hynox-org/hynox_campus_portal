@@ -1,12 +1,15 @@
 import { getCurrentUser } from "@/services/auth";
 import { getStudentAssignedChallenges } from "@/services/learning";
 import { redirect } from "next/navigation";
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
+import { FeatureMaintenance } from "@/components/feature-maintenance";
 import Link from "next/link";
 import { Terminal, Calendar, Code2, ShieldAlert, Award, ChevronRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProgrammingChallengesPage() {
+  if (!CODING_CHALLENGES_ENABLED) return <FeatureMaintenance />;
   const userDetails = await getCurrentUser(true);
 
   if (!userDetails || userDetails.primaryRole !== "student") {
@@ -14,7 +17,7 @@ export default async function ProgrammingChallengesPage() {
   }
 
   const studentId = userDetails.user.id;
-  let challenges: any[] = [];
+  let challenges: Awaited<ReturnType<typeof getStudentAssignedChallenges>> = [];
   try {
     challenges = await getStudentAssignedChallenges(studentId);
   } catch (error) {

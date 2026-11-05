@@ -1,4 +1,6 @@
 "use client";
+import { formatCampusDate } from "@/lib/display-date";
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
 
 import { isPassedQuizAttempt } from "@/lib/quiz-result";
 import { useInputsChanged, useHydrated } from "@/hooks/use-inputs-changed";
@@ -230,7 +232,7 @@ export default function InstitutionPanel({
                   <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
                     {selectedStudent.cohort?.name || "No cohort"}
                   </span>
-                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date((selectedStudent.created_at ?? "")).toLocaleDateString()}</span>
+                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {formatCampusDate((selectedStudent.created_at ?? ""))}</span>
                 </div>
               </div>
             </div>
@@ -245,7 +247,7 @@ export default function InstitutionPanel({
 
           {/* Drawer Tab Navigation */}
           <div className="flex border-b border-[#23252C] px-3 sm:px-6 bg-[#131418] shrink-0 overflow-x-auto no-scrollbar">
-            {(["overview", "syllabus", "quizzes", "projects", "challenges"] as const).map(tab => (
+            {(["overview", "syllabus", "quizzes", "projects"] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setStudentDetailTab(tab)}
@@ -300,7 +302,7 @@ export default function InstitutionPanel({
                     </span>
                   </div>
 
-                  <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/20 rounded-2xl p-4 text-center">
+                  {CODING_CHALLENGES_ENABLED && <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/20 rounded-2xl p-4 text-center">
                     <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block tracking-wider">Coding Runs</span>
                     <div className="text-xl font-black text-[#22D3EE] mt-1">
                       {studentChalSubs.length} / {challenges.length}
@@ -308,7 +310,7 @@ export default function InstitutionPanel({
                     <span className="text-[8px] text-[#C2C6D1] block mt-2">
                       Accepted: {studentChalSubs.filter(c => c.submission_status_code === "accepted").length}
                     </span>
-                  </div>
+                  </div>}
                 </div>
 
                 <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 space-y-4 shadow-sm">
@@ -416,7 +418,7 @@ export default function InstitutionPanel({
                               {attempt && (
                                 <p className="text-[9px] text-[#C2C6D1] mt-0.5">
                                   {attempts.length > 1 ? `${attempts.length} attempts • ` : ""}
-                                  Last attempt on {new Date(attempt.submitted_at || attempt.created_at || attempt.started_at).toLocaleDateString()}
+                                  Last attempt on {formatCampusDate(attempt.submitted_at || attempt.created_at || attempt.started_at)}
                                 </p>
                               )}
                             </div>
@@ -467,7 +469,7 @@ export default function InstitutionPanel({
                             />
                             <div>
                               <h4 className="text-xs font-bold text-[#EDEFF5]">{sub.project_title}</h4>
-                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Submitted on {new Date(sub.submitted_at).toLocaleDateString()}</p>
+                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Submitted on {formatCampusDate(sub.submitted_at)}</p>
                             </div>
                           </div>
                           
@@ -543,7 +545,7 @@ export default function InstitutionPanel({
                       <div className="flex justify-between items-center">
                         <div>
                           <h4 className="font-bold text-[#EDEFF5]">{sub.challenge_title || "Coding Challenge"}</h4>
-                          <p className="text-[9px] text-[#C2C6D1]">Language: {sub.lang} • Run on {new Date(sub.created_at).toLocaleDateString()}</p>
+                          <p className="text-[9px] text-[#C2C6D1]">Language: {sub.lang} • Run on {formatCampusDate(sub.created_at)}</p>
                         </div>
                         <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold border ${
                           sub.submission_status_code === "accepted"
@@ -699,7 +701,7 @@ export default function InstitutionPanel({
                                   </span>
                                 </td>
                                 <td className="px-4 py-3.5 text-[#C2C6D1]">
-                                  {new Date(enr.created_at).toLocaleDateString()}
+                                  {formatCampusDate(enr.created_at)}
                                 </td>
                               </tr>
                             );

@@ -1,4 +1,6 @@
 "use client";
+import { formatCampusDate, formatCampusDateTime } from "@/lib/display-date";
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
 import { isPassedQuizAttempt, canApproveQuizRetake } from "@/lib/quiz-result";
 import { useHydrated,useInputsChanged } from "@/hooks/use-inputs-changed";
 import { errorMessage } from "@/lib/error-message";
@@ -146,7 +148,7 @@ export default function TeacherConsole({
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      const validTabs = ["overview", "roster", "projects", "challenges", "activities-manager", "view_activities", "syllabus", "quiz-auditor", "attendance"];
+      const validTabs = ["overview", "roster", "projects", "activities-manager", "view_activities", "syllabus", "quiz-auditor", "attendance"];
       if (tab && validTabs.includes(tab)) {
         setActiveTab(tab as typeof activeTab);
       }
@@ -1750,7 +1752,7 @@ export default function TeacherConsole({
         passed: isPassedQuizAttempt(attempt),
         score: attempt ? attempt.score : 0,
         maxScore: attempt?.max_score ?? q.max_score ?? 100,
-        submittedAt: attempt ? new Date(attempt.submitted_at || attempt.created_at || attempt.updated_at || 0).toLocaleDateString() : "",
+        submittedAt: attempt ? formatCampusDate(attempt.submitted_at || attempt.created_at || attempt.updated_at || 0) : "",
         attemptsCount: attempts.length
       };
     });
@@ -1793,7 +1795,7 @@ export default function TeacherConsole({
                   <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#6E79F4]/10 text-[#6E79F4] border border-[#6E79F4]/20">
                     {selectedStudent.cohort?.name || "No cohort"}
                   </span>
-                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {new Date((selectedStudent.created_at ?? "")).toLocaleDateString()}</span>
+                  <span className="text-[10px] text-[#C2C6D1]">• Enrolled on {formatCampusDate((selectedStudent.created_at ?? ""))}</span>
                 </div>
               </div>
             </div>
@@ -1861,13 +1863,13 @@ export default function TeacherConsole({
                     <span className="text-[8px] text-[#C2C6D1] block mt-2">{studentProjSubs.length} total uploads</span>
                   </div>
 
-                  <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/10 rounded-2xl p-4 text-center">
+                  {CODING_CHALLENGES_ENABLED && <div className="bg-[#22D3EE]/5 border border-[#22D3EE]/10 rounded-2xl p-4 text-center">
                     <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block tracking-wider">Coding Runs</span>
                     <div className="text-xl font-black text-[#22D3EE] mt-1">
                       {studentChalSubs.filter(c => c.submission_status_code === "accepted").length} / {challenges.length}
                     </div>
                     <span className="text-[8px] text-[#C2C6D1] block mt-2">{studentChalSubs.length} total submits</span>
-                  </div>
+                  </div>}
                 </div>
 
                 {/* Progress Detail List */}
@@ -2041,7 +2043,7 @@ export default function TeacherConsole({
                             </svg>
                             <div>
                               <h4 className="text-xs font-bold text-[#EDEFF5] hover:text-[#6E79F4] transition-colors">{sub.project_title}</h4>
-                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Submitted on {new Date(sub.submitted_at).toLocaleDateString()}</p>
+                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Submitted on {formatCampusDate(sub.submitted_at)}</p>
                             </div>
                           </div>
                           
@@ -2150,7 +2152,7 @@ export default function TeacherConsole({
                             </svg>
                             <div>
                               <h4 className="text-xs font-bold text-[#EDEFF5] hover:text-[#6E79F4] transition-colors">{sub.challenge_title}</h4>
-                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Submitted runtime: {sub.language} • {new Date(sub.submitted_at).toLocaleString()}</p>
+                              <p className="text-[9px] text-[#C2C6D1] mt-0.5">Submitted runtime: {sub.language} • {formatCampusDateTime(sub.submitted_at)}</p>
                             </div>
                           </div>
                           
@@ -2256,7 +2258,7 @@ export default function TeacherConsole({
                 <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Submission Date</span>
                 <span className="font-semibold text-[#EDEFF5]">
                   {selectedQuizAttempt.submitted_at 
-                    ? new Date(selectedQuizAttempt.submitted_at).toLocaleString() 
+                    ? formatCampusDateTime(selectedQuizAttempt.submitted_at)
                     : "In Progress"}
                 </span>
               </div>
@@ -2439,7 +2441,7 @@ export default function TeacherConsole({
                 <div>
                   <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Submitted At</span>
                   <span className="font-semibold text-[#EDEFF5]">
-                    {new Date(selectedProjectSub.submitted_at).toLocaleString()}
+                    {formatCampusDateTime(selectedProjectSub.submitted_at)}
                   </span>
                 </div>
               </div>
@@ -2649,7 +2651,7 @@ export default function TeacherConsole({
               <div>
                 <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block mb-1">Submitted At</span>
                 <span className="font-semibold text-[#EDEFF5]">
-                  {new Date(selectedChallengeSub.submitted_at).toLocaleString()}
+                  {formatCampusDateTime(selectedChallengeSub.submitted_at)}
                 </span>
               </div>
             </div>
@@ -2727,7 +2729,6 @@ export default function TeacherConsole({
           children: [
             { id: "quiz-auditor", label: "Quiz Auditor" },
             { id: "projects", label: "Projects Auditor" },
-            { id: "challenges", label: "Coding Auditor" },
           ]
         },
         { 
@@ -2946,7 +2947,7 @@ export default function TeacherConsole({
                             </div>
                             
                             <p className="text-[10px] text-[#C2C6D1] mt-1">
-                              Submitted by <strong className="text-[#EDEFF5]">{att.student?.full_name || att.student?.email || "Unknown Student"}</strong> • {new Date(att.submitted_at || att.started_at).toLocaleString()}
+                              Submitted by <strong className="text-[#EDEFF5]">{att.student?.full_name || att.student?.email || "Unknown Student"}</strong> • {formatCampusDateTime(att.submitted_at || att.started_at)}
                             </p>
                           </div>
 
@@ -3003,7 +3004,7 @@ export default function TeacherConsole({
                       <p className="text-[9px] font-bold text-[#C2C6D1] uppercase tracking-wider">Timeline</p>
                       <p className="text-xs font-bold text-[#EDEFF5] truncate">
                         {selectedCohort?.start_date
-                          ? `${new Date(selectedCohort.start_date).toLocaleDateString()} – ${selectedCohort.end_date ? new Date(selectedCohort.end_date).toLocaleDateString() : "Ongoing"}`
+                          ? `${formatCampusDate(selectedCohort.start_date)} – ${selectedCohort.end_date ? formatCampusDate(selectedCohort.end_date) : "Ongoing"}`
                           : "—"}
                       </p>
                     </div>
@@ -3069,7 +3070,7 @@ export default function TeacherConsole({
                         <div className="min-w-0">
                           <h4 className="text-xs font-bold text-[#EDEFF5] truncate">{sub.project_title}</h4>
                           <p className="text-[10px] text-[#C2C6D1] mt-0.5">
-                            Submitted by <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong> on {new Date(sub.submitted_at).toLocaleDateString()}
+                            Submitted by <strong className="text-[#EDEFF5]">{sub.student?.full_name || sub.student?.email}</strong> on {formatCampusDate(sub.submitted_at)}
                           </p>
                         </div>
                         <button
@@ -3170,7 +3171,7 @@ export default function TeacherConsole({
                                 {enr.status_code}
                               </span>
                             </div>
-                            <p className="text-[10px] text-[#C2C6D1]">Enrolled {new Date(enr.created_at).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-[#C2C6D1]">Enrolled {formatCampusDate(enr.created_at)}</p>
                           </div>
                         ))}
                       </div>
@@ -3221,7 +3222,7 @@ export default function TeacherConsole({
                                   </span>
                                 </td>
                                 <td className="py-3 text-[#C2C6D1]">
-                                  {new Date(enr.created_at).toLocaleDateString()}
+                                  {formatCampusDate(enr.created_at)}
                                 </td>
                               </tr>
                             ))}
@@ -3331,7 +3332,7 @@ export default function TeacherConsole({
                         <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#23252C] text-[10px] text-[#C2C6D1]">
                           <span className="flex items-center gap-1">
                             <Clock size={12} />
-                            {new Date(sub.submitted_at).toLocaleDateString()}
+                            {formatCampusDate(sub.submitted_at)}
                           </span>
                           <span className="flex items-center gap-1 font-semibold text-[#6E79F4]">
                             <ExternalLink size={12} />
@@ -3443,7 +3444,7 @@ export default function TeacherConsole({
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock size={12} />
-                            {new Date(sub.submitted_at).toLocaleString()}
+                            {formatCampusDateTime(sub.submitted_at)}
                           </span>
                         </div>
                       </div>
@@ -3495,7 +3496,6 @@ export default function TeacherConsole({
                           options={[
                             { id: "quiz", name: "Quiz Assessment" },
                             { id: "project", name: "Project Repository Upload" },
-                            { id: "programming", name: "Coding Challenge" },
                           ]}
                           value={activityType}
                           onChange={(value: string) => { if (value === "quiz" || value === "project" || value === "programming") setActivityType(value); }}
@@ -3863,11 +3863,11 @@ export default function TeacherConsole({
                           <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#6E79F4]/15">
                             <div>
                               <span className="text-[10px] font-bold text-[#6E79F4] uppercase block">Available From</span>
-                              <span className="font-semibold text-[#EDEFF5]">{availableFrom ? new Date(availableFrom).toLocaleString() : "Immediately"}</span>
+                              <span className="font-semibold text-[#EDEFF5]">{availableFrom ? formatCampusDateTime(availableFrom) : "Immediately"}</span>
                             </div>
                             <div>
                               <span className="text-[10px] font-bold text-[#6E79F4] uppercase block">Due Date</span>
-                              <span className="font-semibold text-[#EDEFF5]">{availableUntil ? new Date(availableUntil).toLocaleString() : "No due date"}</span>
+                              <span className="font-semibold text-[#EDEFF5]">{availableUntil ? formatCampusDateTime(availableUntil) : "No due date"}</span>
                             </div>
                           </div>
                         ) : (

@@ -1,4 +1,5 @@
 "use client";
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
 import { isPassedQuizAttempt } from "@/lib/quiz-result";
 import { useInputsChanged } from "@/hooks/use-inputs-changed";
 import type { QuizAttempt } from "@/types/campus";
@@ -1245,13 +1246,13 @@ export default function DeliveryManager({ institutions, initialTab, isTeacherMod
                         <span className="text-[8px] text-[#C2C6D1] block mt-2">{studentProjSubs.length} total uploads</span>
                       </div>
 
-                      <div className="bg-cyan-50 border border-cyan-100 rounded-2xl p-4 text-center">
+                      {CODING_CHALLENGES_ENABLED && <div className="bg-cyan-50 border border-cyan-100 rounded-2xl p-4 text-center">
                         <span className="text-[10px] font-bold text-[#C2C6D1] uppercase block tracking-wider">Coding Runs</span>
                         <div className="text-xl font-black text-cyan-600 mt-1">
                           {studentChalSubs.filter(c => c.submission_status_code === "accepted").length} / {challenges.length}
                         </div>
                         <span className="text-[8px] text-[#C2C6D1] block mt-2">{studentChalSubs.length} total submits</span>
-                      </div>
+                      </div>}
                     </div>
 
                     <div className="bg-[#131418] border border-[#23252C] rounded-2xl p-5 space-y-4 shadow-sm">

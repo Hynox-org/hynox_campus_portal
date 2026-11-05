@@ -120,7 +120,7 @@ export default function StudentConsole({
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab && ["overview", "academics", "quizzes", "projects", "challenges", "career", "newsletters"].includes(tab)) {
+      if (tab && ["overview", "academics", "quizzes", "projects", "career", "newsletters"].includes(tab)) {
         setActiveTab(tab as typeof activeTab);
       }
       const parent = params.get("parentTab");
@@ -1345,7 +1345,6 @@ if (!selectedChallengeActivity) return;
 
   const quizCount = programActivities.filter(a => a.activity_type_code === "quiz").length;
   const projectCount = programActivities.filter(a => a.activity_type_code === "project" || a.activity_type_code === "assignment").length;
-  const challengeCount = programActivities.filter(a => a.activity_type_code === "programming_challenge" || a.activity_type_code === "programming").length;
 
   const completedActivities = programActivities.filter(a => a.progress?.status_code === "completed" || a.progress?.status_code === "reviewed").length;
   const pendingActivities = programActivities.length - completedActivities;
@@ -1453,7 +1452,6 @@ programs.forEach(p => {
             children: [
               { id: "quizzes", label: "Quizzes", badge: quizCount },
               { id: "projects", label: "Projects", badge: projectCount },
-              { id: "challenges", label: "Code Challenges", badge: challengeCount },
             ],
           },
           { id: "newsletters", label: "Daily Field Updates", icon: Send },
@@ -1609,7 +1607,6 @@ programs.forEach(p => {
                   { label: "Syllabus", icon: BookOpen, onClick: () => { setActiveParentTab("curriculum"); setActiveTab("academics"); } },
                   { label: "Quizzes", icon: FileQuestion, onClick: () => { setActiveParentTab("assessments"); setActiveTab("quizzes"); setSelectedQuizActivity(null); } },
                   { label: "Projects", icon: Award, onClick: () => { setActiveParentTab("assessments"); setActiveTab("projects"); setSelectedProjectActivity(null); } },
-                  { label: "Code Challenges", icon: Code, onClick: () => { setActiveParentTab("assessments"); setActiveTab("challenges"); setSelectedChallengeActivity(null); } },
                 ].map((pill) => (
                   <button
                     key={pill.label}

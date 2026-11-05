@@ -9,6 +9,7 @@ import { listInstitutions, listInstitutionUsers } from "@/services/institution";
 import { requireInstitutionAccess } from "@/services/institution-access";
 import { getCurrentUser } from "@/services/auth";
 import { assignedCourseIds } from "@/services/academic-access";
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
 
 export async function getInstitutionPrefetchDataAction(institutionId: string) {
   try {
@@ -88,12 +89,15 @@ export async function getDeliveryPrefetchDataAction(institutionId: string) {
 export async function getLearningPrefetchDataAction(institutionId: string) {
   try {
     await requireInstitutionAccess(institutionId, true);
-    const [activities, projectSubmissions, challengeSubmissions, quizAttemptsRes] = await Promise.all([
+    const [allActivities, projectSubmissions, challengeSubmissions, quizAttemptsRes] = await Promise.all([
       learningService.listAllActivities(institutionId),
       learningService.listProjectSubmissions(institutionId),
-      learningService.listChallengeSubmissions(institutionId),
+      CODING_CHALLENGES_ENABLED ? learningService.listChallengeSubmissions(institutionId) : Promise.resolve([]),
       listQuizAttemptsAction(institutionId)
     ]);
+    const activities = CODING_CHALLENGES_ENABLED
+      ? allActivities
+      : allActivities.filter(activity => !["programming", "programming_challenge"].includes(activity.activity_type_code));
 
     if (quizAttemptsRes.error) throw new Error("Unable to load quiz attempts.");
     return {

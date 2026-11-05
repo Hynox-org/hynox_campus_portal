@@ -1,5 +1,7 @@
 "use server";
 
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
+
 import { readAllPages, readByIds } from "@/services/query-pages";
 import { errorMessage } from "@/lib/error-message";
 import { requireActivityEditor } from "@/services/learning-editor";
@@ -82,6 +84,7 @@ export async function submitProjectAction(
 }
 
 export async function getStudentAssignedChallengesAction(studentId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const challenges = await service.getStudentAssignedChallenges(studentId);
     return { challenges };
@@ -91,6 +94,7 @@ export async function getStudentAssignedChallengesAction(studentId: string) {
 }
 
 export async function getProgrammingChallengeDetailsAction(activityId: string, studentId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const data = await service.getProgrammingChallengeDetails(activityId, studentId);
     return data;
@@ -104,6 +108,7 @@ export async function runChallengeCodeAction(
   language: string,
   sourceCode: string
 ) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const runner = await import("@/services/runner");
     const results = await runner.executeVisibleTests(challengeId, language, sourceCode);
@@ -120,6 +125,7 @@ export async function submitChallengeCodeAction(
   language: string,
   sourceCode: string
 ) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const submission = await service.submitChallengeCode(challengeId, studentId, progressId, language, sourceCode);
     
@@ -139,6 +145,7 @@ export async function submitChallengeCodeAction(
 }
 
 export async function getChallengeSubmissionResultsAction(submissionId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const data = await service.getChallengeSubmissionResults(submissionId);
     return data;
@@ -152,6 +159,7 @@ export async function upsertChallengeStarterTemplateAction(input: {
   language: string;
   starterCode: string;
 }) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const template = await service.upsertChallengeStarterTemplate(input);
     return { template };
@@ -161,6 +169,7 @@ export async function upsertChallengeStarterTemplateAction(input: {
 }
 
 export async function updateChallengeStrictModeAction(challengeId: string, strictMode: boolean) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const challenge = await service.updateChallengeStrictMode(challengeId, strictMode);
     return { challenge };
@@ -170,6 +179,7 @@ export async function updateChallengeStrictModeAction(challengeId: string, stric
 }
 
 export async function forfeitChallengeSubmissionAction(progressId: string, studentId: string, reason: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const progress = await service.forfeitChallengeSubmission(progressId, studentId, reason);
     return { progress };
@@ -189,6 +199,7 @@ export async function listAllActivitiesAction(tenantId: string) {
 }
 
 export async function createActivityAndSubclassAction(input: Parameters<typeof service.createActivityAndSubclass>[0]) {
+  if (!CODING_CHALLENGES_ENABLED && input.activity_type_code === "programming") return { error: "Coding challenges are unavailable." };
   try {
     const activity = await service.createActivityAndSubclass(input);
     revalidatePath("/admin");
@@ -223,6 +234,7 @@ export async function createQuizQuestionAndOptionsAction(
 }
 
 export async function createChallengeExampleAction(input: Parameters<typeof service.createChallengeExample>[0]) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const example = await service.createChallengeExample(input);
     revalidatePath("/admin");
@@ -233,6 +245,7 @@ export async function createChallengeExampleAction(input: Parameters<typeof serv
 }
 
 export async function createChallengeTestCaseAction(input: Parameters<typeof service.createChallengeTestCase>[0]) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const testCase = await service.createChallengeTestCase(input);
     revalidatePath("/admin");
@@ -307,6 +320,7 @@ export async function reviewProjectSubmissionAction(input: {
 }
 
 export async function listChallengeSubmissionsAction(tenantId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { submissions: [] };
   try {
     const submissions = await service.listChallengeSubmissions(tenantId);
     return { submissions };
@@ -517,6 +531,7 @@ export async function ensureLessonProjectActivityAction(lessonId: string, studen
 }
 
 export async function deleteChallengeExampleAction(id: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const supabase = await createClient();
     const { error } = await supabase
@@ -534,6 +549,7 @@ export async function deleteChallengeExampleAction(id: string) {
 }
 
 export async function deleteChallengeTestCaseAction(id: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const supabase = await createClient();
     const { error } = await supabase
@@ -560,6 +576,7 @@ export async function listCohortProjectSubmissionsAction(cohortId: string) {
 }
 
 export async function listCohortChallengeSubmissionsAction(cohortId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { submissions: [] };
   try {
     const submissions = await service.listCohortChallengeSubmissions(cohortId);
     return { submissions };
