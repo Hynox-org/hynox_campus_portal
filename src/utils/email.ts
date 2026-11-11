@@ -193,3 +193,39 @@ export async function sendOnboardingEmail(
     headers: idempotencyKey ? { idempotencyKey } : undefined,
   });
 }
+
+export async function sendPublicPurchaseEmail(
+  toEmail: string,
+  fullName: string,
+  purchasedCourse: string,
+  courses: string[],
+  loginLink: string,
+  duplicatePurchase: boolean,
+  idempotencyKey: string
+) {
+  const courseList = courses.map(course => `<li style="margin:0 0 8px">${escapeHtml(course)}</li>`).join("");
+  const duplicateNotice = duplicatePurchase
+    ? `<div style="margin:0 0 24px;padding:16px;border:1px solid #F59E0B;border-radius:8px;background:#FFFBEB;color:#92400E">
+        <strong>Duplicate purchase detected.</strong> You already have access to ${escapeHtml(purchasedCourse)}. Our team must verify and process the duplicate-payment refund. We will confirm separately when the refund has been completed.
+      </div>`
+    : `<p style="font-size:14px;line-height:24px;color:#475569">Your purchase of <strong>${escapeHtml(purchasedCourse)}</strong> is confirmed and access has been added to your existing Hynox Campus account.</p>`;
+  const htmlContent = `<!doctype html><html><body style="margin:0;background:#F8FAFC;font-family:Inter,Arial,sans-serif;color:#0F172A">
+    <div style="max-width:600px;margin:40px auto;background:#fff;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden">
+      <div style="padding:28px 32px;background:#0F172A;color:#fff"><strong>Hynox Campus Portal</strong></div>
+      <div style="padding:32px"><p style="font-weight:600">Hello ${escapeHtml(fullName)},</p>${duplicateNotice}
+        <p style="font-size:13px;font-weight:700;color:#475569;text-transform:uppercase">Courses available in your account</p>
+        <ul style="padding-left:20px;font-size:14px;line-height:22px;color:#334155">${courseList}</ul>
+        <p style="margin-top:28px;text-align:center"><a href="${escapeHtml(loginLink)}" style="display:inline-block;padding:12px 24px;border-radius:8px;background:#2563EB;color:#fff;text-decoration:none;font-weight:600">Log in to Hynox Campus</a></p>
+      </div>
+      <div style="padding:20px 32px;background:#F8FAFC;border-top:1px solid #E2E8F0;font-size:12px;color:#64748B">If you did not make this purchase, contact Hynox support.</div>
+    </div></body></html>`;
+  return brevo.transactionalEmails.sendTransacEmail({
+    sender: { name: senderName, email: senderEmail },
+    to: [{ email: toEmail, name: fullName }],
+    subject: duplicatePurchase
+      ? `[Hynox Campus] Duplicate purchase detected: ${purchasedCourse}`
+      : `[Hynox Campus] Purchase confirmed: ${purchasedCourse}`,
+    htmlContent,
+    headers: { idempotencyKey },
+  });
+}
