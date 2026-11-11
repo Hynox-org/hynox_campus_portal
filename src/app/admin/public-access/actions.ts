@@ -13,8 +13,9 @@ const purchaseCodes = new Set([
 
 async function requireSuperAdmin() {
   const current = await getCurrentUser();
-  if (!current || current.primaryRole !== "super_admin") throw new Error("Access denied.");
-  return current;
+  const user = current?.user;
+  if (!current || !user || current.primaryRole !== "super_admin") throw new Error("Access denied.");
+  return { ...current, user };
 }
 
 export async function saveOfferingAction(formData: FormData) {
