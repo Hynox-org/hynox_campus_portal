@@ -49,7 +49,7 @@ export async function processNextPublicPurchaseMail(client: SupabaseClient) {
       job.email, job.name || "Course learner", job.purchased_course,
       Array.isArray(job.courses) ? job.courses : [],
       new URL("/login", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").toString(),
-      job.mail_kind === "duplicate_refund_review", `purchase:${job.payment_reference}`
+      job.mail_kind === "duplicate_refund_review", job.idempotency_key
     );
     messageId = response.messageId || null;
     succeeded = true;

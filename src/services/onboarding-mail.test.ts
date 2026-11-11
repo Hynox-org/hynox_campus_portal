@@ -43,15 +43,15 @@ it("fails safely on acknowledgement errors so the lease can recover",async()=>{
   await expect(processNextOnboardingMail(client)).rejects.toThrow(/lease will expire/);
 });
 it("falls through to purchase confirmations when onboarding is empty",async()=>{
-  const purchase={payment_id:7,lease:"lease",email:"buyer@example.com",name:"Buyer",purchased_course:"Product Design",courses:["Product Design","UI/UX Design"],mail_kind:"purchase_confirmation",payment_reference:"order-7"};
+  const purchase={payment_id:7,lease:"lease",email:"buyer@example.com",name:"Buyer",purchased_course:"Product Design",courses:["Product Design","UI/UX Design"],mail_kind:"purchase_confirmation",idempotency_key:"00000000-0000-4000-8000-000000000007"};
   rpc.mockReset().mockResolvedValueOnce({data:null,error:null}).mockResolvedValueOnce({data:purchase,error:null}).mockResolvedValue({data:true,error:null});
   expect(await processNextOnboardingMail(client)).toBe(true);
-  expect(sendPublicPurchaseEmail).toHaveBeenCalledWith(purchase.email,purchase.name,purchase.purchased_course,purchase.courses,expect.stringContaining("/login"),false,"purchase:order-7");
+  expect(sendPublicPurchaseEmail).toHaveBeenCalledWith(purchase.email,purchase.name,purchase.purchased_course,purchase.courses,expect.stringContaining("/login"),false,purchase.idempotency_key);
   expect(rpc).toHaveBeenLastCalledWith("finish_public_purchase_mail",{payment_id:7,lease_value:"lease",succeeded:true,message_id:"purchase-message"});
 });
 it("sends duplicate-purchase notices through the purchase queue",async()=>{
-  const purchase={payment_id:8,lease:"lease",email:"buyer@example.com",name:"Buyer",purchased_course:"UI/UX Design",courses:["UI/UX Design"],mail_kind:"duplicate_refund_review",payment_reference:"order-8"};
+  const purchase={payment_id:8,lease:"lease",email:"buyer@example.com",name:"Buyer",purchased_course:"UI/UX Design",courses:["UI/UX Design"],mail_kind:"duplicate_refund_review",idempotency_key:"00000000-0000-4000-8000-000000000008"};
   rpc.mockReset().mockResolvedValueOnce({data:purchase,error:null}).mockResolvedValue({data:true,error:null});
   await processNextPublicPurchaseMail(client);
-  expect(sendPublicPurchaseEmail).toHaveBeenCalledWith(purchase.email,purchase.name,purchase.purchased_course,purchase.courses,expect.any(String),true,"purchase:order-8");
+  expect(sendPublicPurchaseEmail).toHaveBeenCalledWith(purchase.email,purchase.name,purchase.purchased_course,purchase.courses,expect.any(String),true,purchase.idempotency_key);
 });
