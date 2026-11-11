@@ -62,6 +62,12 @@ describe("shared dashboard route protection", () => {
     user = { id: "auth-1", app_metadata: {} };
     expect((await proxy(request("/teacher"))).headers.get("location")).toBeNull();
   });
+  it("lets an existing institutional user open separately purchased public courses", async () => {
+    user = { id: "auth-1", app_metadata: {} };
+    assignedRoles = ["student", "public"];
+    expect((await proxy(request("/public"))).headers.get("location")).toBeNull();
+    expect((await proxy(request("/admin"))).headers.get("location")).toBe("http://localhost:3000/student");
+  });
 
   it.each([["super_admin", "/admin"], ["institution_admin", "/institution"], ["teacher", "/teacher"], ["trainer", "/teacher"], ["student", "/student"], ["public", "/public"], ["mentor", "/public"]])("enforces the %s dashboard boundary", async (name, dashboard) => {
     user = { id: "auth-1", app_metadata: {} }; assignedRoles = [name];

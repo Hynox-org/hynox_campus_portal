@@ -130,7 +130,7 @@ export async function proxy(request: NextRequest) {
     return redirectTo(myDashboard);
   }
 
-  if (pathname.startsWith("/public") && role !== "public" && role !== "mentor") {
+  if (pathname.startsWith("/public") && role !== "mentor" && !assignedRoles.includes("public")) {
     return redirectTo(myDashboard);
   }
 

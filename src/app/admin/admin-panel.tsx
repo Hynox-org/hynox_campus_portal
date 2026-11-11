@@ -116,6 +116,7 @@ import AttendanceModule from "@/components/attendance-register/attendance-module
 
 import { useAdminData } from "@/hooks/use-admin";
 import { DashboardLoader } from "@/components/dashboard-loader";
+import Link from "next/link";
 import { SecondaryLoader } from "@/components/secondary-loader";
 import { CustomSelect } from "@/components/custom-select";
 import AppShell, { ShellNavItem } from "@/components/app-shell";
@@ -1601,6 +1602,7 @@ export default function AdminPanel({ adminEmail }: AdminPanelProps) {
         }}
         userName={adminEmail}
         userMeta="Super Admin"
+        headerActions={<Link href="/admin/public-access" className="rounded-lg border border-[#343846] px-3 py-2 text-xs font-semibold text-[#C2C6D1] hover:text-white">Public access</Link>}
       >
 
       {/* Conditionally render the Dashboard Loader for verification in Admin Panel */}

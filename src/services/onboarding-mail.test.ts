@@ -12,6 +12,11 @@ it("uses a stable idempotency key and acknowledges provider acceptance",async()=
   expect(sendOnboardingEmail).toHaveBeenCalledWith(job.email,expect.stringContaining("token=token"),job.name,"Student",job.institution_name,job.token);
   expect(rpc).toHaveBeenLastCalledWith("finish_onboarding_mail",{invitation_id:job.id,token_value:job.token,lease_value:job.lease,succeeded:true,message_id:"message"});
 });
+it("labels purchase onboarding as public course access",async()=>{
+  rpc.mockReset().mockResolvedValueOnce({data:{...job,invitation_type:"public_course_purchase"},error:null}).mockResolvedValue({data:true,error:null});
+  await processNextOnboardingMail(client);
+  expect(sendOnboardingEmail).toHaveBeenCalledWith(job.email,expect.any(String),job.name,"Public Course Learner",job.institution_name,job.token);
+});
 it("records a failed attempt without exposing provider errors",async()=>{
   const warning=vi.spyOn(console,"warn").mockImplementation(()=>{});
   vi.mocked(sendOnboardingEmail).mockRejectedValue(new Error("private provider details"));

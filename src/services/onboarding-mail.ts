@@ -6,6 +6,7 @@ const labels: Record<string, string> = {
   student_onboarding: "Student", trainer_onboarding: "Teacher / Trainer",
   institution_admin_invite: "Institution Administrator", mentor_invite: "Mentor",
   super_admin_invite: "Super Administrator",
+  public_course_purchase: "Public Course Learner",
 };
 
 export async function processNextOnboardingMail(client: SupabaseClient) {
