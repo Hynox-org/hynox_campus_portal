@@ -1,3 +1,4 @@
+import type { Module, Lesson } from "@/types/campus";
 import { useQuery, type QueryClient } from "@tanstack/react-query";
 import { 
   listProgramsAction,
@@ -12,21 +13,9 @@ import {
 import { getInstitutionPrefetchDataAction } from "@/app/actions/prefetch-actions";
 import { DASHBOARD_GC_TIME, DASHBOARD_REFETCH_INTERVAL, DASHBOARD_STALE_TIME, unwrapActionResult } from "@/lib/dashboard-query";
 
-type CourseLesson = {
-  id: string;
-  resources?: unknown[];
-  [key: string]: unknown;
-};
+type CourseLesson = Lesson;
 
-type CourseModule = {
-  id: string;
-  title: string;
-  description: string | null;
-  position: number;
-  status_id: string;
-  lessons?: CourseLesson[];
-  [key: string]: unknown;
-};
+type CourseModule = Module;
 
 export function useAcademicLookups() {
   return useQuery({

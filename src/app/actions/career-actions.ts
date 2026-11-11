@@ -7,7 +7,7 @@ import { requireUuid, validateResume, resumeText, type SavedResume, type Learnin
 import { analyzeResume, type ScanRecord, type ScanReport } from "@/lib/resume-scanner";
 
 async function studentContext() {
-  const session = await getCurrentUser();
+  const session = await getCurrentUser(true);
   if (!session?.user || session.primaryRole !== "student" || session.user.status !== "active") throw new Error("Sign in with an active student account to use Career Tools.");
   return { session, db: (await createClient()).schema("learning") };
 }

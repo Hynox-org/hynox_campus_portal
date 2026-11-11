@@ -14,7 +14,7 @@ export default async function AdminPage() {
 
   return (
     <AdminPanel 
-      adminEmail={userDetails.authUser.email} 
+      adminEmail={(userDetails.authUser.email ?? "")}
     />
   );
 }

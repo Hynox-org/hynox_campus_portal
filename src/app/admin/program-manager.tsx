@@ -1,12 +1,14 @@
 "use client";
+import type { Institution, Program, Module, Lesson, Resource, Lookup, Course } from "@/types/campus";
+import { errorMessage } from "@/lib/error-message";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCurriculumCacheSync } from "@/hooks/use-curriculum-cache-sync";
 import {
   createProgramAction,
   deleteProgramAction,
   listCoursesAction,
-  listProgramsAction,
   createModuleAction,
   updateModuleAction,
   deleteModuleAction,
@@ -24,11 +26,9 @@ import {
 import { instantiateCourseTemplateAction } from "@/app/actions/library-actions";
 import { useCourseTemplates } from "@/hooks/use-library";
 import { usePrograms, useCourses, liveCurriculumKeys, fetchModules, fetchLessons, fetchResources } from "@/hooks/use-academics";
-import { DASHBOARD_STALE_TIME } from "@/lib/dashboard-query";
 import { 
-  Folder, Plus, Trash2, X, ChevronRight, ChevronDown, 
-  BookOpen, PlusCircle,
-  FileText, Calendar, Clock, Sparkles, Edit, Play, Video, ExternalLink
+  Folder, Plus, Trash2, X, ChevronRight, ChevronDown,
+  FileText, Calendar, Sparkles, Edit, Video, ExternalLink
 } from "lucide-react";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SecondaryLoader } from "@/components/secondary-loader";
@@ -36,12 +36,12 @@ import { CustomSelect } from "@/components/custom-select";
 import { useToast } from "@/components/toast";
 
 interface ProgramManagerProps {
-  institutions: any[];
+  institutions: Institution[];
   mode?: "explorer" | "examine";
   selectedInstId: string;
   setSelectedInstId: (id: string) => void;
-  selectedProgram: any | null;
-  setSelectedProgram: (prog: any | null) => void;
+  selectedProgram: Program | null;
+  setSelectedProgram: (prog: Program | null) => void;
 }
 
 export default function ProgramManager({ 
@@ -53,23 +53,25 @@ export default function ProgramManager({
   setSelectedProgram
 }: ProgramManagerProps) {
   const queryClient = useQueryClient();
-  const { data: programs = [], isLoading: loadingPrograms } = usePrograms(selectedInstId);
+  const { data: programs = [], isLoading: loadingPrograms, error: programError, refetch: retryPrograms } = usePrograms(selectedInstId);
   const { data: blueprints = [] } = useCourseTemplates();
-  const { data: courses = [], isLoading: loadingCourses } = useCourses(selectedProgram?.id || "");
+  const { data: courses = [], isLoading: loadingCourses, error: courseError, refetch: retryCourses } = useCourses(selectedProgram?.id || "");
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
   const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
   const [selectedBlueprintId, setSelectedBlueprintId] = useState("");
 
   // Cached data map to prevent refetches
-  const [modulesCache, setModulesCache] = useState<Record<string, any[]>>({});
-  const [lessonsCache, setLessonsCache] = useState<Record<string, any[]>>({});
-  const [resourcesCache, setResourcesCache] = useState<Record<string, any[]>>({});
+  const [modulesCache, setModulesCache] = useState<Record<string, Module[]>>({});
+  const [lessonsCache, setLessonsCache] = useState<Record<string, Lesson[]>>({});
+  const [resourcesCache, setResourcesCache] = useState<Record<string, Resource[]>>({});
+  useCurriculumCacheSync("academic-modules", setModulesCache);
+  useCurriculumCacheSync("academic-lessons", setLessonsCache);
+  useCurriculumCacheSync("academic-resources", setResourcesCache);
 
   // Loading states
   const [saving, setSaving] = useState(false);
-  const [preloadingAll, setPreloadingAll] = useState(false);
-  const loading = loadingPrograms || loadingCourses || saving || preloadingAll;
+  const loading = loadingPrograms || loadingCourses || saving;
   const [modulesLoading, setModulesLoading] = useState<Record<string, boolean>>({});
   const [lessonsLoading, setLessonsLoading] = useState<Record<string, boolean>>({});
   const { showSuccess, showError } = useToast();
@@ -79,25 +81,26 @@ export default function ProgramManager({
   const [programForm, setProgramForm] = useState({ title: "", slug: "", description: "" });
 
   // Lookups data for editing lessons
-  const [lessonTypes, setLessonTypes] = useState<any[]>([]);
+  const [lessonTypes, setLessonTypes] = useState<Lookup[]>([]);
   const [defaultStatusId, setDefaultStatusId] = useState("");
   const [defaultLessonTypeId, setDefaultLessonTypeId] = useState("");
-  const [statuses, setStatuses] = useState<any[]>([]);
+  const [statuses, setStatuses] = useState<Lookup[]>([]);
+  const [visibilityTypes, setVisibilityTypes] = useState<Array<{ id: string; code: string }>>([]);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // Modals / forms for Course Editing
-  const [editingCourse, setEditingCourse] = useState<any | null>(null);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [courseModalOpen, setCourseModalOpen] = useState(false);
-  const [courseForm, setCourseForm] = useState({ title: "", slug: "", duration_minutes: 60 });
+  const [courseForm, setCourseForm] = useState({ title: "", slug: "", duration_minutes: 60, status_id: "", visibility_type_id: "" });
 
   // Modals / forms for Modules
   const [moduleModalOpen, setModuleModalOpen] = useState(false);
-  const [editingModule, setEditingModule] = useState<any | null>(null);
+  const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [moduleForm, setModuleForm] = useState({ title: "", position: 1 });
 
   // Modals / forms for Lessons
   const [lessonModalOpen, setLessonModalOpen] = useState(false);
-  const [editingLesson, setEditingLesson] = useState<any | null>(null);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [targetModuleId, setTargetModuleId] = useState<string | null>(null);
   const [lessonForm, setLessonForm] = useState({
     title: "",
@@ -125,85 +128,23 @@ export default function ProgramManager({
       if (lRes.success && lRes.lookups) {
         setLessonTypes(lRes.lookups.lessonTypes);
         setStatuses(lRes.lookups.statuses);
-        const textType = lRes.lookups.lessonTypes.find((t: any) => t.code === "text") || lRes.lookups.lessonTypes[0];
+        setVisibilityTypes(lRes.lookups.visibilityTypes);
+        const textType = lRes.lookups.lessonTypes.find((t) => t.code === "text") || lRes.lookups.lessonTypes[0];
         if (textType) setDefaultLessonTypeId(textType.id);
-        const activeStatus = lRes.lookups.statuses.find((s: any) => s.code === "active") || lRes.lookups.statuses[0];
+        const activeStatus = lRes.lookups.statuses.find((s) => s.code === "active") || lRes.lookups.statuses[0];
         if (activeStatus) setDefaultStatusId(activeStatus.id);
       }
     }
     loadLookups();
   }, []);
 
-  // Reset selection and pre-load all programs, courses, modules, lessons, and resources for the selected institution
-  useEffect(() => {
+  // Descendants load only for the selected course; avoid a campus-wide request fan-out.
+  const handleCampusChange = (campusId: string) => {
     setSelectedProgram(null);
-    if (!selectedInstId) {
-      return;
-    }
-
-    const preloadAllData = async () => {
-      // Already warm within this session (query cache survives remounts, unlike this component's local state)
-      // — skip the full-screen loader and let the nested fetchQuery calls below resolve straight from cache.
-      const alreadyWarm = !!queryClient.getQueryData(["programs", selectedInstId]);
-      if (!alreadyWarm) setPreloadingAll(true);
-      try {
-        // 1. Fetch programs list (served from cache instantly if still fresh)
-        const progsList = await queryClient.fetchQuery({
-          queryKey: ["programs", selectedInstId],
-          queryFn: async () => {
-            const res = await listProgramsAction(selectedInstId);
-            if (res.error) throw new Error(res.error);
-            return res.programs || [];
-          },
-          staleTime: DASHBOARD_STALE_TIME,
-        });
-
-        // 2. Fetch courses per program (served from cache instantly if still fresh)
-        await Promise.all(
-          progsList.map(async (prog: any) => {
-            const coursesList = await queryClient.fetchQuery({
-              queryKey: ["courses", prog.id],
-              queryFn: async () => {
-                const res = await listCoursesAction(prog.id);
-                if (res.error) throw new Error(res.error);
-                return res.courses || [];
-              },
-              staleTime: DASHBOARD_STALE_TIME,
-            });
-
-            // 3. Fetch modules, lessons, and resources recursively per course
-            await Promise.all(
-              coursesList.map(async (course: any) => {
-                const modules = await fetchModules(queryClient, course.id);
-                setModulesCache(prev => ({ ...prev, [course.id]: modules }));
-
-                await Promise.all(
-                  modules.map(async (mod: any) => {
-                    const lessons = await fetchLessons(queryClient, mod.id);
-                    setLessonsCache(prev => ({ ...prev, [mod.id]: lessons }));
-
-                    await Promise.all(
-                      lessons.map(async (les: any) => {
-                        const resources = await fetchResources(queryClient, les.id);
-                        setResourcesCache(prev => ({ ...prev, [les.id]: resources }));
-                      })
-                    );
-                  })
-                );
-              })
-            );
-          })
-        );
-      } catch (err: any) {
-        console.error("Error preloading institution data:", err);
-        showError(err.message || "Failed to preload institution details.");
-      } finally {
-        setPreloadingAll(false);
-      }
-    };
-
-    preloadAllData();
-  }, [selectedInstId, queryClient]);
+    setSelectedCourseId(null);
+    setModulesCache({}); setLessonsCache({}); setResourcesCache({});
+    setSelectedInstId(campusId);
+  };
 
   // Scroll lock when any sidebar drawer is open to prevent background viewport scrolling
   useEffect(() => {
@@ -218,120 +159,82 @@ export default function ProgramManager({
     };
   }, [programModalOpen, courseModalOpen, moduleModalOpen, lessonModalOpen, resourceModalOpen]);
 
+  // Fetch one opened branch at a time; a failed branch stays retryable.
+  const handleSelectCourse = useCallback(async (courseId: string) => {
+    setSelectedCourseId(courseId);
+    if (modulesCache[courseId] || modulesLoading[courseId]) return;
+    setModulesLoading(previous => ({ ...previous, [courseId]: true }));
+    try {
+      const modules = await fetchModules(queryClient, courseId);
+      setModulesCache(previous => ({ ...previous, [courseId]: modules }));
+    } catch (error) { showError(error instanceof Error ? errorMessage(error) : "Unable to load modules."); }
+    finally { setModulesLoading(previous => ({ ...previous, [courseId]: false })); }
+  }, [modulesCache, modulesLoading, queryClient, showError]);
+
   // Auto-select the first course when the selected program's courses load (Examine mode); useCourses handles the fetch/cache.
   useEffect(() => {
+    async function selectInitialCourse() {
     if (!selectedProgram) {
       setSelectedCourseId(null);
       return;
     }
     if (courses.length > 0) {
-      handleSelectCourse(courses[0].id);
+      if (!courses.some(course => course.id === selectedCourseId)) await handleSelectCourse(courses[0].id);
     } else {
       setSelectedCourseId(null);
     }
-  }, [selectedProgram, courses]);
-
-  // Lazy load modules for a specific course, backed by the React Query cache
-  const handleSelectCourse = async (courseId: string) => {
-    setSelectedCourseId(courseId);
-    
-    if (modulesCache[courseId]) {
-      // If already cached, just auto-expand them in UI
-      const modules = modulesCache[courseId];
-      const newExpandedModules: Record<string, boolean> = {};
-      const newExpandedLessons: Record<string, boolean> = {};
-      modules.forEach((mod: any) => {
-        newExpandedModules[mod.id] = true;
-        const lessons = lessonsCache[mod.id] || [];
-        lessons.forEach((les: any) => {
-          newExpandedLessons[les.id] = true;
-        });
-      });
-      setExpandedModules(prev => ({ ...prev, ...newExpandedModules }));
-      setExpandedLessons(prev => ({ ...prev, ...newExpandedLessons }));
-      return;
     }
-
-    setModulesLoading(prev => ({ ...prev, [courseId]: true }));
-    const modules = await fetchModules(queryClient, courseId);
-    setModulesCache(prev => ({ ...prev, [courseId]: modules }));
-    
-    // Pre-expand modules and fetch lessons
-    const newExpandedModules: Record<string, boolean> = {};
-    const newExpandedLessons: Record<string, boolean> = {};
-    
-    await Promise.all(
-      modules.map(async (mod: any) => {
-        newExpandedModules[mod.id] = true; // Auto expand module
-        
-        // Fetch lessons for this module
-        setLessonsLoading(prev => ({ ...prev, [mod.id]: true }));
-        const lessons = await fetchLessons(queryClient, mod.id);
-        setLessonsCache(prev => ({ ...prev, [mod.id]: lessons }));
-        setLessonsLoading(prev => ({ ...prev, [mod.id]: false }));
-        
-        // Pre-expand lessons and fetch resources
-        await Promise.all(
-          lessons.map(async (les: any) => {
-            newExpandedLessons[les.id] = true; // Auto expand lesson
-            
-            // Fetch resources
-            const resources = await fetchResources(queryClient, les.id);
-            setResourcesCache(prev => ({ ...prev, [les.id]: resources }));
-          })
-        );
-      })
-    );
-    
-    setExpandedModules(prev => ({ ...prev, ...newExpandedModules }));
-    setExpandedLessons(prev => ({ ...prev, ...newExpandedLessons }));
-    setModulesLoading(prev => ({ ...prev, [courseId]: false }));
-  };
+    void selectInitialCourse();
+  }, [selectedProgram, courses, selectedCourseId, handleSelectCourse]);
 
   const refreshModules = async (courseId: string) => {
-    setModulesLoading(prev => ({ ...prev, [courseId]: true }));
-    await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.modules(courseId) });
-    const modules = await fetchModules(queryClient, courseId);
-    setModulesCache(prev => ({ ...prev, [courseId]: modules }));
-    setModulesLoading(prev => ({ ...prev, [courseId]: false }));
+    setModulesLoading(previous => ({ ...previous, [courseId]: true }));
+    try {
+      await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.modules(courseId) });
+      const modules = await fetchModules(queryClient, courseId);
+      setModulesCache(previous => ({ ...previous, [courseId]: modules }));
+    } catch (error) { showError(error instanceof Error ? errorMessage(error) : "Unable to refresh modules."); }
+    finally { setModulesLoading(previous => ({ ...previous, [courseId]: false })); }
   };
 
-  // Lazy load lessons for a module
   const toggleModuleExpand = async (moduleId: string) => {
-    const isExpanded = !!expandedModules[moduleId];
-    setExpandedModules(prev => ({ ...prev, [moduleId]: !isExpanded }));
-
-    if (isExpanded || lessonsCache[moduleId]) return; // already loaded or collapsing
-
-    setLessonsLoading(prev => ({ ...prev, [moduleId]: true }));
-    const lessons = await fetchLessons(queryClient, moduleId);
-    setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
-    setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
+    const closing = !!expandedModules[moduleId];
+    setExpandedModules(previous => ({ ...previous, [moduleId]: !closing }));
+    if (closing || lessonsCache[moduleId] || lessonsLoading[moduleId]) return;
+    setLessonsLoading(previous => ({ ...previous, [moduleId]: true }));
+    try {
+      const lessons = await fetchLessons(queryClient, moduleId);
+      setLessonsCache(previous => ({ ...previous, [moduleId]: lessons }));
+    } catch (error) { showError(error instanceof Error ? errorMessage(error) : "Unable to load lessons."); }
+    finally { setLessonsLoading(previous => ({ ...previous, [moduleId]: false })); }
   };
 
   const refreshLessons = async (moduleId: string) => {
-    setLessonsLoading(prev => ({ ...prev, [moduleId]: true }));
-    await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.lessons(moduleId) });
-    const lessons = await fetchLessons(queryClient, moduleId);
-    setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
-    setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
+    setLessonsLoading(previous => ({ ...previous, [moduleId]: true }));
+    try {
+      await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.lessons(moduleId) });
+      const lessons = await fetchLessons(queryClient, moduleId);
+      setLessonsCache(previous => ({ ...previous, [moduleId]: lessons }));
+    } catch (error) { showError(error instanceof Error ? errorMessage(error) : "Unable to refresh lessons."); }
+    finally { setLessonsLoading(previous => ({ ...previous, [moduleId]: false })); }
   };
 
-  // Lazy load resources for a lesson
   const toggleLessonExpand = async (lessonId: string) => {
-    const isExpanded = !!expandedLessons[lessonId];
-    setExpandedLessons(prev => ({ ...prev, [lessonId]: !isExpanded }));
-
-    if (isExpanded || resourcesCache[lessonId]) return;
-
-    const resources = await fetchResources(queryClient, lessonId);
-    setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
+    const closing = !!expandedLessons[lessonId];
+    setExpandedLessons(previous => ({ ...previous, [lessonId]: !closing }));
+    if (closing || resourcesCache[lessonId]) return;
+    try {
+      const resources = await fetchResources(queryClient, lessonId);
+      setResourcesCache(previous => ({ ...previous, [lessonId]: resources }));
+    } catch (error) { showError(error instanceof Error ? errorMessage(error) : "Unable to load resources."); }
   };
 
   const refreshResources = async (lessonId: string) => {
-    await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.resources(lessonId) });
-    const resources = await fetchResources(queryClient, lessonId);
-    setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
+    try {
+      await queryClient.invalidateQueries({ queryKey: liveCurriculumKeys.resources(lessonId) });
+      const resources = await fetchResources(queryClient, lessonId);
+      setResourcesCache(previous => ({ ...previous, [lessonId]: resources }));
+    } catch (error) { showError(error instanceof Error ? errorMessage(error) : "Unable to refresh resources."); }
   };
 
   const handleProgramSubmit = async (e: React.FormEvent) => {
@@ -393,7 +296,9 @@ export default function ProgramManager({
       const res = await updateCourseAction(editingCourse.id, {
         title: courseForm.title,
         slug: courseForm.slug,
-        duration_minutes: Number(courseForm.duration_minutes)
+        duration_minutes: Number(courseForm.duration_minutes),
+        status_id: courseForm.status_id || undefined,
+        visibility_type_id: courseForm.visibility_type_id || undefined
       });
       if (res.error) {
         showError(res.error);
@@ -409,7 +314,9 @@ export default function ProgramManager({
         program_id: selectedProgram.id,
         title: courseForm.title,
         slug: courseForm.slug,
-        duration_minutes: Number(courseForm.duration_minutes)
+        duration_minutes: Number(courseForm.duration_minutes),
+        status_id: courseForm.status_id || undefined,
+        visibility_type_id: courseForm.visibility_type_id || undefined
       });
       if (res.error) {
         showError(res.error);
@@ -577,21 +484,21 @@ export default function ProgramManager({
                             <button
                               onClick={() => setOpenDropdownId(openDropdownId === prog.id ? null : prog.id)}
                               className={`px-3 py-1.5 rounded-full text-[10px] font-bold border flex items-center gap-1.5 cursor-pointer shadow-xs transition-all ${
-                                statuses.find((s: any) => s.id === prog.status_id)?.code === "active"
+                                statuses.find((s) => s.id === prog.status_id)?.code === "active"
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/80"
-                                  : statuses.find((s: any) => s.id === prog.status_id)?.code === "draft"
+                                  : statuses.find((s) => s.id === prog.status_id)?.code === "draft"
                                   ? "bg-[#1A1C22] text-[#E2E4EB] border-[#23252C] hover:bg-[#23252C]/80"
                                   : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
                               }`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${
-                                statuses.find((s: any) => s.id === prog.status_id)?.code === "active"
+                                statuses.find((s) => s.id === prog.status_id)?.code === "active"
                                   ? "bg-emerald-500"
-                                  : statuses.find((s: any) => s.id === prog.status_id)?.code === "draft"
+                                  : statuses.find((s) => s.id === prog.status_id)?.code === "draft"
                                   ? "bg-[#3A3F4B]"
                                   : "bg-red-500"
                               }`}></span>
-                              {statuses.find((s: any) => s.id === prog.status_id)?.code.toUpperCase() || "DRAFT"}
+                              {statuses.find((s) => s.id === prog.status_id)?.code.toUpperCase() || "DRAFT"}
                               <ChevronDown size={11} className="opacity-70" />
                             </button>
 
@@ -600,8 +507,8 @@ export default function ProgramManager({
                                 <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)}></div>
                                 <div className="absolute left-0 mt-1.5 w-32 bg-[#131418] border border-[#23252C] rounded-xl shadow-lg z-20 py-1 font-semibold text-[10px] overflow-hidden text-[#E2E4EB]">
                                   {statuses
-                                    .filter((s: any) => ["active", "draft", "disabled"].includes(s.code))
-                                    .map((s: any) => (
+                                    .filter((s) => ["active", "draft", "disabled"].includes(s.code))
+                                    .map((s) => (
                                       <button
                                         key={s.id}
                                         type="button"
@@ -679,7 +586,7 @@ export default function ProgramManager({
             {programs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {programs.map((prog) => {
-                  const programStatus = statuses.find((s: any) => s.id === prog.status_id)?.code || "draft";
+                  const programStatus = statuses.find((s) => s.id === prog.status_id)?.code || "draft";
                   return (
                     <div 
                       key={prog.id} 
@@ -770,7 +677,7 @@ export default function ProgramManager({
               <p className="text-xs text-[#EDEFF5] leading-relaxed font-medium">{selectedProgram.description || "No pathway description provided."}</p>
               <div className="pt-2 flex items-center justify-between text-[10px] text-[#C2C6D1]">
                 <span>Status:</span>
-                <span className="capitalize font-bold">{statuses.find((s: any) => s.id === selectedProgram.status_id)?.code || "Draft"}</span>
+                <span className="capitalize font-bold">{statuses.find((s) => s.id === selectedProgram.status_id)?.code || "Draft"}</span>
               </div>
             </div>
 
@@ -780,22 +687,22 @@ export default function ProgramManager({
               <button
                 onClick={() => setOpenDropdownId(openDropdownId === `examine-${selectedProgram.id}` ? null : `examine-${selectedProgram.id}`)}
                 className={`w-full px-3 py-2 rounded-lg text-xs font-bold border flex items-center justify-between cursor-pointer shadow-xs transition-all ${
-                  statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "active"
+                  statuses.find((s) => s.id === selectedProgram.status_id)?.code === "active"
                     ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100/80"
-                    : statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "draft"
+                    : statuses.find((s) => s.id === selectedProgram.status_id)?.code === "draft"
                     ? "bg-[#1A1C22] text-[#E2E4EB] border-[#23252C] hover:bg-[#23252C]/80"
                     : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100/80"
                 }`}
               >
                 <span className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${
-                    statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "active"
+                    statuses.find((s) => s.id === selectedProgram.status_id)?.code === "active"
                       ? "bg-emerald-500"
-                      : statuses.find((s: any) => s.id === selectedProgram.status_id)?.code === "draft"
+                      : statuses.find((s) => s.id === selectedProgram.status_id)?.code === "draft"
                       ? "bg-[#3A3F4B]"
                       : "bg-red-500"
                   }`}></span>
-                  {statuses.find((s: any) => s.id === selectedProgram.status_id)?.code.toUpperCase() || "DRAFT"}
+                  {statuses.find((s) => s.id === selectedProgram.status_id)?.code.toUpperCase() || "DRAFT"}
                 </span>
                 <ChevronDown size={14} className="opacity-70" />
               </button>
@@ -805,8 +712,8 @@ export default function ProgramManager({
                   <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)}></div>
                   <div className="absolute left-0 right-0 mt-1.5 bg-[#131418] border border-[#23252C] rounded-xl shadow-lg z-20 py-1 font-semibold text-xs overflow-hidden text-[#E2E4EB] animate-fadeIn">
                     {statuses
-                      .filter((s: any) => ["active", "draft", "disabled"].includes(s.code))
-                      .map((s: any) => (
+                      .filter((s) => ["active", "draft", "disabled"].includes(s.code))
+                      .map((s) => (
                         <button
                           key={s.id}
                           type="button"
@@ -824,8 +731,8 @@ export default function ProgramManager({
                             } else {
                               showSuccess("Program status updated successfully!");
                               await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
-                              const refreshedPrograms = queryClient.getQueryData<any[]>(["programs", selectedInstId]) || [];
-                              const updatedProg = refreshedPrograms.find((p: any) => p.id === selectedProgram.id);
+                              const refreshedPrograms = queryClient.getQueryData<Program[]>(["programs", selectedInstId]) || [];
+                              const updatedProg = refreshedPrograms.find((p) => p.id === selectedProgram.id);
                               if (updatedProg) setSelectedProgram(updatedProg);
                             }
                           }}
@@ -840,6 +747,28 @@ export default function ProgramManager({
                   </div>
                 </>
               )}
+            </div>
+
+            <div className="border-t border-[#23252C] pt-4 space-y-3">
+              <label htmlFor="program-visibility" className="block text-[10px] font-bold uppercase text-[#C2C6D1]">Program visibility</label>
+              <select id="program-visibility" value={selectedProgram.visibility_type_id || ""} disabled={saving}
+                className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs text-[#EDEFF5]"
+                onChange={async event => {
+                  const visibility_type_id = event.target.value;
+                  setSaving(true);
+                  try {
+                    const result = await updateProgramAction(selectedProgram.id, { visibility_type_id });
+                    if (result.error) showError(result.error);
+                    else {
+                      setSelectedProgram({ ...selectedProgram, visibility_type_id });
+                      await queryClient.invalidateQueries({ queryKey: ["programs", selectedInstId] });
+                      showSuccess("Program visibility updated.");
+                    }
+                  } finally { setSaving(false); }
+                }}>
+                <option value="" disabled>Select visibility</option>
+                {visibilityTypes.map(type => <option key={type.id} value={type.id}>{type.code}</option>)}
+              </select>
             </div>
 
             <div className="border-t border-[#23252C] pt-4 space-y-3">
@@ -860,7 +789,7 @@ export default function ProgramManager({
                 disabled={loading || !selectedBlueprintId}
                 className="w-full bg-[#6E79F4] text-white py-2 rounded-lg text-xs font-bold hover:bg-[#6E79F4]/95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
               >
-                {loading ? "Cloning..." : "Instantiate to Program"}
+                {saving ? "Cloning..." : "Instantiate to Program"}
               </button>
             </div>
           </div>
@@ -873,7 +802,7 @@ export default function ProgramManager({
                 <button
                   onClick={() => {
                     setEditingCourse(null);
-                    setCourseForm({ title: "", slug: "", duration_minutes: 60 });
+                    setCourseForm({ title: "", slug: "", duration_minutes: 60, status_id: statuses.find(status => status.code === "draft")?.id || "", visibility_type_id: visibilityTypes.find(type => type.code === "tenant_only")?.id || "" });
                     setCourseModalOpen(true);
                   }}
                   className="flex items-center gap-1 text-[#6E79F4] hover:underline text-[11px] font-bold cursor-pointer"
@@ -905,7 +834,7 @@ export default function ProgramManager({
                             <button
                               onClick={() => {
                                 setEditingCourse(course);
-                                setCourseForm({ title: course.title, slug: course.slug, duration_minutes: course.duration_minutes || 60 });
+                                setCourseForm({ title: course.title, slug: course.slug, duration_minutes: course.duration_minutes ?? 60, status_id: course.status_id || "", visibility_type_id: course.visibility_type_id || "" });
                                 setCourseModalOpen(true);
                               }}
                               className="p-0.5 hover:bg-[#1A1C22] rounded text-[#C2C6D1] hover:text-[#6E79F4]"
@@ -1146,14 +1075,14 @@ export default function ProgramManager({
                                                   {resourcesCache[les.id] ? (
                                                     lessonResources.length > 0 ? (
                                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {lessonResources.map((res: any) => (
+                                                        {lessonResources.map((res) => (
                                                           <div key={res.id} className="bg-[#131418] border border-[#23252C]/60 rounded p-2 flex items-center justify-between text-[11px]">
                                                             <span className="font-medium text-[#EDEFF5] truncate max-w-[80%] flex items-center gap-1">
                                                               <FileText size={10} className="text-[#C2C6D1]" />
                                                               {res.title}
                                                             </span>
                                                             <div className="flex items-center gap-1">
-                                                              <a href={res.external_url || res.file_url} target="_blank" rel="noopener noreferrer" className="p-0.5 hover:bg-[#1A1C22] rounded text-[#6E79F4]">
+                                                              <a href={res.external_url || res.file_url || undefined} target="_blank" rel="noopener noreferrer" className="p-0.5 hover:bg-[#1A1C22] rounded text-[#6E79F4]">
                                                                 <ExternalLink size={10} />
                                                               </a>
                                                               <button
@@ -1224,16 +1153,21 @@ export default function ProgramManager({
         <CustomSelect
           options={institutions.map((inst) => ({ id: inst.id, name: inst.name, code: inst.institution_code }))}
           value={selectedInstId}
-          onChange={setSelectedInstId}
+          onChange={handleCampusChange}
           placeholder="-- Select Institution Campus --"
           className="max-w-md"
         />
       </div>
 
       {selectedInstId && (
-        preloadingAll ? (
+        programError || courseError ? (
+          <div role="alert" className="p-6 border border-red-400/30 rounded-xl text-sm">
+            <p>Unable to load academic {programError ? "programs" : "courses"}.</p>
+            <button type="button" className="mt-3 underline" onClick={() => void (programError ? retryPrograms() : retryCourses())}>Retry</button>
+          </div>
+        ) : loadingPrograms ? (
           <div className="py-16 bg-[#131418] border border-[#23252C] rounded-xl flex flex-col items-center justify-center shadow-sm animate-fadeIn">
-            <SecondaryLoader variant="spinner" message="Syncing campus programs & course content..." />
+            <SecondaryLoader variant="spinner" message="Loading campus programs..." />
           </div>
         ) : (
           mode === "explorer" ? renderExplorerMode() : renderExamineMode()
@@ -1324,9 +1258,9 @@ export default function ProgramManager({
             </div>
             <form onSubmit={handleCourseSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
-                <label className="block font-semibold mb-1 text-[#C2C6D1]">Course Title *</label>
+                <label htmlFor="course-title" className="block font-semibold mb-1 text-[#C2C6D1]">Course Title *</label>
                 <input
-                  type="text"
+                  type="text" id="course-title"
                   value={courseForm.title}
                   onChange={(e) => setCourseForm({ 
                     ...courseForm, 
@@ -1339,9 +1273,9 @@ export default function ProgramManager({
               </div>
 
               <div>
-                <label className="block font-semibold mb-1 text-[#C2C6D1]">Course Slug *</label>
+                <label htmlFor="course-slug" className="block font-semibold mb-1 text-[#C2C6D1]">Course Slug *</label>
                 <input
-                  type="text"
+                  type="text" id="course-slug"
                   value={courseForm.slug}
                   onChange={(e) => setCourseForm({ ...courseForm, slug: e.target.value })}
                   className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"
@@ -1351,14 +1285,35 @@ export default function ProgramManager({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold mb-1 text-[#C2C6D1]">Duration (minutes)</label>
+                  <label htmlFor="course-duration" className="block font-semibold mb-1 text-[#C2C6D1]">Duration (minutes)</label>
                   <input
-                    type="number"
+                    type="number" id="course-duration"
                     value={courseForm.duration_minutes}
                     onChange={(e) => setCourseForm({ ...courseForm, duration_minutes: Number(e.target.value) })}
                     className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm text-[#EDEFF5]"
                     min={0}
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="course-status" className="block font-semibold mb-1 text-[#C2C6D1]">Course status</label>
+                  <select id="course-status" value={courseForm.status_id} required
+                    onChange={event => setCourseForm({ ...courseForm, status_id: event.target.value })}
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs text-[#EDEFF5]">
+                    <option value="" disabled>Select status</option>
+                    {statuses.map(status => <option key={status.id} value={status.id}>{status.code}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="course-visibility" className="block font-semibold mb-1 text-[#C2C6D1]">Course visibility</label>
+                  <select id="course-visibility" value={courseForm.visibility_type_id} required
+                    onChange={event => setCourseForm({ ...courseForm, visibility_type_id: event.target.value })}
+                    className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs text-[#EDEFF5]">
+                    <option value="" disabled>Select visibility</option>
+                    {visibilityTypes.map(type => <option key={type.id} value={type.id}>{type.code}</option>)}
+                  </select>
                 </div>
               </div>
 
@@ -1460,7 +1415,7 @@ export default function ProgramManager({
                   onChange={(e) => setLessonForm({ ...lessonForm, lesson_type_id: e.target.value })}
                   className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-2.5 py-1.5 text-xs text-[#EDEFF5] focus:outline-none focus:border-[#6E79F4] shadow-sm"
                 >
-                  {lessonTypes.map((t: any) => (
+                  {lessonTypes.map((t) => (
                     <option key={t.id} value={t.id}>{t.description || t.code}</option>
                   ))}
                 </select>

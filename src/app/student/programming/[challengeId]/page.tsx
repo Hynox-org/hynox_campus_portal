@@ -1,6 +1,8 @@
 import { getCurrentUser } from "@/services/auth";
 import { getProgrammingChallengeDetails } from "@/services/learning";
 import { redirect } from "next/navigation";
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
+import { FeatureMaintenance } from "@/components/feature-maintenance";
 import WorkspaceConsole from "./workspace-console";
 import Link from "next/link";
 import { Terminal } from "lucide-react";
@@ -12,8 +14,9 @@ interface PageProps {
 }
 
 export default async function ChallengeWorkspacePage({ params }: PageProps) {
+  if (!CODING_CHALLENGES_ENABLED) return <FeatureMaintenance />;
   const { challengeId } = await params;
-  const userDetails = await getCurrentUser();
+  const userDetails = await getCurrentUser(true);
 
   if (!userDetails || userDetails.primaryRole !== "student") {
     redirect("/login");

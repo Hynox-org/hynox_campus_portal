@@ -1,8 +1,13 @@
 "use server";
 
-import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getCurrentUser } from "@/services/auth";
 import * as libraryService from "@/services/library";
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") return error.message;
+  return fallback;
+}
 
 async function verifySuperAdmin() {
   const user = await getCurrentUser();
@@ -18,8 +23,8 @@ export async function listCourseTemplatesAction() {
     await verifySuperAdmin();
     const data = await libraryService.listCourseTemplates();
     return { success: true, templates: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list course templates." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to list course templates.") };
   }
 }
 
@@ -30,8 +35,8 @@ export async function createCourseTemplateAction(input: libraryService.CourseTem
     revalidateTag("course-templates", "max");
     revalidatePath("/admin");
     return { success: true, template: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create course template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to create course template.") };
   }
 }
 
@@ -42,8 +47,8 @@ export async function updateCourseTemplateAction(id: string, input: Partial<libr
     revalidateTag("course-templates", "max");
     revalidatePath("/admin");
     return { success: true, template: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update course template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to update course template.") };
   }
 }
 
@@ -54,8 +59,8 @@ export async function deleteCourseTemplateAction(id: string) {
     revalidateTag("course-templates", "max");
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete course template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to delete course template.") };
   }
 }
 
@@ -65,8 +70,8 @@ export async function listModuleTemplatesAction(courseTemplateId: string) {
     await verifySuperAdmin();
     const data = await libraryService.listModuleTemplates(courseTemplateId);
     return { success: true, modules: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list module templates." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to list module templates.") };
   }
 }
 
@@ -75,8 +80,8 @@ export async function createModuleTemplateAction(input: libraryService.ModuleTem
     await verifySuperAdmin();
     const data = await libraryService.createModuleTemplate(input);
     return { success: true, module: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create module template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to create module template.") };
   }
 }
 
@@ -85,8 +90,8 @@ export async function updateModuleTemplateAction(id: string, input: Partial<libr
     await verifySuperAdmin();
     const data = await libraryService.updateModuleTemplate(id, input);
     return { success: true, module: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update module template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to update module template.") };
   }
 }
 
@@ -95,8 +100,8 @@ export async function deleteModuleTemplateAction(id: string) {
     await verifySuperAdmin();
     await libraryService.deleteModuleTemplate(id);
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete module template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to delete module template.") };
   }
 }
 
@@ -106,8 +111,8 @@ export async function listLessonTemplatesAction(moduleTemplateId: string) {
     await verifySuperAdmin();
     const data = await libraryService.listLessonTemplates(moduleTemplateId);
     return { success: true, lessons: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list lesson templates." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to list lesson templates.") };
   }
 }
 
@@ -116,8 +121,8 @@ export async function createLessonTemplateAction(input: libraryService.LessonTem
     await verifySuperAdmin();
     const data = await libraryService.createLessonTemplate(input);
     return { success: true, lesson: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create lesson template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to create lesson template.") };
   }
 }
 
@@ -126,8 +131,8 @@ export async function updateLessonTemplateAction(id: string, input: Partial<libr
     await verifySuperAdmin();
     const data = await libraryService.updateLessonTemplate(id, input);
     return { success: true, lesson: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update lesson template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to update lesson template.") };
   }
 }
 
@@ -136,8 +141,8 @@ export async function deleteLessonTemplateAction(id: string) {
     await verifySuperAdmin();
     await libraryService.deleteLessonTemplate(id);
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete lesson template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to delete lesson template.") };
   }
 }
 
@@ -147,8 +152,8 @@ export async function listResourceTemplatesAction(lessonTemplateId: string) {
     await verifySuperAdmin();
     const data = await libraryService.listResourceTemplates(lessonTemplateId);
     return { success: true, resources: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list resource templates." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to list resource templates.") };
   }
 }
 
@@ -157,8 +162,8 @@ export async function createResourceTemplateAction(input: libraryService.Resourc
     await verifySuperAdmin();
     const data = await libraryService.createResourceTemplate(input);
     return { success: true, resource: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create resource template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to create resource template.") };
   }
 }
 
@@ -167,8 +172,8 @@ export async function deleteResourceTemplateAction(id: string) {
     await verifySuperAdmin();
     await libraryService.deleteResourceTemplate(id);
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete resource template." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to delete resource template.") };
   }
 }
 
@@ -190,7 +195,7 @@ export async function instantiateCourseTemplateAction(
     revalidatePath("/academic");
     revalidatePath("/admin");
     return { success: true, courseId };
-  } catch (error: any) {
-    return { error: error.message || "Failed to instantiate template course." };
+  } catch (error: unknown) {
+    return { error: errorMessage(error, "Failed to instantiate template course.") };
   }
 }

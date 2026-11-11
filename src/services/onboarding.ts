@@ -166,6 +166,7 @@ export async function listOnboardingInvitations() {
     }
     results.push(...(data || []).map(invitation => ({
       ...invitation,
+      user: (Array.isArray(invitation.user) ? invitation.user[0] : invitation.user) || { id: "", full_name: null, email: "" },
       status: ["created", "pending", "sent"].includes(invitation.status) && Date.parse(invitation.expires_at) <= Date.now() ? "expired" : invitation.status,
       institution_name: invitation.tenant_id ? institutions.get(invitation.tenant_id) || "Unknown Institution" : "Global / Platform",
     })));

@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import type { CourseInstructor } from "@/types/campus";
+import type { Program, Course, CampusUser, Module, Lookup, Lesson, Resource } from "@/types/campus";
+import React, { useState } from "react";
 import { 
-  FolderPlus, Plus, ChevronDown, ChevronRight, Edit2, Trash2, 
-  BookOpen, Video, FileText, Link2, File, Sparkles, UserCheck, 
-  Users, Save, Settings, X, GraduationCap, Clock, ExternalLink 
+   Plus, ChevronDown, ChevronRight, Edit2, Trash2, Video, FileText, Link2, File,
+  Users, Save, X, ExternalLink
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { LessonMedia } from "@/components/lesson-media";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { useToast } from "@/components/toast";
 import { 
@@ -18,22 +20,21 @@ import {
 } from "@/app/actions/academic-actions";
 
 interface CourseSpaceConsoleProps {
-  program: any;
-  course: any;
-  initialInstructors: any[];
-  tenantInstructors: any[];
-  initialModules: any[];
+  program: Program;
+  course: Course;
+  initialInstructors: CourseInstructor[];
+  tenantInstructors: CampusUser[];
+  initialModules: Module[];
   primaryRole: string;
   lookups: {
-    courseTypes: any[];
-    lessonTypes: any[];
-    statuses: any[];
-    visibilityTypes: any[];
+    courseTypes: Lookup[];
+    lessonTypes: Lookup[];
+    statuses: Lookup[];
+    visibilityTypes: Lookup[];
   };
 }
 
 export default function CourseSpaceConsole({
-  program,
   course,
   initialInstructors,
   tenantInstructors,
@@ -42,15 +43,15 @@ export default function CourseSpaceConsole({
   lookups
 }: CourseSpaceConsoleProps) {
   const router = useRouter();
-  const [modules, setModules] = useState<any[]>(initialModules);
-  const [instructors, setInstructors] = useState<any[]>(initialInstructors);
+  const [modules, setModules] = useState<Module[]>(initialModules);
+
   
   // Expanded modules state mapping
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
-  const [moduleLessons, setModuleLessons] = useState<Record<string, any[]>>({});
-  const [lessonResources, setLessonResources] = useState<Record<string, any[]>>({});
+  const [moduleLessons, setModuleLessons] = useState<Record<string, Lesson[]>>({});
+  const [lessonResources, setLessonResources] = useState<Record<string, Resource[]>>({});
 
-  const [selectedLesson, setSelectedLesson] = useState<any | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useToast();
@@ -64,7 +65,7 @@ export default function CourseSpaceConsole({
 
   // Modals state
   const [activeModal, setActiveModal] = useState<"module" | "lesson" | "resource" | null>(null);
-  const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [editingItem, setEditingItem] = useState<Module | null>(null);
 
   // Form inputs
   const [moduleTitle, setModuleTitle] = useState("");
@@ -103,7 +104,7 @@ export default function CourseSpaceConsole({
   };
 
   // Fetch resources when selecting lesson
-  const handleSelectLesson = async (lesson: any) => {
+  const handleSelectLesson = async (lesson: Lesson) => {
     setSelectedLesson(lesson);
 
     if (!lessonResources[lesson.id]) {
@@ -140,12 +141,12 @@ export default function CourseSpaceConsole({
     setActiveModal("module");
   };
 
-  const handleOpenEditModule = (mod: any) => {
+  const handleOpenEditModule = (mod: Module) => {
     setEditingItem(mod);
     setModuleTitle(mod.title);
     setModuleDesc(mod.description || "");
     setModulePos(mod.position);
-    setModuleStatusId(mod.status_id);
+    setModuleStatusId(mod.status_id || "");
     setActiveModal("module");
   };
 
@@ -213,17 +214,17 @@ export default function CourseSpaceConsole({
     setActiveModal("lesson");
   };
 
-  const handleOpenEditLesson = (less: any) => {
+  const handleOpenEditLesson = (less: Lesson) => {
     setEditingItem(less);
-    setActiveModuleIdForLess(less.module_id);
+    setActiveModuleIdForLess((less.module_id ?? ""));
     setLessonTitle(less.title);
-    setLessonTypeId(less.lesson_type_id);
+    setLessonTypeId((less.lesson_type_id ?? ""));
     setLessonContent(less.content_json?.text || "");
     setLessonVideoUrl(less.video_url || "");
     setLessonDuration(less.duration || 0);
     setLessonPos(less.position);
     setLessonIsPreview(less.is_preview || false);
-    setLessonStatusId(less.status_id);
+    setLessonStatusId((less.status_id ?? ""));
     setActiveModal("lesson");
   };
 
@@ -272,7 +273,9 @@ export default function CourseSpaceConsole({
     setLoading(false);
   };
 
-  const handleDeleteLesson = async (less: any) => {
+  const handleDeleteLesson = async (less: Lesson) => {
+    if (!less.module_id) return;
+    const moduleId = less.module_id;
     if (!confirm(`Delete lesson "${less.title}"?`)) return;
     setLoading(true);
     const res = await deleteLessonAction(less.id);
@@ -281,7 +284,7 @@ export default function CourseSpaceConsole({
     } else {
       setModuleLessons(prev => ({
         ...prev,
-        [less.module_id]: prev[less.module_id].filter(l => l.id !== less.id)
+        [moduleId]: (prev[moduleId] || []).filter(l => l.id !== less.id)
       }));
       if (selectedLesson?.id === less.id) {
         setSelectedLesson(null);
@@ -292,6 +295,8 @@ export default function CourseSpaceConsole({
 
   // Lesson Resources Submissions
   const handleOpenCreateResource = () => {
+if (!selectedLesson) return;
+
     setEditingItem(null);
     setResTitle("");
     setResType("pdf");
@@ -302,6 +307,8 @@ export default function CourseSpaceConsole({
   };
 
   const handleResourceSubmit = async (e: React.FormEvent) => {
+if (!selectedLesson) return;
+
     e.preventDefault();
     setLoading(true);
 
@@ -328,6 +335,8 @@ export default function CourseSpaceConsole({
   };
 
   const handleDeleteResource = async (resId: string) => {
+if (!selectedLesson) return;
+
     if (!confirm("Remove this resource attachment?")) return;
     setLoading(true);
     const res = await deleteLessonResourceAction(resId);
@@ -495,22 +504,14 @@ export default function CourseSpaceConsole({
               </button>
             </div>
 
-            {/* Video preview if available */}
-            {selectedLesson.video_url && (
-              <div className="aspect-video w-full bg-slate-950 rounded-xl overflow-hidden border border-[#23252C] flex items-center justify-center text-white text-xs relative">
-                <Video size={36} className="text-[#6E79F4] mb-2" />
-                <span className="absolute bottom-3 left-3 bg-black/60 px-2 py-0.5 rounded text-[10px] font-bold">
-                  Video URL: {selectedLesson.video_url}
-                </span>
-              </div>
-            )}
+            <LessonMedia url={selectedLesson.video_url} title={selectedLesson.title} />
 
             {/* Lesson Structured Content */}
             <div className="space-y-2 text-xs">
               <span className="font-semibold text-[#C2C6D1] block">Lesson Overview & Content</span>
               <div className="bg-[#16171D] border border-[#23252C] p-5 rounded-xl">
-                {selectedLesson.content_json?.text ? (
-                  <MarkdownRenderer content={selectedLesson.content_json.text} />
+                {(selectedLesson.content_json?.body || selectedLesson.content_json?.text) ? (
+                  <MarkdownRenderer content={selectedLesson.content_json.body || selectedLesson.content_json.text} />
                 ) : (
                   <span className="text-xs text-[#C2C6D1] italic">No learning text content provided for this lesson.</span>
                 )}
@@ -781,7 +782,7 @@ export default function CourseSpaceConsole({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-[#C2C6D1]">Video URL</label>
+                  <label className="block font-semibold mb-1 text-[#C2C6D1]">Learning Media URL</label>
                   <input
                     type="text"
                     value={lessonVideoUrl}

@@ -21,7 +21,7 @@ it("puts newsletters last and opens it inside the shell with a synced URL",async
  dashboard();const nav=screen.getByRole("navigation");expect(nav.lastElementChild).toHaveTextContent("Course Newsletters");
  fireEvent.click(screen.getByRole("button",{name:"Course Newsletters"}));expect(screen.getByText("Newsletter controls")).toBeVisible();
  await waitFor(()=>expect(window.location.search).toBe("?parentTab=newsletters&tab=newsletters"));expect(window.location.pathname).toBe("/admin");
- fireEvent.click(screen.getByRole("button",{name:"Institutions",exact:true}));await waitFor(()=>expect(window.location.search).toBe("?parentTab=institutions&tab=institutions"));expect(screen.queryByText("Newsletter controls")).toBeNull();
+ fireEvent.click(screen.getByRole("button",{name:"Institutions"}));await waitFor(()=>expect(window.location.search).toBe("?parentTab=institutions&tab=institutions"));expect(screen.queryByText("Newsletter controls")).toBeNull();
 });
 it("restores the newsletter tab from its URL",async()=>{
  window.history.replaceState(null,"","/admin?parentTab=newsletters&tab=newsletters");render(<QueryClientProvider client={new QueryClient()}><AdminPanel adminEmail="admin@example.com"/></QueryClientProvider>);expect(await screen.findByText("Newsletter controls")).toBeVisible();await waitFor(()=>expect(window.location.search).toBe("?parentTab=newsletters&tab=newsletters"));

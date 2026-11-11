@@ -1,18 +1,24 @@
+import type { CampusUser } from "@/types/campus";
+import type { User } from "@supabase/supabase-js";
+import type { Institution } from "@/types/campus";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { isSharedLogin, selectedSharedRole, SHARED_ROLE_COOKIE } from "@/lib/shared-login";
 
 export interface UserDetails {
-  authUser: any;
-  user: any;
+  authUser: User;
+  user: CampusUser | null;
   primaryRole: string;
   tenantId: string | null;
-  institution: any | null;
+  institution: Institution | null;
   sharedLogin?: boolean;
   availableRoles?: string[];
 }
 
-export async function getCurrentUser(): Promise<UserDetails | null> {
+type ProfileUserDetails = Omit<UserDetails, "user"> & { user: CampusUser };
+export function getCurrentUser(requireProfile: true): Promise<ProfileUserDetails | null>;
+export function getCurrentUser(requireProfile?: false): Promise<UserDetails | null>;
+export async function getCurrentUser(requireProfile = false): Promise<UserDetails | null> {
   const supabase = await createClient();
 
   const {
@@ -35,6 +41,7 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
 
   if (userError) return null;
   if (!user) {
+    if (requireProfile) return null;
     // If auth user exists but is not pre-provisioned in core.users, fallback to public role
     return {
       authUser,
@@ -68,11 +75,15 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
 
   if (rolesError || !userRoles?.length) return null;
 
+  const resolvedRoles = userRoles.flatMap(mapping => {
+    const role = Array.isArray(mapping.roles) ? mapping.roles[0] : mapping.roles;
+    return role ? [role] : [];
+  });
+
   let primaryRole = "public";
   if (userRoles && userRoles.length > 0) {
     let maxPriority = -1;
-    userRoles.forEach(ur => {
-      const role = ur.roles as unknown as { name: string; priority: number } | null;
+    resolvedRoles.forEach(role => {
       if (role && role.priority > maxPriority) {
         maxPriority = role.priority;
         primaryRole = role.name;
@@ -81,10 +92,7 @@ export async function getCurrentUser(): Promise<UserDetails | null> {
   }
 
   // Fetch tenant/institution details if tenant_id is linked
-  const availableRoles = (userRoles || []).flatMap(ur => {
-    const role = ur.roles as unknown as { name: string } | null;
-    return role?.name ? [role.name] : [];
-  });
+  const availableRoles = resolvedRoles.flatMap(role => role.name ? [role.name] : []);
   const sharedLogin = isSharedLogin(authUser);
   if (sharedLogin) {
     primaryRole = selectedSharedRole((await cookies()).get(SHARED_ROLE_COOKIE)?.value, authUser.id, availableRoles) || "public";

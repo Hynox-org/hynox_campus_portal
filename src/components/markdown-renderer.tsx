@@ -2,7 +2,7 @@
 
 import React from "react";
 
-export function MarkdownRenderer({ content }: { content: string }) {
+export function MarkdownRenderer({ content }: { content?: string | null }) {
   if (!content) return null;
 
   // Split content by code blocks to separate text from code blocks

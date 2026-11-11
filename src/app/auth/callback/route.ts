@@ -14,6 +14,10 @@ export async function GET(request: Request) {
   };
   const code = searchParams.get("code");
   const next = safeNextPath(searchParams.get("next"));
+  if (searchParams.get("error")) {
+    return redirectTo(searchParams.get("error") === "access_denied"
+      ? "/login?error=OAuthAccessDenied" : "/login?error=OAuthExchangeFailed");
+  }
   if (!code) return redirectTo("/login?error=OAuthExchangeFailed");
 
   const supabase = await createClient();

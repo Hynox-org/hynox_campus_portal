@@ -126,7 +126,7 @@ describe("newsletter delivery", () => {
   it("defers a batch when reserved provider capacity is exhausted", async () => {
     const env = environment({ credits: 50 });
     const result = await runNewsletters(env.db, secrets, env.fetcher);
-    expect(result.waiting).toBe(1); expect(env.calls.some(call => call.path.endsWith("/sendNow"))).toBe(false);
+    expect("waiting" in result && result.waiting).toBe(1); expect(env.calls.some(call => call.path.endsWith("/sendNow"))).toBe(false);
   });
   it("holds ambiguous sends and never blindly retries them", async () => {
     const env = environment({ sendFails: true });

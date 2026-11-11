@@ -1,8 +1,5 @@
-import React from "react";
+import { getAcademicLookups,listPrograms } from "@/services/academic";
 import { getCurrentUser } from "@/services/auth";
-import { listPrograms, getAcademicLookups } from "@/services/academic";
-import Link from "next/link";
-import { Plus, Folder, ArrowRight, Eye, CheckCircle, Edit, Trash2 } from "lucide-react";
 import ClientProgramList from "./client-program-list";
 
 export const dynamic = "force-dynamic";

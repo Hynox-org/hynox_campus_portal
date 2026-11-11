@@ -9,9 +9,10 @@ import { listAllTeachersAction } from "@/app/actions/institution-actions";
 import { getDeliveryPrefetchDataAction, getLearningPrefetchDataAction } from "@/app/actions/prefetch-actions";
 import { DASHBOARD_GC_TIME, DASHBOARD_REFETCH_INTERVAL, DASHBOARD_STALE_TIME, unwrapActionResult } from "@/lib/dashboard-query";
 
-export function useAllTeachers() {
+export function useAllTeachers(enabled = true) {
   return useQuery({
     queryKey: ["all-teachers"],
+    enabled,
     queryFn: async () => {
       const res = await listAllTeachersAction();
       if (res.error) throw new Error(res.error);
@@ -22,9 +23,10 @@ export function useAllTeachers() {
   });
 }
 
-export function useAllCohorts() {
+export function useAllCohorts(enabled = true) {
   return useQuery({
     queryKey: ["all-cohorts"],
+    enabled,
     queryFn: async () => {
       const res = await listAllCohortsAction();
       if (res.error) throw new Error(res.error);

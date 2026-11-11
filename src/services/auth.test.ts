@@ -55,6 +55,11 @@ describe("server identity resolution", () => {
     expect(await getCurrentUser()).toMatchObject({ user: null, primaryRole: "public", tenantId: null });
     expect(from.mock.calls.filter(([table]) => table === "users")).toHaveLength(1);
   });
+  it("requires a provisioned profile for protected callers without removing public hub access", async () => {
+    businessUser = null;
+    expect(await getCurrentUser(true)).toBeNull();
+    expect(await getCurrentUser()).toMatchObject({ user: null, primaryRole: "public" });
+  });
   it("fails closed on a database error", async () => {
     userError = { message: "private database details" }; expect(await getCurrentUser()).toBeNull();
   });

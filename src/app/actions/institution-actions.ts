@@ -1,4 +1,5 @@
 "use server";
+import { errorMessage } from "@/lib/error-message";
 
 import { getCurrentUser } from "@/services/auth";
 import { 
@@ -40,7 +41,7 @@ export async function createNewInstitutionAction(formData: FormData) {
   }
 
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied. Only super administrators can perform this action." };
     }
@@ -58,8 +59,8 @@ export async function createNewInstitutionAction(formData: FormData) {
 
     revalidatePath("/admin");
     return { success: true, institution };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create institution." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to create institution.") };
   }
 }
 
@@ -69,7 +70,7 @@ export async function assignAdminAction(institutionId: string, email: string) {
   }
 
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
@@ -77,8 +78,8 @@ export async function assignAdminAction(institutionId: string, email: string) {
     await assignInstitutionAdmin(institutionId, email);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to assign administrator." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to assign administrator.") };
   }
 }
 
@@ -88,8 +89,8 @@ export async function uploadCsvOnboardingAction(institutionId: string, csvConten
   }
 
   try {
-    const userDetails = await getCurrentUser();
-    if (!userDetails) return { error: "Access denied." };
+    const userDetails = await getCurrentUser(true);
+    if (!userDetails?.user) return { error: "Access denied." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
     const isInstAdmin = userDetails.primaryRole === "institution_admin" && userDetails.tenantId === institutionId;
@@ -113,15 +114,15 @@ export async function uploadCsvOnboardingAction(institutionId: string, csvConten
     revalidatePath("/admin");
     revalidatePath("/institution");
     return { success: true, results };
-  } catch (error: any) {
-    return { error: error.message || "Failed to process CSV onboarding." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to process CSV onboarding.") };
   }
 }
 
 export async function listInvitationsAction() {
   try {
-    const userDetails = await getCurrentUser();
-    if (!userDetails) return { error: "Access denied." };
+    const userDetails = await getCurrentUser(true);
+    if (!userDetails?.user) return { error: "Access denied." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
     const isInstAdmin = userDetails.primaryRole === "institution_admin";
@@ -133,11 +134,11 @@ export async function listInvitationsAction() {
     let invitations = await listOnboardingInvitations();
     if (isInstAdmin) {
       // Scope to their own tenant
-      invitations = invitations.filter((inv: any) => inv.tenant_id === userDetails.tenantId);
+      invitations = invitations.filter((inv) => inv.tenant_id === userDetails.tenantId);
     }
     return { success: true, invitations };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list invitations." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list invitations.") };
   }
 }
 
@@ -147,8 +148,8 @@ export async function regenerateInvitationAction(invitationId: string) {
   }
 
   try {
-    const userDetails = await getCurrentUser();
-    if (!userDetails) return { error: "Access denied." };
+    const userDetails = await getCurrentUser(true);
+    if (!userDetails?.user) return { error: "Access denied." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
     const isInstAdmin = userDetails.primaryRole === "institution_admin";
@@ -162,8 +163,8 @@ export async function regenerateInvitationAction(invitationId: string) {
     revalidatePath("/admin");
     revalidatePath("/institution");
     return { success: true, invitation: res };
-  } catch (error: any) {
-    return { error: error.message || "Failed to regenerate invitation." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to regenerate invitation.") };
   }
 }
 
@@ -173,8 +174,8 @@ export async function listInstitutionUsersAction(institutionId: string) {
   }
 
   try {
-    const userDetails = await getCurrentUser();
-    if (!userDetails) return { error: "Access denied." };
+    const userDetails = await getCurrentUser(true);
+    if (!userDetails?.user) return { error: "Access denied." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
     const isInstAdmin = userDetails.primaryRole === "institution_admin" && userDetails.tenantId === institutionId;
@@ -185,8 +186,8 @@ export async function listInstitutionUsersAction(institutionId: string) {
 
     const users = await listInstitutionUsers(institutionId);
     return { success: true, users };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list institution users." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list institution users.") };
   }
 }
 
@@ -207,8 +208,8 @@ export async function onboardSingleUserAction(params: {
   }
 
   try {
-    const userDetails = await getCurrentUser();
-    if (!userDetails) return { error: "Access denied." };
+    const userDetails = await getCurrentUser(true);
+    if (!userDetails?.user) return { error: "Access denied." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
     const isInstAdmin = role === "student" && userDetails.primaryRole === "institution_admin" && userDetails.tenantId === institutionId;
@@ -232,14 +233,14 @@ export async function onboardSingleUserAction(params: {
     revalidatePath("/admin");
     revalidatePath("/institution");
     return { success: true, result };
-  } catch (error: any) {
-    return { error: error.message || "Failed to onboard user." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to onboard user.") };
   }
 }
 export async function listTeacherInstitutionsAction(userId: string) {
   try {
-    const userDetails = await getCurrentUser();
-    if (!userDetails) return { error: "Unauthorized." };
+    const userDetails = await getCurrentUser(true);
+    if (!userDetails?.user) return { error: "Unauthorized." };
 
     const isSuperAdmin = userDetails.primaryRole === "super_admin";
     if (!isSuperAdmin && (!(userDetails.primaryRole === "teacher" || userDetails.primaryRole === "trainer") || userDetails.user?.id !== userId)) {
@@ -247,28 +248,28 @@ export async function listTeacherInstitutionsAction(userId: string) {
     }
     const data = await listTeacherInstitutions(userId, isSuperAdmin);
     return { success: true, institutions: data };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list teacher institutions." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list teacher institutions.") };
   }
 }
 
 export async function listAllTeachersAction() {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
 
     const teachers = await listAllTeachers();
     return { success: true, teachers };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list teachers." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list teachers.") };
   }
 }
 
 export async function mapTeacherToInstitutionAction(userId: string, tenantId: string) {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
@@ -276,14 +277,14 @@ export async function mapTeacherToInstitutionAction(userId: string, tenantId: st
     await mapTeacherToTenant(userId, tenantId);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to map teacher to institution." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to map teacher to institution.") };
   }
 }
 
 export async function unmapTeacherFromInstitutionAction(userId: string, tenantId: string) {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
@@ -291,14 +292,14 @@ export async function unmapTeacherFromInstitutionAction(userId: string, tenantId
     await unmapTeacherFromTenant(userId, tenantId);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to unmap teacher from institution." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to unmap teacher from institution.") };
   }
 }
 
 export async function getTeacherInstitutionDetailsAction(userId: string) {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
@@ -309,14 +310,14 @@ export async function getTeacherInstitutionDetailsAction(userId: string) {
 
     if (error) throw error;
     return { success: true, details: data || [] };
-  } catch (error: any) {
-    return { error: error.message || "Failed to retrieve teacher institution details." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to retrieve teacher institution details.") };
   }
 }
 
 export async function updateInstitutionStatusAction(institutionId: string, status: string) {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied. Only super administrators can update institution status." };
     }
@@ -324,8 +325,8 @@ export async function updateInstitutionStatusAction(institutionId: string, statu
     await updateInstitutionStatus(institutionId, status);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update institution status." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to update institution status.") };
   }
 }
 
@@ -342,7 +343,7 @@ export async function onboardSuperAdminAction(params: {
   }
 
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
@@ -355,8 +356,8 @@ export async function onboardSuperAdminAction(params: {
 
     revalidatePath("/admin");
     return { success: true, result };
-  } catch (error: any) {
-    return { error: error.message || "Failed to onboard super admin." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to onboard super admin.") };
   }
 }
 
@@ -372,7 +373,7 @@ export async function updateInstitutionAction(institutionId: string, data: {
   status: string;
 }) {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
@@ -380,28 +381,28 @@ export async function updateInstitutionAction(institutionId: string, data: {
     const institution = await updateInstitution(institutionId, data);
     revalidatePath("/admin");
     return { success: true, institution };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update institution." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to update institution.") };
   }
 }
 
 export async function getInstitutionRelationsCountAction(institutionId: string) {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
 
     const counts = await getInstitutionRelationsCount(institutionId);
     return { success: true, counts };
-  } catch (error: any) {
-    return { error: error.message || "Failed to check institution relations." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to check institution relations.") };
   }
 }
 
 export async function deleteInstitutionAction(institutionId: string) {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
@@ -409,14 +410,14 @@ export async function deleteInstitutionAction(institutionId: string) {
     await deleteInstitution(institutionId);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete institution." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to delete institution.") };
   }
 }
 
 export async function deleteUserAction(userId: string) {
   try {
-    const userDetails = await getCurrentUser();
+    const userDetails = await getCurrentUser(true);
     if (!userDetails || userDetails.primaryRole !== "super_admin") {
       return { error: "Access denied." };
     }
@@ -430,8 +431,8 @@ export async function deleteUserAction(userId: string) {
     revalidatePath("/admin");
     revalidatePath("/institution");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete user completely." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to delete user completely.") };
   }
 }
 

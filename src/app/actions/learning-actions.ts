@@ -1,5 +1,11 @@
 "use server";
 
+import { CODING_CHALLENGES_ENABLED } from "@/lib/features";
+
+import { readAllPages, readByIds } from "@/services/query-pages";
+import { errorMessage } from "@/lib/error-message";
+import { requireActivityEditor } from "@/services/learning-editor";
+import { requireInstitutionAccess } from "@/services/institution-access";
 import * as service from "@/services/learning";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
@@ -8,8 +14,8 @@ export async function getStudentAssignedActivitiesAction(studentId: string) {
   try {
     const activities = await service.getStudentAssignedActivities(studentId);
     return { activities };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load assigned activities." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load assigned activities.") };
   }
 }
 
@@ -17,17 +23,18 @@ export async function getQuizDetailsAction(activityId: string) {
   try {
     const data = await service.getQuizDetails(activityId);
     return data;
-  } catch (error: any) {
-    return { error: error.message || "Failed to load quiz details." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load quiz details.") };
   }
 }
 
-export async function startQuizAttemptAction(quizId: string, studentId: string, progressId: string, attemptNumber: number = 1) {
+export async function startQuizAttemptAction(quizId: string, studentId: string, progressId: string, _attemptNumber: number = 1) {
   try {
-    const attempt = await service.startQuizAttempt(quizId, studentId, progressId, attemptNumber);
+    if (!Number.isInteger(_attemptNumber) || _attemptNumber < 1) throw new Error("Invalid attempt number.");
+    const attempt = await service.startQuizAttempt(quizId, studentId, progressId);
     return { attempt };
-  } catch (error: any) {
-    return { error: error.message || "Failed to start quiz attempt." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to start quiz attempt.") };
   }
 }
 
@@ -38,8 +45,8 @@ export async function submitQuizAnswersAction(
   try {
     const attempt = await service.submitQuizAnswers(attemptId, answers);
     return { attempt };
-  } catch (error: any) {
-    return { error: error.message || "Failed to submit quiz answers." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to submit quiz answers.") };
   }
 }
 
@@ -47,8 +54,8 @@ export async function forfeitQuizAttemptAction(attemptId: string, reason: string
   try {
     const attempt = await service.forfeitQuizAttempt(attemptId, reason);
     return { attempt };
-  } catch (error: any) {
-    return { error: error.message || "Failed to forfeit quiz attempt." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to forfeit quiz attempt.") };
   }
 }
 
@@ -56,8 +63,8 @@ export async function getProjectDetailsAction(activityId: string, studentId: str
   try {
     const data = await service.getProjectDetails(activityId, studentId);
     return data;
-  } catch (error: any) {
-    return { error: error.message || "Failed to load project details." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load project details.") };
   }
 }
 
@@ -71,26 +78,28 @@ export async function submitProjectAction(
   try {
     const submission = await service.submitProject(projectId, studentId, progressId, githubUrl, notes);
     return { submission };
-  } catch (error: any) {
-    return { error: error.message || "Failed to submit project." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to submit project.") };
   }
 }
 
 export async function getStudentAssignedChallengesAction(studentId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const challenges = await service.getStudentAssignedChallenges(studentId);
     return { challenges };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load assigned challenges." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load assigned challenges.") };
   }
 }
 
 export async function getProgrammingChallengeDetailsAction(activityId: string, studentId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const data = await service.getProgrammingChallengeDetails(activityId, studentId);
     return data;
-  } catch (error: any) {
-    return { error: error.message || "Failed to load programming challenge." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load programming challenge.") };
   }
 }
 
@@ -99,12 +108,13 @@ export async function runChallengeCodeAction(
   language: string,
   sourceCode: string
 ) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const runner = await import("@/services/runner");
     const results = await runner.executeVisibleTests(challengeId, language, sourceCode);
     return { results };
-  } catch (error: any) {
-    return { error: error.message || "Failed to run challenge code." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to run challenge code.") };
   }
 }
 
@@ -115,6 +125,7 @@ export async function submitChallengeCodeAction(
   language: string,
   sourceCode: string
 ) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const submission = await service.submitChallengeCode(challengeId, studentId, progressId, language, sourceCode);
     
@@ -128,17 +139,18 @@ export async function submitChallengeCodeAction(
     }
 
     return { submission };
-  } catch (error: any) {
-    return { error: error.message || "Failed to submit challenge code." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to submit challenge code.") };
   }
 }
 
 export async function getChallengeSubmissionResultsAction(submissionId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const data = await service.getChallengeSubmissionResults(submissionId);
     return data;
-  } catch (error: any) {
-    return { error: error.message || "Failed to load submission results." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load submission results.") };
   }
 }
 
@@ -147,29 +159,32 @@ export async function upsertChallengeStarterTemplateAction(input: {
   language: string;
   starterCode: string;
 }) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const template = await service.upsertChallengeStarterTemplate(input);
     return { template };
-  } catch (error: any) {
-    return { error: error.message || "Failed to save starter template." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to save starter template.") };
   }
 }
 
 export async function updateChallengeStrictModeAction(challengeId: string, strictMode: boolean) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const challenge = await service.updateChallengeStrictMode(challengeId, strictMode);
     return { challenge };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update lockdown mode." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to update lockdown mode.") };
   }
 }
 
 export async function forfeitChallengeSubmissionAction(progressId: string, studentId: string, reason: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const progress = await service.forfeitChallengeSubmission(progressId, studentId, reason);
     return { progress };
-  } catch (error: any) {
-    return { error: error.message || "Failed to forfeit challenge attempt." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to forfeit challenge attempt.") };
   }
 }
 
@@ -178,18 +193,19 @@ export async function listAllActivitiesAction(tenantId: string) {
   try {
     const activities = await service.listAllActivities(tenantId);
     return { activities };
-  } catch (error: any) {
-    return { error: error.message || "Failed to list activities." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to list activities.") };
   }
 }
 
-export async function createActivityAndSubclassAction(input: any) {
+export async function createActivityAndSubclassAction(input: Parameters<typeof service.createActivityAndSubclass>[0]) {
+  if (!CODING_CHALLENGES_ENABLED && input.activity_type_code === "programming") return { error: "Coding challenges are unavailable." };
   try {
     const activity = await service.createActivityAndSubclass(input);
     revalidatePath("/admin");
     return { activity };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create activity." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to create activity.") };
   }
 }
 
@@ -212,38 +228,40 @@ export async function createQuizQuestionAndOptionsAction(
     );
     revalidatePath("/admin");
     return { question };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create question." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to create question.") };
   }
 }
 
-export async function createChallengeExampleAction(input: any) {
+export async function createChallengeExampleAction(input: Parameters<typeof service.createChallengeExample>[0]) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const example = await service.createChallengeExample(input);
     revalidatePath("/admin");
     return { example };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create challenge example." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to create challenge example.") };
   }
 }
 
-export async function createChallengeTestCaseAction(input: any) {
+export async function createChallengeTestCaseAction(input: Parameters<typeof service.createChallengeTestCase>[0]) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const testCase = await service.createChallengeTestCase(input);
     revalidatePath("/admin");
     return { testCase };
-  } catch (error: any) {
-    return { error: error.message || "Failed to create test case." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to create test case.") };
   }
 }
 
-export async function assignActivityToCohortAction(input: any) {
+export async function assignActivityToCohortAction(input: Parameters<typeof service.assignActivityToCohort>[0]) {
   try {
     const assignment = await service.assignActivityToCohort(input);
     revalidatePath("/admin");
     return { assignment };
-  } catch (error: any) {
-    return { error: error.message || "Failed to assign activity." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to assign activity.") };
   }
 }
 
@@ -251,8 +269,8 @@ export async function getActiveQuizAttemptAction(quizId: string, studentId: stri
   try {
     const attempt = await service.getActiveQuizAttempt(quizId, studentId);
     return { attempt };
-  } catch (error: any) {
-    return { error: error.message || "Failed to check active attempt." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to check active attempt.") };
   }
 }
 
@@ -260,8 +278,8 @@ export async function getQuizSessionDetailsAction(attemptId: string) {
   try {
     const data = await service.getQuizSessionDetails(attemptId);
     return data;
-  } catch (error: any) {
-    return { error: error.message || "Failed to retrieve quiz session details." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to retrieve quiz session details.") };
   }
 }
 
@@ -271,8 +289,8 @@ export async function approveQuizRetakeAction(attemptId: string) {
     revalidatePath("/teacher");
     revalidatePath("/student");
     return res;
-  } catch (error: any) {
-    return { error: error.message || "Failed to approve quiz retake." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to approve quiz retake.") };
   }
 }
 
@@ -280,8 +298,8 @@ export async function listProjectSubmissionsAction(tenantId: string) {
   try {
     const submissions = await service.listProjectSubmissions(tenantId);
     return { submissions };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load project submissions." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load project submissions.") };
   }
 }
 
@@ -296,17 +314,18 @@ export async function reviewProjectSubmissionAction(input: {
     const review = await service.reviewProjectSubmission(input);
     revalidatePath("/teacher");
     return { review };
-  } catch (error: any) {
-    return { error: error.message || "Failed to submit project review." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to submit project review.") };
   }
 }
 
 export async function listChallengeSubmissionsAction(tenantId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { submissions: [] };
   try {
     const submissions = await service.listChallengeSubmissions(tenantId);
     return { submissions };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load challenge submissions." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load challenge submissions.") };
   }
 }
 
@@ -314,6 +333,7 @@ import { createClient } from "@/utils/supabase/server";
 
 export async function getActivityDetailsNoStudentAction(activityId: string, activityType: string) {
   try {
+    await requireActivityEditor(activityId);
     const supabase = await createClient();
     
     const { data: assignments } = await supabase
@@ -324,43 +344,9 @@ export async function getActivityDetailsNoStudentAction(activityId: string, acti
       .is("deleted_at", null);
 
     if (activityType === "quiz") {
-      const { data: quiz, error: qError } = await supabase
-        .schema("learning")
-        .from("quizzes")
-        .select("*")
-        .eq("activity_id", activityId)
-        .maybeSingle();
-      if (qError) throw qError;
-      if (!quiz) return { error: "Quiz not found" };
-
-      const { data: questions, error: questError } = await supabase
-        .schema("learning")
-        .from("quiz_questions")
-        .select("*")
-        .eq("quiz_id", quiz.id)
-        .order("position", { ascending: true });
-      if (questError) throw questError;
-
-      const questionIds = (questions || []).map(q => q.id);
-      let options: any[] = [];
-      if (questionIds.length > 0) {
-        const { data: optData } = await supabase
-          .schema("learning")
-          .from("quiz_options")
-          .select("*")
-          .in("question_id", questionIds)
-          .order("position", { ascending: true });
-        options = optData || [];
-      }
-
-      return {
-        quiz,
-        assignments: assignments || [],
-        questions: (questions || []).map(q => ({
-          ...q,
-          options: options.filter(o => o.question_id === q.id)
-        }))
-      };
+      const { quizContent } = await import("@/services/quiz-engine");
+      const content = await quizContent(activityId, undefined, true);
+      return { quiz: content.quiz, questions: content.questions, assignments: assignments || [] };
     } else if (activityType === "project") {
       const { data: project, error: pError } = await supabase
         .schema("learning")
@@ -415,13 +401,14 @@ export async function getActivityDetailsNoStudentAction(activityId: string, acti
       };
     }
     return { error: "Unknown activity type" };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load activity details." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load activity details.") };
   }
 }
 
 export async function listActivityProgressAction(activityId: string) {
   try {
+    await requireActivityEditor(activityId);
     const supabase = await createClient();
     
     const { data: assignments, error: assignError } = await supabase
@@ -458,15 +445,16 @@ export async function listActivityProgressAction(activityId: string) {
         student: students?.find(s => s.id === p.student_id) || null
       }))
     };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load activity progress." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load activity progress.") };
   }
 }
 
 export async function listQuizAttemptsAction(tenantId: string) {
   try {
+    await requireInstitutionAccess(tenantId, true);
     const supabase = await createClient();
-    const { data: quizzes, error: qError } = await supabase
+    const quizzes = await readAllPages((from, to) => supabase
       .schema("learning")
       .from("quizzes")
       .select(`
@@ -479,56 +467,57 @@ export async function listQuizAttemptsAction(tenantId: string) {
           max_score
         )
       `)
-      .eq("activities.tenant_id", tenantId);
+      .eq("activities.tenant_id", tenantId).order("id").range(from, to));
 
-    if (qError) throw qError;
+
     if (!quizzes || quizzes.length === 0) return { attempts: [] };
 
     const quizIds = quizzes.map(q => q.id);
 
-    const { data: attempts, error: attError } = await supabase
+    const attempts = await readByIds(quizIds, (group, from, to) => supabase
       .schema("learning")
       .from("quiz_attempts")
-      .select("*")
-      .in("quiz_id", quizIds)
-      .order("submitted_at", { ascending: false });
+      .select("*, progress:student_activity_progress_id(assignment:activity_assignment_id(cohort_id))")
+      .in("quiz_id", group)
+      .order("submitted_at", { ascending: false }).order("id").range(from, to));
 
-    if (attError) throw attError;
+
     if (!attempts || attempts.length === 0) return { attempts: [] };
 
     const studentIds = [...new Set(attempts.map(a => a.student_id))];
-    const { data: students } = await supabase
+    const students = await readByIds(studentIds, (group, from, to) => supabase
       .schema("core")
       .from("users")
       .select("id, full_name, email")
-      .in("id", studentIds);
+      .in("id", group).order("id").range(from, to));
 
     return {
-      attempts: attempts.map(att => {
-        const quiz: any = quizzes.find(q => q.id === att.quiz_id);
+      attempts: attempts.sort((a, b) => Date.parse(b.submitted_at || b.started_at) - Date.parse(a.submitted_at || a.started_at)).map(att => {
+        const quiz = quizzes.find(q => q.id === att.quiz_id);
         const student = students?.find(s => s.id === att.student_id) || null;
 
         return {
           ...att,
-          quiz_title: quiz?.activities?.title || "Unknown Quiz",
-          max_score: Number(quiz?.activities?.max_score || 100),
+          cohort_id: att.progress?.assignment?.cohort_id,
+          quiz_title: (Array.isArray(quiz?.activities) ? quiz.activities[0] : quiz?.activities)?.title || "Unknown Quiz",
+          activity_max_score: Number((Array.isArray(quiz?.activities) ? quiz.activities[0] : quiz?.activities)?.max_score || 100),
           student,
           activity_id: quiz?.activity_id
         };
       })
     };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load quiz attempts." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load quiz attempts.") };
   }
 }
 
-export async function updateActivityAndSubclassAction(id: string, input: any) {
+export async function updateActivityAndSubclassAction(id: string, input: Parameters<typeof service.updateActivityAndSubclass>[1]) {
   try {
     const activity = await service.updateActivityAndSubclass(id, input);
     revalidatePath("/admin");
     return { success: true, activity };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update learning activity." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to update learning activity.") };
   }
 }
 
@@ -536,12 +525,13 @@ export async function ensureLessonProjectActivityAction(lessonId: string, studen
   try {
     const res = await service.ensureLessonProjectActivity(lessonId, studentId, courseId);
     return res;
-  } catch (error: any) {
-    return { error: error.message || "Failed to ensure dynamic lesson activity." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to ensure dynamic lesson activity.") };
   }
 }
 
 export async function deleteChallengeExampleAction(id: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const supabase = await createClient();
     const { error } = await supabase
@@ -553,12 +543,13 @@ export async function deleteChallengeExampleAction(id: string) {
     revalidatePath("/admin");
     revalidatePath("/teacher");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete challenge example." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to delete challenge example.") };
   }
 }
 
 export async function deleteChallengeTestCaseAction(id: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { error: "Coding challenges are unavailable." };
   try {
     const supabase = await createClient();
     const { error } = await supabase
@@ -570,8 +561,8 @@ export async function deleteChallengeTestCaseAction(id: string) {
     revalidatePath("/admin");
     revalidatePath("/teacher");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete challenge test case." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to delete challenge test case.") };
   }
 }
 
@@ -579,17 +570,18 @@ export async function listCohortProjectSubmissionsAction(cohortId: string) {
   try {
     const submissions = await service.listCohortProjectSubmissions(cohortId);
     return { submissions };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load project submissions for cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load project submissions for cohort.") };
   }
 }
 
 export async function listCohortChallengeSubmissionsAction(cohortId: string) {
+  if (!CODING_CHALLENGES_ENABLED) return { submissions: [] };
   try {
     const submissions = await service.listCohortChallengeSubmissions(cohortId);
     return { submissions };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load challenge submissions for cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load challenge submissions for cohort.") };
   }
 }
 
@@ -597,8 +589,8 @@ export async function listCohortActivitiesAction(cohortId: string) {
   try {
     const activities = await service.listCohortActivities(cohortId);
     return { success: true, activities };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load activities for cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load activities for cohort.") };
   }
 }
 
@@ -606,8 +598,8 @@ export async function listCohortQuizAttemptsAction(cohortId: string) {
   try {
     const attempts = await service.listCohortQuizAttempts(cohortId);
     return { success: true, attempts };
-  } catch (error: any) {
-    return { error: error.message || "Failed to load quiz attempts for cohort." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to load quiz attempts for cohort.") };
   }
 }
 
@@ -616,8 +608,8 @@ export async function deleteActivityAction(id: string) {
     await service.deleteActivity(id);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete activity." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to delete activity.") };
   }
 }
 
@@ -626,8 +618,8 @@ export async function deleteQuizQuestionAction(id: string) {
     await service.deleteQuizQuestion(id);
     revalidatePath("/admin");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message || "Failed to delete question." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to delete question.") };
   }
 }
 
@@ -648,8 +640,7 @@ export async function updateQuizQuestionAndOptionsAction(
     );
     revalidatePath("/admin");
     return { success: true, question };
-  } catch (error: any) {
-    return { error: error.message || "Failed to update question." };
+  } catch (error) {
+    return { error: errorMessage(error, "Failed to update question.") };
   }
 }
-

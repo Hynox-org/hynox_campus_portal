@@ -109,32 +109,10 @@ export async function listTeacherInstitutions(userId: string, isSuperAdmin: bool
     return listInstitutions();
   }
 
-  const [primary, assigned, mapped] = await Promise.all([
-    supabase
-    .schema("core")
-    .from("users")
-    .select("tenant_id")
-    .eq("id", userId)
-    .maybeSingle(),
-    supabase
-    .schema("academic")
-    .from("course_instructors")
-    .select("tenant_id")
-    .eq("user_id", userId),
-    supabase
-    .schema("academic")
-    .from("tenant_teachers")
-    .select("tenant_id")
-    .eq("user_id", userId),
-  ]);
-  if (primary.error || assigned.error || mapped.error) throw new Error("Unable to load teacher institutions.");
-
-  const tIds = new Set<string>();
-  if (primary.data?.tenant_id) tIds.add(primary.data.tenant_id);
-  assigned.data?.forEach(a => { if (a.tenant_id) tIds.add(a.tenant_id); });
-  mapped.data?.forEach(m => { if (m.tenant_id) tIds.add(m.tenant_id); });
-
-  const tenantIds = Array.from(tIds);
+  const { data: campuses, error: scopeError } = await supabase.schema("core")
+    .rpc("teacher_campus_ids", { p_user_id: userId });
+  if (scopeError) throw new Error("Unable to load teacher institutions.");
+  const tenantIds = [...new Set((campuses || []) as string[])];
   if (tenantIds.length === 0) return [];
 
   const { data: insts, error: instError } = await supabase

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Calendar,
   Check,
   X as XIcon,
-  Clock3,
-  Users,
+
+
   ChevronLeft,
   ChevronRight,
   Sun,
@@ -24,6 +24,10 @@ import {
   markHolidayAction,
   unmarkHolidayAction,
 } from "@/app/actions/attendance-actions";
+import { errorMessage } from "@/lib/error-message";
+import { attendanceToday, summarizeAttendance } from "@/lib/attendance";
+import { useInputsChanged } from "@/hooks/use-inputs-changed";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/components/toast";
 import { SecondaryLoader } from "@/components/secondary-loader";
 import type { AttendanceRegister as RegisterData, AttendanceStatus } from "@/services/attendance";
@@ -54,17 +58,12 @@ function formatDateLabel(dateStr: string) {
   return d.toLocaleDateString(undefined, { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
 }
 
-function todayStr() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - offset * 60 * 1000);
-  return local.toISOString().substring(0, 10);
-}
-
 export default function AttendanceRegister({ cohortId, cohortName, userRole }: AttendanceRegisterProps) {
   const { showSuccess, showError } = useToast();
   const [register, setRegister] = useState<RegisterData | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const mutationPending = useRef(false);
+  const [page, setPage] = useState(0);
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<"day" | "sheet" | "stats">(() =>
     typeof window !== "undefined" && window.innerWidth < 768 ? "day" : "sheet"
@@ -76,32 +75,29 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
   // Teachers/trainers can only mark or edit attendance for the present day;
   // past and future dates are locked to a read-only view. Super Admins are exempt.
   const isRestrictedRole = userRole !== "super_admin";
-  const isTodaySelected = selectedDate === todayStr();
-  const canEditSelectedDate = !isRestrictedRole || isTodaySelected;
+  const isTodaySelected = selectedDate === attendanceToday();
+  const canEditSelectedDate = selectedDate <= attendanceToday() && (!isRestrictedRole || isTodaySelected);
 
-  const loadRegister = async () => {
-    setLoading(true);
-    const res = await getAttendanceRegisterAction(cohortId);
-    if (res.error) {
-      showError(res.error);
-      setRegister(null);
-    } else if (res.register) {
-      setRegister(res.register);
-      setSelectedDate((prev) => {
-        if (prev && res.register!.dates.some((d) => d.date === prev)) return prev;
-        const today = todayStr();
-        const match = res.register!.dates.find((d) => d.date === today);
-        return match ? match.date : res.register!.dates[res.register!.dates.length - 1]?.date || "";
-      });
+  const attendanceQuery = useQuery({
+    queryKey: ["attendance-register", cohortId],
+    queryFn: async () => {
+      const result = await getAttendanceRegisterAction(cohortId);
+      if (result.error || !result.register) throw new Error(result.error || "Unable to load attendance.");
+      return result.register;
+    },
+  });
+  const loading = attendanceQuery.isPending;
+  if (useInputsChanged([attendanceQuery.data])) {
+    const fresh = attendanceQuery.data;
+    setRegister(fresh ?? null);
+    if (fresh && !fresh.dates.some(d => d.date === selectedDate)) {
+      setSelectedDate(fresh.dates.find(d => d.date === attendanceToday())?.date ?? fresh.dates.filter(d => d.date <= attendanceToday()).at(-1)?.date ?? fresh.dates[0]?.date ?? "");
     }
-    setLoading(false);
+  }
+  const loadRegister = async () => {
+    const result = await attendanceQuery.refetch();
+    if (result.error) showError(result.error.message);
   };
-
-  useEffect(() => {
-    loadRegister();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cohortId]);
-
   const dateIndex = useMemo(() => {
     if (!register) return -1;
     return register.dates.findIndex((d) => d.date === selectedDate);
@@ -111,27 +107,8 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
 
   const stats = useMemo(() => {
     if (!register) return null;
-    const workingDates = register.dates.filter((d) => !d.isHoliday);
-    const workingDays = workingDates.length;
-    const holidays = register.dates.length - workingDays;
-
-    const students = register.students.map((student) => {
-      const recs = register.records[student.id] || {};
-      let present = 0;
-      let absent = 0;
-      let late = 0;
-      for (const d of workingDates) {
-        const s = recs[d.date];
-        if (s === "present") present++;
-        else if (s === "late") late++;
-        else if (s === "absent") absent++;
-      }
-      const marked = present + absent + late;
-      const percentage = marked > 0 ? Math.round(((present + late) / marked) * 1000) / 10 : 100;
-      return { ...student, present, absent, late, percentage };
-    });
-
-    return { workingDays, holidays, totalDays: register.dates.length, students };
+    const summary = summarizeAttendance(register);
+    return { ...summary, students: summary.students.map(s => ({ ...s, id: s.studentId, full_name: s.name })) };
   }, [register]);
 
   const goToDate = (offset: number) => {
@@ -142,79 +119,53 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
   };
 
   // Whether the given date is open for edits by the current user.
-  const dateEditable = (dateStr: string) => !isRestrictedRole || dateStr === todayStr();
+  const dateEditable = (dateStr: string) => dateStr <= attendanceToday() && (!isRestrictedRole || dateStr === attendanceToday());
+  const studentDateEditable = (studentId: string, date: string) => {
+    const joined = register?.students.find(s => s.id === studentId)?.enrolled_date;
+    return dateEditable(date) && (!joined || joined <= date);
+  };
 
+  const saveChange = async (save: () => Promise<{ success?: boolean; error?: string }>, message?: string) => {
+    if (mutationPending.current) return;
+    mutationPending.current = true; setBusy(true);
+    try {
+      const result = await save();
+      if (result.error) { setRegister(attendanceQuery.data ?? null); showError(result.error); }
+      else if (message) showSuccess(message);
+      await loadRegister();
+    } catch (error) {
+      setRegister(attendanceQuery.data ?? null);
+      showError(errorMessage(error, "Attendance could not be saved. Retry when connected."));
+      await loadRegister();
+    } finally { mutationPending.current = false; setBusy(false); }
+  };
   const handleBulkMark = async (status: AttendanceStatus) => {
     if (!register || !currentDateInfo || currentDateInfo.isHoliday || !dateEditable(selectedDate)) return;
-    setBusy(true);
-    const studentIds = register.students.map((s) => s.id);
-    const res = await bulkMarkAttendanceAction(cohortId, selectedDate, studentIds, status);
-    if (res.error) {
-      showError(res.error);
-    } else {
-      showSuccess(`Marked all students ${status} for ${formatDateLabel(selectedDate)}.`);
-      await loadRegister();
-    }
-    setBusy(false);
+    const eligible = register.students.filter(s => !s.enrolled_date || s.enrolled_date <= selectedDate).map(s => s.id);
+    if (!eligible.length) { showError("No students were enrolled on this date."); return; }
+    await saveChange(() => bulkMarkAttendanceAction(cohortId, selectedDate, eligible, status), `Marked enrolled students ${status} for ${formatDateLabel(selectedDate)}.`);
   };
-
-  const handleCycleStatus = async (studentId: string, dateStr: string) => {
-    if (!register || !dateEditable(dateStr)) return;
-    const dateInfo = register.dates.find((d) => d.date === dateStr);
-    if (!dateInfo || dateInfo.isHoliday) return;
-    const current = register.records[studentId]?.[dateStr];
-    const currentIdx = current ? STATUS_CYCLE.indexOf(current) : -1;
-    const next = STATUS_CYCLE[(currentIdx + 1) % STATUS_CYCLE.length];
-    await handleSetStatus(studentId, next, dateStr);
+  const handleSetStatus = async (studentId: string, status: AttendanceStatus, date: string = selectedDate) => {
+    if (!studentDateEditable(studentId, date) || mutationPending.current) return;
+    const info = register?.dates.find(d => d.date === date);
+    if (!info || info.isHoliday) return;
+    setRegister(previous => previous ? { ...previous, records: { ...previous.records, [studentId]: { ...previous.records[studentId], [date]: status } } } : null);
+    await saveChange(() => setAttendanceStatusAction(cohortId, date, studentId, status));
   };
-
-  const handleSetStatus = async (studentId: string, status: AttendanceStatus, dateStr: string = selectedDate) => {
-    if (!dateEditable(dateStr)) return;
-    const dateInfo = register?.dates.find((d) => d.date === dateStr);
-    if (!dateInfo || dateInfo.isHoliday) return;
-    setRegister((prev) => {
-      if (!prev) return prev;
-      const records = { ...prev.records };
-      records[studentId] = { ...(records[studentId] || {}), [dateStr]: status };
-      return { ...prev, records };
-    });
-    const res = await setAttendanceStatusAction(cohortId, dateStr, studentId, status);
-    if (res.error) {
-      showError(res.error);
-      await loadRegister();
-    }
+  const handleCycleStatus = async (studentId: string, date: string) => {
+    const current = register?.records[studentId]?.[date];
+    const next = STATUS_CYCLE[(current ? STATUS_CYCLE.indexOf(current) + 1 : 0) % STATUS_CYCLE.length];
+    await handleSetStatus(studentId, next, date);
   };
-
   const handleToggleHoliday = async () => {
     if (!currentDateInfo || !dateEditable(selectedDate)) return;
-    setBusy(true);
-    if (currentDateInfo.isHoliday) {
-      const res = await unmarkHolidayAction(cohortId, selectedDate);
-      if (res.error) showError(res.error);
-      else {
-        showSuccess("Holiday removed. Day is now a working day.");
-        await loadRegister();
-      }
-      setBusy(false);
-    } else {
-      setShowHolidayPrompt(true);
-      setBusy(false);
-    }
+    if (currentDateInfo.isHoliday) await saveChange(() => unmarkHolidayAction(cohortId, selectedDate), "Holiday removed. Day is now a working day.");
+    else setShowHolidayPrompt(true);
   };
-
   const confirmHoliday = async () => {
-    setBusy(true);
-    const res = await markHolidayAction(cohortId, selectedDate, holidayNameDraft || "Holiday");
-    setBusy(false);
-    setShowHolidayPrompt(false);
-    setHolidayNameDraft("");
-    if (res.error) showError(res.error);
-    else {
-      showSuccess("Marked as holiday.");
-      await loadRegister();
-    }
+    await saveChange(() => markHolidayAction(cohortId, selectedDate, holidayNameDraft || "Holiday"), "Marked as holiday.");
+    setShowHolidayPrompt(false); setHolidayNameDraft("");
   };
-
   if (loading) {
     return <SecondaryLoader variant="spinner" message="Loading attendance register..." />;
   }
@@ -222,7 +173,8 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
   if (!register) {
     return (
       <div className="bg-[#131418] border border-[#23252C] rounded-xl p-8 text-center text-[#C2C6D1] text-xs">
-        Unable to load attendance register for this group.
+        <p>{attendanceQuery.error?.message || "Unable to load attendance register for this group."}</p>
+        <button onClick={() => void loadRegister()} className="mt-3 underline">Retry</button>
       </div>
     );
   }
@@ -235,6 +187,10 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
     );
   }
 
+  const pageCount = Math.ceil(register.students.length / 50);
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleStudents = register.students.slice(currentPage * 50, (currentPage + 1) * 50);
+  const visibleDates = register.dates.filter(d => d.date.startsWith(selectedDate.slice(0, 7)));
   return (
     <div className="space-y-4 text-xs text-[#EDEFF5]">
       {/* Header / summary */}
@@ -271,6 +227,18 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span>Students {currentPage * 50 + 1}-{Math.min((currentPage + 1) * 50, register.students.length)} of {register.students.length}</span>
+        <div className="flex gap-3">
+          <button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous students</button>
+          <button disabled={currentPage >= pageCount - 1} onClick={() => setPage(currentPage + 1)}>Next students</button>
+        </div>
+      </div>
+      {view === "sheet" && <label className="flex flex-wrap items-center gap-3">Sheet month
+        <input aria-label="Sheet month" type="month" value={selectedDate.slice(0, 7)} min={register.cohort.start_date.slice(0, 7)} max={register.cohort.end_date.slice(0, 7)}
+          onChange={e => { const first = register.dates.find(d => d.date.startsWith(e.target.value)); if (first) setSelectedDate(first.date); }} className="bg-[#16171D] border border-[#23252C] p-2 rounded" />
+      </label>}
+      {view === "stats" && <p className="text-[#C2C6D1]">Attendance rate uses marked elapsed days: present plus late divided by present, late and absent. Unmarked days are not treated as absences.</p>}
       {view === "day" && currentDateInfo && (
         <div className="space-y-3">
           {/* Date navigator */}
@@ -289,7 +257,7 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
                 onChange={(e) => setSelectedDate(e.target.value)}
                 className="bg-[#16171D] border border-[#23252C] rounded-lg px-3 py-1.5 text-xs font-bold text-center focus:outline-none focus:border-[#6E79F4] max-w-full"
               >
-                {register.dates.map((d) => (
+                {visibleDates.map((d) => (
                   <option key={d.date} value={d.date}>
                     {formatDateLabel(d.date)} {d.isHoliday ? "· Holiday" : ""}
                   </option>
@@ -309,7 +277,7 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
           {isRestrictedRole && !isTodaySelected && (
             <div className="bg-[#6E79F4]/5 border border-[#6E79F4]/20 rounded-xl p-3 shadow-sm flex items-center gap-2 text-[#6E79F4] font-semibold">
               <Lock size={14} className="shrink-0" />
-              {dateIndex >= 0 && register.dates[dateIndex].date < todayStr()
+              {dateIndex >= 0 && register.dates[dateIndex].date < attendanceToday()
                 ? "This date is in the past and is locked. You can view it, but only Super Admin can make changes."
                 : "This date is in the future. Attendance can only be marked on the day itself."}
             </div>
@@ -382,7 +350,7 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
             </div>
           ) : (
             <div className="bg-[#131418] border border-[#23252C] rounded-xl overflow-hidden shadow-sm divide-y divide-[#23252C]">
-              {register.students.map((student) => {
+              {visibleStudents.map((student) => {
                 const status = register.records[student.id]?.[selectedDate];
                 return (
                   <div key={student.id} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -393,31 +361,37 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => handleSetStatus(student.id, "present")}
-                        disabled={!canEditSelectedDate}
+                        disabled={!canEditSelectedDate || (!!student.enrolled_date && student.enrolled_date > selectedDate)}
                         className={`w-9 h-9 rounded-lg border font-bold flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none ${
                           status === "present" ? "bg-[#2FBF71] text-white border-[#2FBF71]" : "bg-[#16171D] border-[#23252C] text-[#2FBF71] hover:bg-[#2FBF71]/10"
                         }`}
                         title="Present"
+                        aria-label={`${student.full_name}: Present`}
+                        aria-pressed={status === "present"}
                       >
                         P
                       </button>
                       <button
                         onClick={() => handleSetStatus(student.id, "late")}
-                        disabled={!canEditSelectedDate}
+                        disabled={!canEditSelectedDate || (!!student.enrolled_date && student.enrolled_date > selectedDate)}
                         className={`w-9 h-9 rounded-lg border font-bold flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none ${
                           status === "late" ? "bg-[#F5B04A] text-white border-[#F5B04A]" : "bg-[#16171D] border-[#23252C] text-[#F5B04A] hover:bg-[#F5B04A]/10"
                         }`}
                         title="Late"
+                        aria-label={`${student.full_name}: Late`}
+                        aria-pressed={status === "late"}
                       >
                         L
                       </button>
                       <button
                         onClick={() => handleSetStatus(student.id, "absent")}
-                        disabled={!canEditSelectedDate}
+                        disabled={!canEditSelectedDate || (!!student.enrolled_date && student.enrolled_date > selectedDate)}
                         className={`w-9 h-9 rounded-lg border font-bold flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none ${
                           status === "absent" ? "bg-[#F0555D] text-white border-[#F0555D]" : "bg-[#16171D] border-[#23252C] text-[#F0555D] hover:bg-[#F0555D]/10"
                         }`}
                         title="Absent"
+                        aria-label={`${student.full_name}: Absent`}
+                        aria-pressed={status === "absent"}
                       >
                         A
                       </button>
@@ -439,7 +413,7 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
                   <th className="sticky left-0 z-10 bg-[#16171D] border-b border-r border-[#23252C] px-4 py-2.5 text-left font-bold text-[#C2C6D1] min-w-[160px]">
                     Student
                   </th>
-                  {register.dates.map((d) => (
+                  {visibleDates.map((d) => (
                     <th
                       key={d.date}
                       className={`border-b border-[#23252C] px-1.5 py-2.5 text-center font-bold whitespace-nowrap min-w-[42px] cursor-pointer hover:bg-[#1A1C22] ${
@@ -458,12 +432,12 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
                 </tr>
               </thead>
               <tbody>
-                {register.students.map((student) => (
+                {visibleStudents.map((student) => (
                   <tr key={student.id} className="hover:bg-[#16171D]/30">
                     <td className="sticky left-0 z-10 bg-[#131418] border-r border-b border-[#23252C] px-4 py-2 font-semibold text-[#EDEFF5] whitespace-nowrap">
                       {student.full_name}
                     </td>
-                    {register.dates.map((d) => {
+                    {visibleDates.map((d) => {
                       if (d.isHoliday) {
                         return (
                           <td key={d.date} className="border-b border-[#23252C] px-1.5 py-2 text-center bg-[#F5B04A]/5 text-[#F5B04A]">
@@ -473,7 +447,7 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
                       }
                       const status = register.records[student.id]?.[d.date];
                       const s = statusStyle(status);
-                      const editable = dateEditable(d.date);
+                      const editable = studentDateEditable(student.id, d.date);
                       return (
                         <td key={d.date} className="border-b border-[#23252C] px-1.5 py-2 text-center">
                           <button
@@ -527,7 +501,7 @@ export default function AttendanceRegister({ cohortId, cohortName, userRole }: A
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#23252C]">
-                  {stats.students.map((s) => (
+                  {stats.students.slice(currentPage * 50, (currentPage + 1) * 50).map((s) => (
                     <tr key={s.id} className="hover:bg-[#16171D]/30">
                       <td className="px-4 py-2.5 font-semibold text-[#EDEFF5]">{s.full_name}</td>
                       <td className="px-4 py-2.5 text-center text-[#2FBF71] font-bold">{s.present}</td>

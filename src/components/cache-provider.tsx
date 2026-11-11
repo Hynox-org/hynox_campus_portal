@@ -3,22 +3,22 @@
 import React, { createContext, useContext, useRef } from "react";
 
 interface CacheContextProps {
-  get: <T = any>(key: string) => T | undefined;
-  set: (key: string, value: any, ttlMs?: number) => void;
+  get: <T = unknown>(key: string) => T | undefined;
+  set: (key: string, value: unknown, ttlMs?: number) => void;
   clear: () => void;
 }
 
 const CacheContext = createContext<CacheContextProps | null>(null);
 
 type CacheEntry = {
-  value: any;
+  value: unknown;
   expiresAt?: number;
 };
 
 export function CacheProvider({ children }: { children: React.ReactNode }) {
   const cacheRef = useRef<Record<string, CacheEntry>>({});
 
-  const get = <T = any,>(key: string): T | undefined => {
+  const get = <T = unknown,>(key: string): T | undefined => {
     const entry = cacheRef.current[key];
     if (!entry) return undefined;
     if (entry.expiresAt && Date.now() > entry.expiresAt) {
@@ -28,7 +28,7 @@ export function CacheProvider({ children }: { children: React.ReactNode }) {
     return entry.value as T;
   };
 
-  const set = (key: string, value: any, ttlMs?: number) => {
+  const set = (key: string, value: unknown, ttlMs?: number) => {
     cacheRef.current[key] = {
       value,
       expiresAt: ttlMs ? Date.now() + ttlMs : undefined,

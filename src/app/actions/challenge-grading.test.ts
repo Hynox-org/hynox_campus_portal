@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { afterEach, expect, it, vi } from "vitest";
 vi.mock("next/server", () => ({after:vi.fn()}));
+vi.mock("@/lib/features", () => ({CODING_CHALLENGES_ENABLED:true}));
 vi.mock("@/services/learning", () => ({submitChallengeCode:vi.fn(async()=>({id:"submission-1"}))}));
 vi.mock("@/services/runner", () => ({executeAllTestsAndGrade:vi.fn(async()=>{})}));
 import { executeAllTestsAndGrade } from "@/services/runner";

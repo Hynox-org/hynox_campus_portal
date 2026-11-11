@@ -89,7 +89,7 @@ it("preserves the preference form when leaving and returning to the dashboard ta
 });
 
 it("redirects the old standalone URL into the student dashboard", async () => {
-  vi.mocked(getCurrentUser).mockResolvedValue({ user: { id: "student-1" }, authUser: {}, primaryRole: "student", tenantId: null, institution: null });
+  vi.mocked(getCurrentUser).mockResolvedValue({ user: { id: "student-1", full_name: "Test Student", email: "student@example.test" }, authUser: { id: "auth-student-1", app_metadata: {}, user_metadata: {}, aud: "authenticated", created_at: "2026-01-01" }, primaryRole: "student", tenantId: null, institution: null });
   await expect(StudentNewsletterPage()).rejects.toThrow("redirect:/student?parentTab=newsletters&tab=newsletters");
 });
 

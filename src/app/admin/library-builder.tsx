@@ -1,7 +1,10 @@
 "use client";
+import type { CourseTemplate, ModuleTemplate, LessonTemplate, ResourceTemplate } from "@/types/campus";
+import { errorMessage } from "@/lib/error-message";
 
 import React, { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCurriculumCacheSync } from "@/hooks/use-curriculum-cache-sync";
 import {
   createCourseTemplateAction,
   updateCourseTemplateAction,
@@ -24,9 +27,10 @@ import {
 } from "@/hooks/use-library";
 import { 
   BookOpen, Plus, Edit, Trash2, X, FolderPlus,
-  Folder, ArrowRight, Save, Clock, ChevronRight,
-  ChevronDown, FileText, Link2, ExternalLink, Sparkles, Play, Search
+  Folder, ChevronRight,
+  ChevronDown, FileText, Link2, ExternalLink, Search
 } from "lucide-react";
+import { LessonMedia } from "@/components/lesson-media";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { SecondaryLoader } from "@/components/secondary-loader";
 import { useToast } from "@/components/toast";
@@ -34,20 +38,24 @@ import { useToast } from "@/components/toast";
 export default function LibraryBuilder() {
   const queryClient = useQueryClient();
   const { data: courseTemplates = [], isLoading: loading } = useCourseTemplates();
-  const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<CourseTemplate | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Lazy Loaded Cache States (Consistent with program-manager.tsx)
-  const [modulesCache, setModulesCache] = useState<Record<string, any[]>>({});
-  const [lessonsCache, setLessonsCache] = useState<Record<string, any[]>>({});
-  const [resourcesCache, setResourcesCache] = useState<Record<string, any[]>>({});
+  const [modulesCache, setModulesCache] = useState<Record<string, ModuleTemplate[]>>({});
+  const [lessonsCache, setLessonsCache] = useState<Record<string, LessonTemplate[]>>({});
+  const [resourcesCache, setResourcesCache] = useState<Record<string, ResourceTemplate[]>>({});
+  useCurriculumCacheSync("module-templates", setModulesCache);
+  useCurriculumCacheSync("lesson-templates", setLessonsCache);
+  useCurriculumCacheSync("resource-templates", setResourcesCache);
 
   // Loading indicator maps for individual nodes
   const [modulesLoading, setModulesLoading] = useState<Record<string, boolean>>({});
   const [lessonsLoading, setLessonsLoading] = useState<Record<string, boolean>>({});
   
   const [saving, setSaving] = useState(false);
-  const [courseDataLoading, setCourseDataLoading] = useState(false);
+  const [loadingCourses, setLoadingCourses] = useState<Record<string, boolean>>({});
+  const courseDataLoading = !!loadingCourses[selectedCourse?.id || ""];
   const { showSuccess, showError } = useToast();
 
   // Node toggle states
@@ -56,7 +64,7 @@ export default function LibraryBuilder() {
 
   // Drawer states
   const [courseDrawerOpen, setCourseDrawerOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<any | null>(null);
+  const [editingCourse, setEditingCourse] = useState<CourseTemplate | null>(null);
   const [isCourseTypeDropdownOpen, setIsCourseTypeDropdownOpen] = useState(false);
   const [courseForm, setCourseForm] = useState({
     title: "",
@@ -70,7 +78,7 @@ export default function LibraryBuilder() {
   });
 
   const [moduleDrawerOpen, setModuleDrawerOpen] = useState(false);
-  const [editingModule, setEditingModule] = useState<any | null>(null);
+  const [editingModule, setEditingModule] = useState<ModuleTemplate | null>(null);
   const [moduleForm, setModuleForm] = useState({
     title: "",
     description: "",
@@ -78,7 +86,7 @@ export default function LibraryBuilder() {
   });
 
   const [lessonDrawerOpen, setLessonDrawerOpen] = useState(false);
-  const [editingLesson, setEditingLesson] = useState<any | null>(null);
+  const [editingLesson, setEditingLesson] = useState<LessonTemplate | null>(null);
   const [selectedModuleId, setSelectedModuleId] = useState("");
   const [lessonForm, setLessonForm] = useState({
     title: "",
@@ -114,60 +122,34 @@ export default function LibraryBuilder() {
 
   // Lazy load modules for a specific course, backed by the React Query cache
   const handleSelectCourse = async (courseId: string) => {
-    const course = courseTemplates.find((c: any) => c.id === courseId);
+    const course = courseTemplates.find((c) => c.id === courseId);
     if (course) setSelectedCourse(course);
 
-    if (modulesCache[courseId]) return; // use local cache
+    if (modulesCache[courseId]) return;
 
-    setCourseDataLoading(true);
+    setLoadingCourses(prev => ({ ...prev, [courseId]: true }));
     try {
       const modulesList = await fetchModuleTemplates(queryClient, courseId);
+      // Fetch descendants only when expanded; collapsed trees need one request.
       setModulesCache(prev => ({ ...prev, [courseId]: modulesList }));
-
-      // Fetch lessons for all modules in parallel
-      const lessonsResults = await Promise.all(
-        modulesList.map(async (mod: any) => ({
-          moduleId: mod.id,
-          lessons: await fetchLessonTemplates(queryClient, mod.id)
-        }))
-      );
-      const newLessonsCache: Record<string, any[]> = {};
-      const allLessonsToFetch: any[] = [];
-
-      lessonsResults.forEach(item => {
-        newLessonsCache[item.moduleId] = item.lessons;
-        allLessonsToFetch.push(...item.lessons);
-      });
-
-      setLessonsCache(prev => ({ ...prev, ...newLessonsCache }));
-
-      // Fetch resources for all lessons in parallel
-      const resourcesResults = await Promise.all(
-        allLessonsToFetch.map(async (les: any) => ({
-          lessonId: les.id,
-          resources: await fetchResourceTemplates(queryClient, les.id)
-        }))
-      );
-      const newResourcesCache: Record<string, any[]> = {};
-
-      resourcesResults.forEach(item => {
-        newResourcesCache[item.lessonId] = item.resources;
-      });
-
-      setResourcesCache(prev => ({ ...prev, ...newResourcesCache }));
     } catch (err) {
-      console.error("Error loading complete course blueprint curriculum:", err);
+      showError(err instanceof Error ? errorMessage(err) : "Could not load blueprint. Select it again to retry.");
     } finally {
-      setCourseDataLoading(false);
+      setLoadingCourses(prev => ({ ...prev, [courseId]: false }));
     }
   };
 
   const refreshModules = async (courseId: string) => {
     setModulesLoading(prev => ({ ...prev, [courseId]: true }));
-    await queryClient.invalidateQueries({ queryKey: libraryKeys.moduleTemplates(courseId) });
-    const modules = await fetchModuleTemplates(queryClient, courseId);
-    setModulesCache(prev => ({ ...prev, [courseId]: modules }));
-    setModulesLoading(prev => ({ ...prev, [courseId]: false }));
+    try {
+      await queryClient.invalidateQueries({ queryKey: libraryKeys.moduleTemplates(courseId) });
+      const modules = await fetchModuleTemplates(queryClient, courseId);
+      setModulesCache(prev => ({ ...prev, [courseId]: modules }));
+    } catch (error) {
+      showError(error instanceof Error ? errorMessage(error) : "Could not load blueprint data. Retry the operation.");
+    } finally {
+      setModulesLoading(prev => ({ ...prev, [courseId]: false }));
+    }
   };
 
   // Lazy load lessons for a module
@@ -178,17 +160,27 @@ export default function LibraryBuilder() {
     if (isExpanded || lessonsCache[moduleId]) return; // already loaded or collapsing
 
     setLessonsLoading(prev => ({ ...prev, [moduleId]: true }));
-    const lessons = await fetchLessonTemplates(queryClient, moduleId);
-    setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
-    setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
+    try {
+      const lessons = await fetchLessonTemplates(queryClient, moduleId);
+      setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
+    } catch (error) {
+      showError(error instanceof Error ? errorMessage(error) : "Could not load blueprint data. Retry the operation.");
+    } finally {
+      setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
+    }
   };
 
   const refreshLessons = async (moduleId: string) => {
     setLessonsLoading(prev => ({ ...prev, [moduleId]: true }));
-    await queryClient.invalidateQueries({ queryKey: libraryKeys.lessonTemplates(moduleId) });
-    const lessons = await fetchLessonTemplates(queryClient, moduleId);
-    setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
-    setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
+    try {
+      await queryClient.invalidateQueries({ queryKey: libraryKeys.lessonTemplates(moduleId) });
+      const lessons = await fetchLessonTemplates(queryClient, moduleId);
+      setLessonsCache(prev => ({ ...prev, [moduleId]: lessons }));
+    } catch (error) {
+      showError(error instanceof Error ? errorMessage(error) : "Could not load blueprint data. Retry the operation.");
+    } finally {
+      setLessonsLoading(prev => ({ ...prev, [moduleId]: false }));
+    }
   };
 
   // Lazy load resources for a lesson
@@ -198,21 +190,29 @@ export default function LibraryBuilder() {
 
     if (isExpanded || resourcesCache[lessonId]) return;
 
-    const resources = await fetchResourceTemplates(queryClient, lessonId);
-    setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
+    try {
+      const resources = await fetchResourceTemplates(queryClient, lessonId);
+      setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
+    } catch (error) {
+      showError(error instanceof Error ? errorMessage(error) : "Could not load resources. Retry the operation.");
+    }
   };
 
   const refreshResources = async (lessonId: string) => {
-    await queryClient.invalidateQueries({ queryKey: libraryKeys.resourceTemplates(lessonId) });
-    const resources = await fetchResourceTemplates(queryClient, lessonId);
-    setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
+    try {
+      await queryClient.invalidateQueries({ queryKey: libraryKeys.resourceTemplates(lessonId) });
+      const resources = await fetchResourceTemplates(queryClient, lessonId);
+      setResourcesCache(prev => ({ ...prev, [lessonId]: resources }));
+    } catch (error) {
+      showError(error instanceof Error ? errorMessage(error) : "Could not load resources. Retry the operation.");
+    }
   };
 
   const refreshCourseList = async (keepSelectedId?: string) => {
     await queryClient.invalidateQueries({ queryKey: libraryKeys.courseTemplates });
     if (keepSelectedId) {
-      const templates = queryClient.getQueryData<any[]>(libraryKeys.courseTemplates) || [];
-      const updated = templates.find((t: any) => t.id === keepSelectedId);
+      const templates = queryClient.getQueryData<CourseTemplate[]>(libraryKeys.courseTemplates) || [];
+      const updated = templates.find((t) => t.id === keepSelectedId);
       if (updated) setSelectedCourse(updated);
     }
   };
@@ -241,6 +241,8 @@ export default function LibraryBuilder() {
   };
 
   const handleModuleSubmit = async (e: React.FormEvent) => {
+if (!selectedCourse) return;
+
     e.preventDefault();
     setSaving(true);
 
@@ -280,7 +282,7 @@ export default function LibraryBuilder() {
         title: lessonForm.title,
         lesson_type_code: lessonForm.lesson_type_code,
         content_json,
-        video_url: lessonForm.video_url || undefined,
+        video_url: lessonForm.video_url,
         duration: lessonForm.duration,
         position: lessonForm.position
       });
@@ -290,7 +292,7 @@ export default function LibraryBuilder() {
         title: lessonForm.title,
         lesson_type_code: lessonForm.lesson_type_code,
         content_json,
-        video_url: lessonForm.video_url || undefined,
+        video_url: lessonForm.video_url,
         duration: lessonForm.duration,
         position: lessonForm.position
       });
@@ -421,7 +423,7 @@ export default function LibraryBuilder() {
         <div className="lg:col-span-8 space-y-6">
           {courseDataLoading ? (
             <div className="bg-[#131418] border border-[#23252C] rounded-xl p-12 text-center text-xs text-[#C2C6D1] shadow-sm flex flex-col items-center justify-center min-h-[300px]">
-              <SecondaryLoader variant="spinner" message="Loading full course blueprint data (modules, lessons & resources)..." />
+              <SecondaryLoader variant="spinner" message="Loading course blueprint modules..." />
             </div>
           ) : selectedCourse ? (
             <div className="space-y-6">
@@ -432,7 +434,7 @@ export default function LibraryBuilder() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-[9px] uppercase font-bold text-[#6E79F4] tracking-wider bg-[#6E79F4]/10 px-2 py-0.5 rounded border border-[#6E79F4]/25">
-                        Blueprint Blueprint
+                        Course Blueprint
                       </span>
                       <span className="text-[9px] bg-[#1A1C22] text-[#C2C6D1] px-1.5 py-0.5 rounded font-bold uppercase font-mono">
                         {selectedCourse.course_type_code || "theory"}
@@ -615,10 +617,10 @@ export default function LibraryBuilder() {
                                                 setEditingLesson(les);
                                                 setLessonForm({ 
                                                   title: les.title, 
-                                                  lesson_type_code: les.lesson_type_code,
+                                                  lesson_type_code: (les.lesson_type_code ?? ""),
                                                   content_text: les.content_json?.body || les.content_json?.text || "",
                                                   video_url: les.video_url || "",
-                                                  duration: les.duration || 15,
+                                                  duration: les.duration ?? 15,
                                                   position: les.position || 1
                                                 });
                                                 setLessonDrawerOpen(true);
@@ -648,15 +650,7 @@ export default function LibraryBuilder() {
                                         <div className={`grid transition-all duration-300 ease-in-out ${isLesExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                                           <div className="overflow-hidden">
                                             <div className="border-t border-[#1F2128] pt-2 mt-2 space-y-2 pl-4">
-                                            {les.video_url && (
-                                              <div className="flex items-center gap-1.5 text-[10px] bg-[#16171D] px-2 py-1.5 rounded-lg border border-[#23252C]">
-                                                <Play size={10} className="fill-[#6E79F4] text-[#6E79F4] shrink-0" />
-                                                <span className="font-semibold text-[#E2E4EB]">Video Link:</span>
-                                                <a href={les.video_url} target="_blank" rel="noopener noreferrer" className="truncate hover:underline text-[#6E79F4] font-bold flex-1">
-                                                  {les.video_url}
-                                                </a>
-                                              </div>
-                                            )}
+                                            {isLesExpanded && <LessonMedia url={les.video_url} title={les.title} />}
                                             {(les.content_json?.body || les.content_json?.text) && (
                                               <div className="bg-[#16171D] border border-[#23252C] p-4 rounded-xl space-y-2 shadow-inner">
                                                 <div className="flex justify-between items-center border-b border-[#23252C]/50 pb-1">
@@ -683,7 +677,7 @@ export default function LibraryBuilder() {
                                             </div>
                                             {resourcesCache[les.id] ? (
                                               hasResources ? (
-                                                resourcesCache[les.id].map((resrc: any) => (
+                                                resourcesCache[les.id].map((resrc) => (
                                                   <div key={resrc.id} className="flex items-center justify-between text-[10px] text-[#C2C6D1] py-1 bg-[#16171D] px-2 rounded">
                                                     <div className="flex items-center gap-1.5 min-w-0">
                                                       <FileText size={10} className="shrink-0" />
@@ -691,7 +685,7 @@ export default function LibraryBuilder() {
                                                       <span className="text-[8px] bg-[#23252C] text-[#C2C6D1] px-1 rounded uppercase font-bold shrink-0">{resrc.resource_type}</span>
                                                       {(resrc.file_url || resrc.external_url) && (
                                                         <a 
-                                                          href={resrc.file_url || resrc.external_url} 
+                                                          href={resrc.file_url || resrc.external_url || undefined}
                                                           target="_blank" 
                                                           rel="noopener noreferrer" 
                                                           className="text-[#6E79F4] hover:underline shrink-0"
@@ -880,6 +874,12 @@ export default function LibraryBuilder() {
                 </div>
               </div>
 
+              <label className="flex items-center gap-2 px-6 py-3">
+                <input type="checkbox" checked={courseForm.is_published}
+                  onChange={e => setCourseForm({ ...courseForm, is_published: e.target.checked })} />
+                Published (available to copy into a campus)
+              </label>
+
               {/* Actions Footer */}
               <div className="bg-[#16171D] border-t border-[#23252C] p-5 flex flex-wrap justify-end gap-3 shrink-0">
                 <button
@@ -1045,10 +1045,10 @@ export default function LibraryBuilder() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#C2C6D1]">Video URL (Optional)</label>
+                  <label className="block font-bold text-[#C2C6D1]">Learning Media URL (Optional)</label>
                   <input
                     type="text"
-                    placeholder="https://vimeo.com/... or cloud storage URL"
+                    placeholder="https://... (video, PDF, audio or image)"
                     value={lessonForm.video_url}
                     onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })}
                     className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"
@@ -1162,7 +1162,7 @@ export default function LibraryBuilder() {
                   <label className="block font-bold text-[#C2C6D1]">File URL (Optional)</label>
                   <input
                     type="text"
-                    placeholder="course-assets/handouts/assignment-1.pdf"
+                    placeholder="https://example.com/handouts/assignment-1.pdf"
                     value={resourceForm.file_url}
                     onChange={(e) => setResourceForm({ ...resourceForm, file_url: e.target.value })}
                     className="w-full bg-[#131418] border border-[#23252C] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[#6E79F4] shadow-sm font-mono text-[#EDEFF5]"

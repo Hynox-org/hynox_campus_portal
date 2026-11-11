@@ -1,35 +1,26 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Building, Users } from "lucide-react";
 import { useDeliveryData } from "@/hooks/use-delivery";
 import { CustomSelect } from "@/components/custom-select";
 import { SecondaryLoader } from "@/components/secondary-loader";
+import type { Institution } from "@/types/campus";
 import AttendanceRegister from "./attendance-register";
 
 interface AttendanceModuleProps {
-  institutions: any[];
+  institutions: Institution[];
   userRole: "super_admin" | "teacher" | "trainer";
 }
 
 export default function AttendanceModule({ institutions, userRole }: AttendanceModuleProps) {
-  const [selectedInstId, setSelectedInstId] = useState(institutions[0]?.id || "");
-  const [selectedCohortId, setSelectedCohortId] = useState("");
-
-  const { data: deliveryData, isLoading } = useDeliveryData(selectedInstId);
+  const [institutionChoice, setSelectedInstId] = useState("");
+  const [cohortChoice, setSelectedCohortId] = useState("");
+  const selectedInstId = institutions.some(i => i.id === institutionChoice) ? institutionChoice : institutions[0]?.id ?? "";
+  const { data: deliveryData, isLoading, error, refetch } = useDeliveryData(selectedInstId);
   const cohorts = deliveryData?.cohorts || [];
-
-  useEffect(() => {
-    if (!selectedCohortId && cohorts.length > 0) {
-      setSelectedCohortId(cohorts[0].id);
-    } else if (selectedCohortId && !cohorts.some((c: any) => c.id === selectedCohortId)) {
-      setSelectedCohortId(cohorts[0]?.id || "");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cohorts]);
-
-  const selectedCohort = cohorts.find((c: any) => c.id === selectedCohortId);
-
+  const selectedCohortId = cohorts.some(c => c.id === cohortChoice) ? cohortChoice : cohorts[0]?.id ?? "";
+  const selectedCohort = cohorts.find(c => c.id === selectedCohortId);
   return (
     <div className="space-y-6 text-xs text-[#EDEFF5]">
       <div className="bg-[#131418] border border-[#23252C] p-6 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -38,7 +29,7 @@ export default function AttendanceModule({ institutions, userRole }: AttendanceM
             <Users size={15} /> Attendance Register
           </h3>
           <p className="text-[10px] text-[#C2C6D1] leading-relaxed">
-            Mark and review daily attendance for each group's enrolled roster.
+            Mark and review daily attendance for each group&apos;s enrolled roster.
           </p>
         </div>
 
@@ -49,7 +40,7 @@ export default function AttendanceModule({ institutions, userRole }: AttendanceM
                 <Building size={11} /> Institution
               </label>
               <CustomSelect
-                options={institutions.map((inst: any) => ({ id: inst.id, name: inst.name, code: inst.institution_code }))}
+                options={institutions.map((inst) => ({ id: inst.id, name: inst.name, code: inst.institution_code }))}
                 value={selectedInstId}
                 onChange={(value) => {
                   setSelectedInstId(value);
@@ -63,7 +54,7 @@ export default function AttendanceModule({ institutions, userRole }: AttendanceM
           <div className="w-full sm:w-64">
             <label className="block text-[10px] font-bold text-[#C2C6D1] uppercase tracking-wider mb-1">Group</label>
             <CustomSelect
-              options={cohorts.map((c: any) => ({ id: c.id, name: c.name, code: c.code }))}
+              options={cohorts.map((c) => ({ id: c.id, name: c.name, code: c.code }))}
               value={selectedCohortId}
               onChange={setSelectedCohortId}
               placeholder="-- Select Group --"
@@ -73,7 +64,7 @@ export default function AttendanceModule({ institutions, userRole }: AttendanceM
         </div>
       </div>
 
-      {isLoading && !cohorts.length ? (
+      {error ? <div role="alert">{error.message}<button className="ml-3 underline" onClick={() => void refetch()}>Retry</button></div> : isLoading && !cohorts.length ? (
         <SecondaryLoader variant="spinner" message="Loading groups..." />
       ) : cohorts.length === 0 ? (
         <div className="bg-[#131418] border border-[#23252C] rounded-xl p-8 text-center text-[#C2C6D1] text-xs">

@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/services/auth";
 import { getProgramBySlug, listCourses, getAcademicLookups } from "@/services/academic";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpen, ArrowLeft, Home } from "lucide-react";
+import {  ArrowLeft } from "lucide-react";
 import ClientCourseList from "./client-course-list";
 
 export const dynamic = "force-dynamic";

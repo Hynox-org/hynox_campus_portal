@@ -45,7 +45,7 @@ export default async function InstitutionAdminPage() {
 
   return (
     <InstitutionPanel
-      adminEmail={authUser.email}
+      adminEmail={(authUser.email ?? "")}
       institution={institution}
       tenantId={tenantId}
       primaryRole={primaryRole}
